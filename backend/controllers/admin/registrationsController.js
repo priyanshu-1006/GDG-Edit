@@ -1,6 +1,7 @@
 import Registration from '../../models/Registration.js';
 import Event from '../../models/Event.js';
 import User from '../../models/User.js';
+import sendMail from '../../utils/sendEmail.utils.js'
 
 /**
  * @desc    Get all registrations with filtering
@@ -89,7 +90,13 @@ export const approveRegistration = async (req, res) => {
       });
     }
 
-    // TODO: Send approval email to user
+    const mailSent = sendMail(registration, "approved");
+    if(!mailSent){
+      return res.status(503).json({
+        success: false,
+        message: 'Failed to send mail.'
+      });
+    }
 
     res.json({
       success: true,
@@ -133,7 +140,13 @@ export const rejectRegistration = async (req, res) => {
       });
     }
 
-    // TODO: Send rejection email to user
+    const mailSent = sendMail("a@gmail.com", "rejected");
+    if(!mailSent){
+      return res.status(503).json({
+        success: false,
+        message: 'Failed to send mail.'
+      });
+    }
 
     res.json({
       success: true,
