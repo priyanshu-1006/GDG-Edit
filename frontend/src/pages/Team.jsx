@@ -154,10 +154,10 @@ const FilterButton = styled.button`
   padding: 10px 20px;
   border-radius: 25px;
   // border: 2px solid ${props => props.theme.primary};
-  background: ${props => props.active 
+  background: ${props => props.$active 
     ? props.theme.primary 
     : (props.theme.name === 'dark' ? '#2b2b2b9c' : '#e7e5e5bf')};
-  color: ${props => props.active ? 'white' : props.theme.colors.text.primary};
+  color: ${props => props.$active ? 'white' : props.theme.colors.text.primary};
   cursor: pointer;
   transition: all 0.3s ease;
 
@@ -364,37 +364,37 @@ export default function Team() {
           </SectionHeader>
           <FilterContainer>
             <FilterButton
-              active={selectedYear === "GDG Lead"}
+              $active={selectedYear === "GDG Lead"}
               onClick={() => setSelectedYear('GDG Lead')}
             >
               Our Leads
             </FilterButton>
             <FilterButton
-              active={selectedYear === '2025'}
+              $active={selectedYear === '2025'}
               onClick={() => setSelectedYear('2025')}
             >
               2025
             </FilterButton>
             <FilterButton
-              active={selectedYear === '2024'}
+              $active={selectedYear === '2024'}
               onClick={() => setSelectedYear('2024')}
             >
               2024
             </FilterButton>
             <FilterButton
-              active={selectedYear === '2023'}
+              $active={selectedYear === '2023'}
               onClick={() => setSelectedYear('2023')}
             >
               2023
             </FilterButton>
             <FilterButton
-              active={selectedYear === '2022'}
+              $active={selectedYear === '2022'}
               onClick={() => setSelectedYear('2022')}
             >
               2022
             </FilterButton>
             <FilterButton
-              active={selectedYear === '2021'}
+              $active={selectedYear === '2021'}
               onClick={() => setSelectedYear('2021')}
             >
               2021
