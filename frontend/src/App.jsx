@@ -6,6 +6,7 @@ import { ThemeProvider as StyledThemeProvider } from 'styled-components'
 import AppContainer from './utils/AppContainer'
 import Spinner from './components/GDG-Spinner'
 import CertificateDisplay from './pages/CertificateDisplay'
+import CertificateVerification from './pages/CertificateVerification';
 import CheckOut from './pages/CheckOut'
 const HomePage =lazy(()=>import( './pages/HomePage'));
 const Events =lazy(()=>import('./pages/Events'));
@@ -27,6 +28,8 @@ const StudyJams = lazy(() => import('./pages/Dashboard/StudyJams'));
 
 // Admin components
 const AdminRoute = lazy(() => import('./pages/Admin/AdminRoute'));
+const TeamManagement = lazy(() => import('./pages/Admin/TeamManagement'));
+const CertificateManagement = lazy(() => import('./pages/Admin/CertificateManagement'));
 const AdminLayout = lazy(() => import('./pages/Admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
@@ -64,6 +67,7 @@ function App() {
              <Route path='/auth' element={<AuthPage />} />
              <Route path="/auth/callback" element={<AuthCallback/>} />
              <Route path="/verification/:serial" element={<CertificateDisplay />} />
+             <Route path="/certificate/verify" element={<CertificateVerification />} />
              <Route path='/rsvp' element={<CheckOut />} />
              
              {/* Dashboard Routes */}
@@ -85,8 +89,8 @@ function App() {
                <Route path="events/:id/edit" element={<EditEvent />} />
                <Route path="registrations" element={<AdminRegistrations />} />
                <Route path="notifications" element={<AdminNotifications />} />
-               <Route path="certificates" element={<div style={{padding: '24px'}}>Certificates - Coming Soon</div>} />
-               <Route path="teams" element={<div style={{padding: '24px'}}>Teams - Coming Soon</div>} />
+               <Route path="certificates" element={<CertificateManagement />} />
+               <Route path="teams" element={<TeamManagement />} />
                <Route path="analytics" element={<div style={{padding: '24px'}}>Analytics - Coming Soon</div>} />
                <Route path="settings" element={<div style={{padding: '24px'}}>Settings - Coming Soon</div>} />
              </Route>

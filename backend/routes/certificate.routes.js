@@ -1,8 +1,30 @@
 import express from 'express';
 import Certificate from '../models/Certificate.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
+import upload from '../middleware/upload.middleware.js';
+import * as XLSX from 'xlsx';
 
 const router = express.Router();
+
+// @route   GET /api/certificates
+// @desc    Get all certificates (Admin only)
+// @access  Private (Admin)
+router.get('/', protect, authorize('admin', 'super_admin'), async (req, res, next) => {
+  try {
+    const certificates = await Certificate.find()
+      .populate('user', 'name email')
+      .populate('event', 'name date')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: certificates.length,
+      certificates, // Note: standardizing response to "certificates"
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // @route   GET /api/certificates/my-certificates
 // @desc    Get user's certificates
@@ -85,6 +107,127 @@ router.post('/', protect, authorize('admin', 'event_manager', 'super_admin'), as
     res.status(201).json({
       success: true,
       certificate,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   POST /api/certificates/bulk-issue
+// @desc    Bulk issue certificates from Excel/CSV
+// @access  Private (Admin only)
+router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_admin'), upload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload an Excel file' });
+    }
+
+    const { eventId, templateUrl, textX, textY, fontSize, color } = req.body;
+
+    if (!eventId || !templateUrl) {
+      return res.status(400).json({ success: false, message: 'Event ID and Template URL are required' });
+    }
+
+    // Parse Excel
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    // detailed: true gets raw values
+    const data = XLSX.utils.sheet_to_json(sheet);
+    
+    if (!data || data.length === 0) {
+      return res.status(400).json({ success: false, message: 'Excel file is empty' });
+    }
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    const positioning = {
+      x: parseInt(textX) || 50, // Default percent or px? Let's assume % for responsiveness or px? 
+      // If frontend canvas uses px, we store px. If assume standard 2000px width?
+      // Let's store whatever user sends.
+      y: parseInt(textY) || 50,
+      fontSize: parseInt(fontSize) || 30,
+      color: color || '#000000'
+    };
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      // Try to find Name and Email
+      // keys might be "Name", "name", "Full Name" etc.
+      const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('name'));
+      const emailKey = Object.keys(row).find(k => k.toLowerCase().includes('email'));
+      
+      const recipientName = nameKey ? row[nameKey] : null;
+      const recipientEmail = emailKey ? row[emailKey] : null;
+
+      if (!recipientName) {
+        results.failed++;
+        results.errors.push(`Row ${i+1}: Name not found`);
+        continue;
+      }
+
+      // Check duplicates (by email if available, else just create)
+      if (recipientEmail) {
+        const existing = await Certificate.findOne({
+          event: eventId,
+          recipientEmail: recipientEmail
+        });
+        if (existing) {
+          results.failed++;
+          results.errors.push(`Row ${i+1}: Certificate already exists for ${recipientEmail}`);
+          continue;
+        }
+      }
+
+      // Create Certificate
+      // Note: user field is optional now.
+      const certificateCode = `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      await Certificate.create({
+        event: eventId,
+        recipientName,
+        recipientEmail,
+        certificateUrl: templateUrl, // Using template
+        certificateCode,
+        isDynamic: true,
+        positioning
+      });
+      results.success++;
+    }
+
+    res.json({
+      success: true,
+      summary: results
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   DELETE /api/certificates/:id
+// @desc    Delete/Revoke certificate
+// @access  Private (Admin only)
+router.delete('/:id', protect, authorize('admin', 'super_admin'), async (req, res, next) => {
+  try {
+    const certificate = await Certificate.findById(req.params.id);
+
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Certificate not found',
+      });
+    }
+
+    await certificate.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Certificate revoked successfully',
     });
   } catch (error) {
     next(error);

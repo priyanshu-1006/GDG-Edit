@@ -269,7 +269,7 @@ const AboutSection = () => {
         </IllustrationContainer>
       </AboutWrapper>
       <IllustrationContainer>
-        <motion.button ref={illustrationRef} style={{position:"absolute", left:"65%",  padding:"1rem", backgroundColor:"#4285F4", color:"#fff", border:"none", borderRadius:"5px", cursor:"pointer"  }} onClick={() => { window.location.href = '/about';}}>Learn more about Us</motion.button>
+        <motion.button ref={illustrationRef} style={{position:"absolute", left:"65%",  padding:"1rem", backgroundColor:"#4285F4", color:"#fff", border:"none", borderRadius:"5px", cursor:"pointer"  }} onClick={() => { window.location.href = 'https://gdg.community.dev/events/details/google-gdg-on-campus-madan-mohan-malaviya-university-of-technology-gorakhpur-india-presents-techsprint-hackathon-info-session/';}}>Learn more about Us</motion.button>
       </IllustrationContainer>
    
     </AboutSectionContainer>

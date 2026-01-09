@@ -32,6 +32,7 @@ import certificateRoutes from './routes/certificate.routes.js';
 import codingProfileRoutes from './routes/codingProfile.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import setupRoutes from './routes/setup.routes.js';
+import coreTeamRoutes from './routes/coreTeam.routes.js';
 
 // Initialize app
 const app = express();
@@ -102,6 +103,7 @@ app.use('/api/coding-profiles', codingProfileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/core-team', coreTeamRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
