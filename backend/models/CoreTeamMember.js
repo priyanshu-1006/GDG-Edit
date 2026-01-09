@@ -11,6 +11,10 @@ const coreTeamMemberSchema = new mongoose.Schema({
     required: [true, 'Role is required'], // e.g., "Web Dev Team", "Lead"
     trim: true,
   },
+  position: {
+    type: String, // e.g., "GDG Lead" - used for specific filtering
+    trim: true,
+  },
   badge: {
     type: String, // e.g., "Web Developer", "Designer"
     trim: true,

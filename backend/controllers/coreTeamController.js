@@ -4,9 +4,9 @@ import CoreTeamMember from '../models/CoreTeamMember.js';
 export const getAllMembers = async (req, res) => {
   try {
     const members = await CoreTeamMember.find({ visible: true }).sort({ order: 1, name: 1 });
-    res.status(200).json(members);
+    res.status(200).json({ success: true, count: members.length, data: members });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -14,9 +14,9 @@ export const getAllMembers = async (req, res) => {
 export const getAllMembersAdmin = async (req, res) => {
   try {
     const members = await CoreTeamMember.find({}).sort({ order: 1 });
-    res.status(200).json(members);
+    res.status(200).json({ success: true, count: members.length, data: members });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -24,9 +24,9 @@ export const getAllMembersAdmin = async (req, res) => {
 export const createMember = async (req, res) => {
   try {
     const member = await CoreTeamMember.create(req.body);
-    res.status(201).json(member);
+    res.status(201).json({ success: true, data: member });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -34,10 +34,10 @@ export const createMember = async (req, res) => {
 export const updateMember = async (req, res) => {
   try {
     const member = await CoreTeamMember.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!member) return res.status(404).json({ message: 'Member not found' });
-    res.status(200).json(member);
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found' });
+    res.status(200).json({ success: true, data: member });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -45,9 +45,9 @@ export const updateMember = async (req, res) => {
 export const deleteMember = async (req, res) => {
   try {
     const member = await CoreTeamMember.findByIdAndDelete(req.params.id);
-    if (!member) return res.status(404).json({ message: 'Member not found' });
-    res.status(200).json({ message: 'Member deleted successfully' });
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found' });
+    res.status(200).json({ success: true, message: 'Member deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
