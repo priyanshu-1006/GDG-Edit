@@ -122,33 +122,26 @@ router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_a
       return res.status(400).json({ success: false, message: 'Please upload an Excel file' });
     }
 
-    const { eventId, templateUrl, textX, textY, fontSize, color } = req.body;
+    const { eventId, customEventName, templateUrl, textX, textY, fontSize, color } = req.body;
 
-    if (!eventId || !templateUrl) {
-      return res.status(400).json({ success: false, message: 'Event ID and Template URL are required' });
+    if ((!eventId && !customEventName) || !templateUrl) {
+      return res.status(400).json({ success: false, message: 'Event (ID or Name) and Template URL are required' });
     }
 
     // Parse Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    // detailed: true gets raw values
     const data = XLSX.utils.sheet_to_json(sheet);
     
     if (!data || data.length === 0) {
       return res.status(400).json({ success: false, message: 'Excel file is empty' });
     }
 
-    const results = {
-      success: 0,
-      failed: 0,
-      errors: []
-    };
+    const results = { success: 0, failed: 0, errors: [] };
 
     const positioning = {
-      x: parseInt(textX) || 50, // Default percent or px? Let's assume % for responsiveness or px? 
-      // If frontend canvas uses px, we store px. If assume standard 2000px width?
-      // Let's store whatever user sends.
+      x: parseInt(textX) || 50,
       y: parseInt(textY) || 50,
       fontSize: parseInt(fontSize) || 30,
       color: color || '#000000'
@@ -156,8 +149,6 @@ router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_a
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      // Try to find Name and Email
-      // keys might be "Name", "name", "Full Name" etc.
       const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('name'));
       const emailKey = Object.keys(row).find(k => k.toLowerCase().includes('email'));
       
@@ -170,12 +161,10 @@ router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_a
         continue;
       }
 
-      // Check duplicates (by email if available, else just create)
+      // Check duplicates
       if (recipientEmail) {
-        const existing = await Certificate.findOne({
-          event: eventId,
-          recipientEmail: recipientEmail
-        });
+        const query = { recipientEmail, ... (eventId ? { event: eventId } : { customEventName }) };
+        const existing = await Certificate.findOne(query);
         if (existing) {
           results.failed++;
           results.errors.push(`Row ${i+1}: Certificate already exists for ${recipientEmail}`);
@@ -183,15 +172,14 @@ router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_a
         }
       }
 
-      // Create Certificate
-      // Note: user field is optional now.
       const certificateCode = `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
       await Certificate.create({
-        event: eventId,
+        event: eventId || undefined,
+        customEventName: customEventName || undefined,
         recipientName,
         recipientEmail,
-        certificateUrl: templateUrl, // Using template
+        certificateUrl: templateUrl,
         certificateCode,
         isDynamic: true,
         positioning
@@ -199,10 +187,7 @@ router.post('/bulk-issue', protect, authorize('admin', 'event_manager', 'super_a
       results.success++;
     }
 
-    res.json({
-      success: true,
-      summary: results
-    });
+    res.json({ success: true, summary: results });
 
   } catch (error) {
     next(error);

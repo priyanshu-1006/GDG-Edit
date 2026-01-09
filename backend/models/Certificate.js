@@ -17,7 +17,11 @@ const certificateSchema = new mongoose.Schema({
   event: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event',
-    required: true,
+    required: false, // Changed to false to allow custom events
+  },
+  customEventName: {
+    type: String,
+    required: false // Used if event is not selected
   },
   certificateUrl: {
     type: String,

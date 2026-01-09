@@ -61,6 +61,28 @@
   --font-size-5xl: 3rem;     /* 48px */
 }
 
+/* Dark Theme Colors */
+.dark {
+  --primary-color: #8AB4F8; /* Google Blue Light */
+  --secondary-color: #81C995;
+  --accent-color: #F28B82;
+  --yellow-color: #FDE293;
+  
+  --background: #111111;
+  --surface: #1e1e1e; 
+  --surface-variant: #2d2d2d;
+  --surface-elevated: #303134;
+  
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-tertiary: #5f6368;
+  
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --shadow-color-strong: rgba(0, 0, 0, 0.7);
+  
+  --border-color: #3c4043;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -77,7 +99,9 @@ body {
   margin: 0;
   font-family: 'Roboto', sans-serif;
   overflow-x: hidden;
-  transition: background-color var(--transition-speed) ease;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+  background-color: var(--background);
+  color: var(--text-primary);
 }
 
 h1, h2, h3, h4, h5, h6 {

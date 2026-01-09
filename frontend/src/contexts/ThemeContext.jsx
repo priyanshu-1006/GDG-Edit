@@ -19,6 +19,13 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     // Save theme preference to local storage whenever it changes
     localStorage.setItem('isDarkTheme', JSON.stringify(isDarkTheme));
+    
+    // Apply dark mode class to html element for Tailwind
+    if (isDarkTheme) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [isDarkTheme]);
 
   useEffect(() => {

@@ -1,152 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
-import { X, Upload, Check, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Check, FileSpreadsheet, Image as ImageIcon, MapPin } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../../../config/api';
 import axios from 'axios';
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
-`;
-
-const ModalContainer = styled.div`
-  background-color: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 800px; /* Wider for preview */
-  padding: 2rem;
-  position: relative;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-height: 90vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #6b7280;
-  &:hover { color: #111827; }
-`;
-
-const Title = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 1.5rem;
-`;
-
-const Row = styled.div`
-  display: flex;
-  gap: 2rem;
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const Col = styled.div`
-  flex: 1;
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 1.25rem;
-`;
-
-const Label = styled.label`
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.5rem;
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-`;
-
-const FileInput = styled.input`
-  display: block;
-  width: 100%;
-  font-size: 0.875rem;
-  color: #6b7280;
-  file-selector-button {
-    margin-right: 1rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    border: none;
-    background: #e5e7eb;
-    cursor: pointer;
-  }
-`;
-
-const PreviewContainer = styled.div`
-  margin-top: 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-  cursor: crosshair;
-  background: #f9fafb;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const PreviewImage = styled.img`
-  max-width: 100%;
-  display: block;
-`;
-
-const PreviewText = styled.div`
-  position: absolute;
-  transform: translate(-50%, -50%); /* Center on click */
-  white-space: nowrap;
-  pointer-events: none;
-  border: 1px dashed #3b82f6;
-  padding: 2px 5px;
-  background: rgba(255, 255, 255, 0.7);
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #4285f4;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 1rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-  &:disabled { background-color: #9ca3af; cursor: not-allowed; }
-`;
-
 const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState([]);
+  
+  // Form State
+  const [isCustomEvent, setIsCustomEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState('');
+  const [customEventName, setCustomEventName] = useState('');
   
   // Files
   const [templateFile, setTemplateFile] = useState(null);
@@ -200,7 +65,6 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
         const formData = new FormData();
         formData.append("file", templateFile);
         
-        // Note: Reusing Uploadbox endpoint pattern
         const token = localStorage.getItem("token");
         const res = await axios.post(
             `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/upload/certificates`, 
@@ -219,8 +83,12 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedEvent || !excelFile || (!templateFile && !templateUrl)) {
-        toast.error("Please provide Event, Template, and Excel file");
+    if ((!isCustomEvent && !selectedEvent) || (isCustomEvent && !customEventName)) {
+        toast.error("Please provide Event details");
+        return;
+    }
+    if (!excelFile || (!templateFile && !templateUrl)) {
+        toast.error("Please provide valid files");
         return;
     }
 
@@ -234,7 +102,11 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
 
         const formData = new FormData();
         formData.append('file', excelFile);
-        formData.append('eventId', selectedEvent);
+        if (isCustomEvent) {
+          formData.append('customEventName', customEventName);
+        } else {
+          formData.append('eventId', selectedEvent);
+        }
         formData.append('templateUrl', finalTemplateUrl);
         formData.append('textX', pos.x);
         formData.append('textY', pos.y);
@@ -249,14 +121,14 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
             toast.success(`Processed: ${res.data.summary.success} success, ${res.data.summary.failed} failed`);
             if (res.data.summary.errors.length > 0) {
                 console.warn(res.data.summary.errors);
-                toast.warning("Check console for some errors in rows");
+                toast.warning("Check console for errors in some rows");
             }
             onSuccess();
             onClose();
         }
     } catch (err) {
         console.error(err);
-        toast.error("Bulk issue failed");
+        toast.error("Bulk issue failed. Check inputs.");
     } finally {
         setLoading(false);
     }
@@ -265,71 +137,173 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContainer onClick={e => e.stopPropagation()}>
-        <CloseButton onClick={onClose}><X /></CloseButton>
-        <Title>Bulk Issue Certificates</Title>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 md:p-8 flex flex-col max-h-[90vh]">
+        <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
+        >
+            <X size={24} />
+        </button>
         
-        <form onSubmit={handleSubmit}>
-            <Row>
-                <Col>
-                    <FormGroup>
-                        <Label>Select Event</Label>
-                        <Select value={selectedEvent} onChange={e => setSelectedEvent(e.target.value)} required>
-                            <option value="">Choose...</option>
-                            {events.map(ev => <option key={ev._id} value={ev._id}>{ev.name}</option>)}
-                        </Select>
-                    </FormGroup>
+        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Bulk Issue Certificates</h2>
+        
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left Column: Form Inputs */}
+                <div className="space-y-6">
+                    <div>
+                        <div className="flex items-center gap-4 mb-3">
+                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Issue For:</label>
+                            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCustomEvent(false)}
+                                    className={`px-3 py-1 text-sm rounded-md transition-all ${!isCustomEvent ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'}`}
+                                >
+                                    Existing Event
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCustomEvent(true)}
+                                    className={`px-3 py-1 text-sm rounded-md transition-all ${isCustomEvent ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'}`}
+                                >
+                                    Custom Event
+                                </button>
+                            </div>
+                        </div>
 
-                    <FormGroup>
-                        <Label><ImageIcon size={16} /> Template Image</Label>
-                        <FileInput type="file" accept="image/*" onChange={handleTemplateChange} required={!templateUrl} />
-                    </FormGroup>
+                        {!isCustomEvent ? (
+                            <select 
+                                value={selectedEvent} 
+                                onChange={e => setSelectedEvent(e.target.value)} 
+                                className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                required={!isCustomEvent}
+                            >
+                                <option value="">Select an Event...</option>
+                                {events.map(ev => <option key={ev._id} value={ev._id}>{ev.name}</option>)}
+                            </select>
+                        ) : (
+                            <input 
+                                type="text" 
+                                placeholder="Enter Custom Event Name (e.g. Hackathon 2025)"
+                                value={customEventName}
+                                onChange={e => setCustomEventName(e.target.value)}
+                                className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                required={isCustomEvent}
+                            />
+                        )}
+                    </div>
 
-                    <FormGroup>
-                        <Label><FileSpreadsheet size={16} /> Excel File (Name, Email)</Label>
-                        <FileInput type="file" accept=".xlsx, .xls, .csv" onChange={e => setExcelFile(e.target.files[0])} required />
-                    </FormGroup>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <ImageIcon size={16} className="inline mr-2" /> Template Image (Certificate Layout)
+                        </label>
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleTemplateChange}
+                            required={!templateUrl}
+                            className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300 transition-colors"
+                        />
+                    </div>
 
-                    <FormGroup>
-                        <Label>Font Size (px)</Label>
-                        <input type="number" value={fontSize} onChange={e => setFontSize(e.target.value)} style={{width:'100%', padding:'0.5rem'}} />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Text Color</Label>
-                        <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{width:'100%', height: '40px'}} />
-                    </FormGroup>
-                </Col>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <FileSpreadsheet size={16} className="inline mr-2" /> Excel File (Columns: 'Name', 'Email')
+                        </label>
+                        <input 
+                            type="file" 
+                            accept=".xlsx, .xls, .csv" 
+                            onChange={e => setExcelFile(e.target.files[0])}
+                            required
+                            className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 dark:file:bg-green-900 dark:file:text-green-300 transition-colors"
+                        />
+                    </div>
 
-                <Col>
-                    <Label>Preview & Position (Click to place name)</Label>
-                    <PreviewContainer>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Font Size (px)</label>
+                            <input 
+                                type="number" 
+                                value={fontSize} 
+                                onChange={e => setFontSize(e.target.value)} 
+                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Text Color</label>
+                            <input 
+                                type="color" 
+                                value={color} 
+                                onChange={e => setColor(e.target.value)} 
+                                className="w-full h-10 p-1 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Preview */}
+                <div>
+                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                       Preview and Position (Click image to place text)
+                   </label>
+                   <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center min-h-[300px]">
                         {localPreviewUrl ? (
-                            <div style={{position:'relative'}}>
-                                <PreviewImage ref={imageRef} src={localPreviewUrl} onClick={handleImageClick} />
-                                <PreviewText style={{ 
-                                    left: `${pos.x}%`, 
-                                    top: `${pos.y}%`,
-                                    fontSize: `${fontSize}px`,
-                                    color: color,
-                                    fontFamily: 'Arial, sans-serif'
-                                }}>
-                                    Your Name Here
-                                </PreviewText>
+                            <div className="relative inline-block w-full">
+                                <img 
+                                    ref={imageRef} 
+                                    src={localPreviewUrl} 
+                                    alt="Preview" 
+                                    onClick={handleImageClick}
+                                    className="w-full h-auto cursor-crosshair display-block"
+                                />
+                                <div 
+                                    className="absolute transform -translate-x-1/2 -translate-y-1/2 border border-dashed border-blue-500 bg-white/70 px-2 py-1 pointer-events-none whitespace-nowrap"
+                                    style={{ 
+                                        left: `${pos.x}%`, 
+                                        top: `${pos.y}%`,
+                                        fontSize: `${fontSize}px`,
+                                        color: color,
+                                        fontFamily: 'Arial, sans-serif'
+                                    }}
+                                >
+                                    Student Name
+                                </div>
                             </div>
                         ) : (
-                            <div style={{padding:'2rem', color:'#9ca3af'}}>Upload a template to preview</div>
+                            <div className="text-gray-400 dark:text-gray-500 flex flex-col items-center">
+                                <ImageIcon size={48} className="mb-2 opacity-50" />
+                                <p>Upload a template to see preview</p>
+                            </div>
                         )}
-                    </PreviewContainer>
-                </Col>
-            </Row>
+                   </div>
+                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                       {pos.x.toFixed(1)}% X, {pos.y.toFixed(1)}% Y (Relative to image size)
+                   </p>
+                </div>
+            </div>
 
-            <Button type="submit" disabled={loading}>
-                {loading ? 'Processing...' : 'Generate Certificates'}
-            </Button>
+            <button 
+                type="submit" 
+                disabled={loading}
+                className={`mt-8 w-full py-3 px-6 rounded-lg font-bold text-white transition-all flex items-center justify-center gap-2
+                    ${loading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-lg hover:shadow-xl'
+                    }`}
+            >
+                {loading ? (
+                    <>Processing...</>
+                ) : (
+                    <>
+                        <Check size={20} /> Generate & Issue Certificates
+                    </>
+                )}
+            </button>
         </form>
-      </ModalContainer>
-    </ModalOverlay>
+      </div>
+    </div>
   );
 };
 

@@ -17,6 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -75,6 +76,9 @@ const AdminLayout = () => {
           </TopBarLeft>
 
           <TopBarRight>
+            <div className="mr-2">
+               <ThemeToggle />
+            </div>
             <UserMenu>
               <UserButton onClick={() => setUserMenuOpen(!userMenuOpen)}>
                 <UserInfo>
@@ -107,10 +111,11 @@ const AdminLayout = () => {
   );
 };
 
-const Container = styled.div`
+const Container = styled.div.attrs({
+  className: 'bg-gray-100 dark:bg-gray-900 transition-colors duration-200 text-gray-900 dark:text-gray-100'
+})`
   display: flex;
   min-height: 100vh;
-  background: #f5f5f5;
 `;
 
 const Sidebar = styled.aside`
@@ -196,8 +201,9 @@ const MainContent = styled.main`
   }
 `;
 
-const TopBar = styled.header`
-  background: white;
+const TopBar = styled.header.attrs({
+  className: 'bg-white dark:bg-gray-800 transition-colors duration-200'
+})`
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
@@ -214,23 +220,21 @@ const TopBarLeft = styled.div`
   gap: 16px;
 `;
 
-const MenuButton = styled.button`
+const MenuButton = styled.button.attrs({
+  className: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+})`
   background: none;
   border: none;
   cursor: pointer;
-  color: #333;
   padding: 8px;
   border-radius: 8px;
-
-  &:hover {
-    background: #f0f0f0;
-  }
 `;
 
-const PageTitle = styled.h2`
+const PageTitle = styled.h2.attrs({
+  className: 'text-gray-800 dark:text-white'
+})`
   font-size: 20px;
   font-weight: 600;
-  color: #333;
 `;
 
 const TopBarRight = styled.div`
@@ -243,7 +247,9 @@ const UserMenu = styled.div`
   position: relative;
 `;
 
-const UserButton = styled.button`
+const UserButton = styled.button.attrs({
+  className: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+})`
   display: flex;
   align-items: center;
   gap: 12px;
@@ -252,55 +258,51 @@ const UserButton = styled.button`
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 8px;
-
-  &:hover {
-    background: #f0f0f0;
-  }
 `;
 
 const UserInfo = styled.div`
   text-align: right;
 `;
 
-const UserName = styled.div`
+const UserName = styled.div.attrs({
+  className: 'text-gray-800 dark:text-white'
+})`
   font-weight: 600;
-  color: #333;
   font-size: 14px;
 `;
 
-const UserRole = styled.div`
+const UserRole = styled.div.attrs({
+  className: 'text-gray-600 dark:text-gray-400'
+})`
   font-size: 12px;
-  color: #666;
   text-transform: capitalize;
 `;
 
-const DropdownMenu = styled.div`
+const DropdownMenu = styled.div.attrs({
+  className: 'bg-white dark:bg-gray-800 dark:border dark:border-gray-700'
+})`
   position: absolute;
   top: 100%;
   right: 0;
   margin-top: 8px;
-  background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   min-width: 180px;
   overflow: hidden;
 `;
 
-const DropdownItem = styled.button`
+const DropdownItem = styled.button.attrs({
+  className: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+})`
   width: 100%;
   padding: 12px 16px;
   background: none;
   border: none;
   text-align: left;
   cursor: pointer;
-  color: #333;
   display: flex;
   align-items: center;
   gap: 8px;
-
-  &:hover {
-    background: #f0f0f0;
-  }
 `;
 
 const Content = styled.div`
