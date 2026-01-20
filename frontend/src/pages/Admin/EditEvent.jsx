@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import axios from 'axios';
-import { API_BASE_URL, getAuthHeaders } from '../../utils/apiUtils';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import axios from "axios";
+import { API_BASE_URL, getAuthHeaders } from "../../utils/apiUtils";
+import { ArrowLeft, Save, X } from "lucide-react";
 
 const EditEvent = () => {
   const { id } = useParams();
@@ -11,57 +11,62 @@ const EditEvent = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'Workshop',
-    description: '',
-    location: '',
-    date: '',
-    time: '',
+    name: "",
+    type: "Workshop",
+    description: "",
+    location: "",
+    date: "",
+    time: "",
     capacity: 100,
-    tags: '',
-    eventCategory: 'general',
+    tags: "",
+    eventCategory: "general",
     published: false,
     registrationOpen: true,
-    image: ''
+    image: "",
   });
 
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
-
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/events/${id}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admin/events/${id}`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
       const event = response.data.event;
       setFormData({
-        name: event.name || '',
-        type: event.type || 'Workshop',
-        description: event.description || '',
-        location: event.location || '',
-        date: event.date ? new Date(event.date).toISOString().split('T')[0] : '',
-        time: event.time || '',
+        name: event.name || "",
+        type: event.type || "Workshop",
+        description: event.description || "",
+        location: event.location || "",
+        date: event.date
+          ? new Date(event.date).toISOString().split("T")[0]
+          : "",
+        time: event.time || "",
         capacity: event.capacity || 100,
-        tags: event.tags ? event.tags.join(', ') : '',
-        eventCategory: event.eventCategory || 'general',
+        tags: event.tags ? event.tags.join(", ") : "",
+        eventCategory: event.eventCategory || "general",
         published: event.published || false,
         registrationOpen: event.registrationOpen || true,
-        image: event.image || ''
+        image: event.image || "",
       });
     } catch (error) {
-      console.error('Failed to fetch event:', error);
-      alert('Failed to load event');
+      console.error("Failed to fetch event:", error);
+      alert("Failed to load event");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchEvent();
+  }, [fetchEvent]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -72,19 +77,25 @@ const EditEvent = () => {
     try {
       const submitData = {
         ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        capacity: parseInt(formData.capacity)
+        tags: formData.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag),
+        capacity: parseInt(formData.capacity),
       };
 
       await axios.put(`${API_BASE_URL}/api/admin/events/${id}`, submitData, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
 
-      alert('Event updated successfully!');
+      alert("Event updated successfully!");
       navigate(`/admin/events/${id}`);
     } catch (error) {
-      console.error('Failed to update event:', error);
-      alert('Failed to update event: ' + (error.response?.data?.message || error.message));
+      console.error("Failed to update event:", error);
+      alert(
+        "Failed to update event: " +
+          (error.response?.data?.message || error.message),
+      );
     } finally {
       setSaving(false);
     }
@@ -107,7 +118,7 @@ const EditEvent = () => {
       <Form onSubmit={handleSubmit}>
         <Section>
           <SectionTitle>Basic Information</SectionTitle>
-          
+
           <FormGroup>
             <Label>Event Name *</Label>
             <Input
@@ -123,7 +134,12 @@ const EditEvent = () => {
           <FormRow>
             <FormGroup>
               <Label>Event Type *</Label>
-              <Select name="type" value={formData.type} onChange={handleChange} required>
+              <Select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+              >
                 <option value="Workshop">Workshop</option>
                 <option value="Study Jam">Study Jam</option>
                 <option value="Hackathon">Hackathon</option>
@@ -136,7 +152,11 @@ const EditEvent = () => {
 
             <FormGroup>
               <Label>Category</Label>
-              <Select name="eventCategory" value={formData.eventCategory} onChange={handleChange}>
+              <Select
+                name="eventCategory"
+                value={formData.eventCategory}
+                onChange={handleChange}
+              >
                 <option value="general">General</option>
                 <option value="study-jam">Study Jam</option>
                 <option value="immerse">Immerse</option>
@@ -176,7 +196,7 @@ const EditEvent = () => {
 
         <Section>
           <SectionTitle>Event Details</SectionTitle>
-          
+
           <FormRow>
             <FormGroup>
               <Label>Date *</Label>
@@ -239,7 +259,7 @@ const EditEvent = () => {
 
         <Section>
           <SectionTitle>Settings</SectionTitle>
-          
+
           <CheckboxGroup>
             <Checkbox
               type="checkbox"
@@ -268,13 +288,16 @@ const EditEvent = () => {
         </Section>
 
         <ButtonGroup>
-          <CancelButton type="button" onClick={() => navigate(`/admin/events/${id}`)}>
+          <CancelButton
+            type="button"
+            onClick={() => navigate(`/admin/events/${id}`)}
+          >
             <X size={18} />
             Cancel
           </CancelButton>
           <SaveButton type="submit" disabled={saving}>
             <Save size={18} />
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? "Saving..." : "Save Changes"}
           </SaveButton>
         </ButtonGroup>
       </Form>
@@ -294,7 +317,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   height: 400px;
   font-size: 18px;
-  color: #666;
+  color: #64748b;
 `;
 
 const Header = styled.div`
@@ -316,17 +339,32 @@ const BackButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #f5f5f5;
+    background: #f8fafc;
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background: #334155;
+      color: white;
+    }
   }
 `;
 
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: #333;
+  color: #0f172a;
 
   @media (max-width: 768px) {
     font-size: 24px;
+  }
+
+  .dark & {
+    color: white;
   }
 `;
 
@@ -346,6 +384,10 @@ const Section = styled.div`
   padding-bottom: 32px;
   border-bottom: 1px solid #f0f0f0;
 
+  .dark & {
+    border-color: #334155;
+  }
+
   &:last-of-type {
     border-bottom: none;
   }
@@ -354,8 +396,12 @@ const Section = styled.div`
 const SectionTitle = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: #1e293b;
   margin-bottom: 20px;
+
+  .dark & {
+    color: white;
+  }
 `;
 
 const FormGroup = styled.div`
@@ -376,8 +422,12 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #334155;
   margin-bottom: 8px;
+
+  .dark & {
+    color: #cbd5e1;
+  }
 `;
 
 const Input = styled.input`
@@ -477,7 +527,11 @@ const CheckboxLabel = styled.label`
 
   span {
     font-size: 13px;
-    color: #666;
+    color: #64748b;
+  }
+
+  .dark & span {
+    color: #94a3b8;
   }
 `;
 

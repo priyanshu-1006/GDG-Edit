@@ -1,5 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap");
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
 
 :root {
   --transition-speed: 0.3s;
@@ -8,25 +8,25 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-  
+
   /* Light Theme Colors */
-  --primary-color: #4285F4;
-  --secondary-color: #0F9D58;
-  --accent-color: #DB4437;
-  --yellow-color: #F4B400;
-  
+  --primary-color: #4285f4;
+  --secondary-color: #0f9d58;
+  --accent-color: #db4437;
+  --yellow-color: #f4b400;
+
   --background: #ffffff;
   --surface: #f8f9fa;
   --surface-variant: #e8eaed;
   --surface-elevated: #ffffff;
-  
+
   --text-primary: #202124;
   --text-secondary: #5f6368;
   --text-tertiary: #80868b;
-  
+
   --shadow-color: rgba(0, 0, 0, 0.1);
   --shadow-color-strong: rgba(0, 0, 0, 0.15);
-  
+
   --border-color: #dadce0;
 
   /* Animation Duration */
@@ -50,40 +50,70 @@
   --radius-full: 9999px;
 
   /* Font Sizes */
-  --font-size-xs: 0.75rem;   /* 12px */
-  --font-size-sm: 0.875rem;  /* 14px */
-  --font-size-md: 1rem;      /* 16px */
-  --font-size-lg: 1.125rem;  /* 18px */
-  --font-size-xl: 1.25rem;   /* 20px */
-  --font-size-2xl: 1.5rem;   /* 24px */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
   --font-size-3xl: 1.875rem; /* 30px */
-  --font-size-4xl: 2.25rem;  /* 36px */
-  --font-size-5xl: 3rem;     /* 48px */
+  --font-size-4xl: 2.25rem; /* 36px */
+  --font-size-5xl: 3rem; /* 48px */
+
+  /* Admin Sidebar Light */
+  --admin-sidebar-bg: white;
+  --admin-sidebar-text: #334155;
+  --admin-sidebar-border: #e2e8f0;
+  --admin-sidebar-hover: #f1f5f9;
+  --admin-nav-text: #64748b;
+  --admin-nav-hover-text: #1e293b;
+  --admin-nav-active-bg: #e0f2fe;
+  --admin-nav-active-text: #0284c7;
+
+  /* Admin Main Content Light */
+  --admin-main-bg: #f8fafc;
+  --admin-content-bg: #f1f5f9;
 }
 
 /* Dark Theme Colors */
 .dark {
-  --primary-color: #8AB4F8; /* Google Blue Light */
-  --secondary-color: #81C995;
-  --accent-color: #F28B82;
-  --yellow-color: #FDE293;
-  
+  --primary-color: #8ab4f8; /* Google Blue Light */
+  --secondary-color: #81c995;
+  --accent-color: #f28b82;
+  --yellow-color: #fde293;
+
   --background: #111111;
-  --surface: #1e1e1e; 
+  --surface: #1e1e1e;
   --surface-variant: #2d2d2d;
   --surface-elevated: #303134;
-  
+
   --text-primary: #e8eaed;
   --text-secondary: #9aa0a6;
   --text-tertiary: #5f6368;
-  
+
   --shadow-color: rgba(0, 0, 0, 0.5);
   --shadow-color-strong: rgba(0, 0, 0, 0.7);
-  
+
   --border-color: #3c4043;
+
+  /* Admin Sidebar Dark */
+  --admin-sidebar-bg: #0f172a;
+  --admin-sidebar-text: white;
+  --admin-sidebar-border: rgba(255, 255, 255, 0.05);
+  --admin-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --admin-nav-text: #94a3b8;
+  --admin-nav-hover-text: #f1f5f9;
+  --admin-nav-active-bg: linear-gradient(135deg, #4285f4, #3b82f6);
+  --admin-nav-active-text: white;
+
+  /* Admin Main Content Dark */
+  --admin-main-bg: #111827;
+  --admin-content-bg: #1f2937;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -97,15 +127,22 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   overflow-x: hidden;
-  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+  transition:
+    background-color var(--transition-speed) ease,
+    color var(--transition-speed) ease;
   background-color: var(--background);
   color: var(--text-primary);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', sans-serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Inter", sans-serif;
   line-height: 1.2;
   margin-bottom: 0.5rem;
 }
@@ -115,12 +152,24 @@ p {
   margin-bottom: 1rem;
 }
 
-h1 { font-size: 2.5rem; }
-h2 { font-size: 2rem; }
-h3 { font-size: 1.75rem; }
-h4 { font-size: 1.5rem; }
-h5 { font-size: 1.25rem; }
-h6 { font-size: 1rem; }
+h1 {
+  font-size: 2.5rem;
+}
+h2 {
+  font-size: 2rem;
+}
+h3 {
+  font-size: 1.75rem;
+}
+h4 {
+  font-size: 1.5rem;
+}
+h5 {
+  font-size: 1.25rem;
+}
+h6 {
+  font-size: 1rem;
+}
 
 a {
   text-decoration: none;
@@ -134,7 +183,7 @@ img {
 
 button {
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   border: none;
   outline: none;
   transition: all var(--transition-speed) ease;
@@ -153,7 +202,7 @@ button {
   html {
     font-size: 14px;
   }
-  
+
   .container {
     padding: 0 0.875rem;
   }
@@ -170,7 +219,7 @@ button {
 }
 
 .section-title::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   bottom: -0.5rem;
@@ -214,34 +263,30 @@ button {
   border-width: 0;
 }
 
-
-
 /*another */
 /* CSS Reset and Base Styles */
 
 /* Dark Theme */
 [data-theme="dark"] {
-  --primary-color: #8AB4F8;
-  --secondary-color: #81C995;
-  --accent-color: #F28B82;
-  --yellow-color: #FDD663;
-  
+  --primary-color: #8ab4f8;
+  --secondary-color: #81c995;
+  --accent-color: #f28b82;
+  --yellow-color: #fdd663;
+
   --background: #202124;
   --surface: #292a2d;
   --surface-variant: #3c4043;
   --surface-elevated: #2d2e30;
-  
+
   --text-primary: #e8eaed;
   --text-secondary: #9aa0a6;
   --text-tertiary: #80868b;
-  
+
   --shadow-color: rgba(0, 0, 0, 0.3);
   --shadow-color-strong: rgba(0, 0, 0, 0.4);
-  
+
   --border-color: #5f6368;
 }
-
-
 
 .btn {
   display: inline-flex;
@@ -349,7 +394,6 @@ button {
   animation: pulse 2s infinite;
 }
 
-
 /*events*/
 
 /* Cube animations */
@@ -381,11 +425,13 @@ button {
 }
 
 @keyframes loading-dot-animation {
-  0%, 80%, 100% { 
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
-  40% { 
-    transform: scale(1.0);
+  40% {
+    transform: scale(1);
   }
 }
 

@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { Users, Calendar, ClipboardCheck, Award, TrendingUp, TrendingDown } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL, getAuthHeaders } from '../../utils/apiUtils';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import {
+  Users,
+  Calendar,
+  ClipboardCheck,
+  Award,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import axios from "axios";
+import { API_BASE_URL, getAuthHeaders } from "../../utils/apiUtils";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -14,12 +21,15 @@ const AdminDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/dashboard/stats`, {
-        headers: getAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admin/dashboard/stats`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
       setStats(response.data);
     } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
+      console.error("Failed to fetch dashboard stats:", error);
     } finally {
       setLoading(false);
     }
@@ -31,33 +41,33 @@ const AdminDashboard = () => {
 
   const statsCards = [
     {
-      title: 'Total Users',
+      title: "Total Users",
       value: stats?.stats?.totalUsers?.count || 0,
       icon: Users,
-      color: '#4285f4',
-      growth: stats?.stats?.totalUsers?.change || 0
+      color: "#4285f4",
+      growth: stats?.stats?.totalUsers?.change || 0,
     },
     {
-      title: 'Total Events',
+      title: "Total Events",
       value: stats?.stats?.activeEvents?.total || 0,
       icon: Calendar,
-      color: '#ea4335',
-      growth: 0
+      color: "#ea4335",
+      growth: 0,
     },
     {
-      title: 'Pending Registrations',
+      title: "Pending Registrations",
       value: stats?.stats?.pendingRegistrations?.count || 0,
       icon: ClipboardCheck,
-      color: '#fbbc04',
-      growth: 0
+      color: "#fbbc04",
+      growth: 0,
     },
     {
-      title: 'Certificates Issued',
+      title: "Certificates Issued",
       value: stats?.stats?.certificatesIssued?.count || 0,
       icon: Award,
-      color: '#34a853',
-      growth: 0
-    }
+      color: "#34a853",
+      growth: 0,
+    },
   ];
 
   return (
@@ -78,7 +88,11 @@ const AdminDashboard = () => {
               <CardValue>{card.value.toLocaleString()}</CardValue>
               {card.growth !== 0 && (
                 <Growth $positive={card.growth > 0}>
-                  {card.growth > 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                  {card.growth > 0 ? (
+                    <TrendingUp size={16} />
+                  ) : (
+                    <TrendingDown size={16} />
+                  )}
                   {Math.abs(card.growth)}%
                 </Growth>
               )}
@@ -97,24 +111,36 @@ const AdminDashboard = () => {
             </InfoItem>
             <InfoItem>
               <InfoLabel>New Users This Week</InfoLabel>
-              <InfoValue>{stats?.stats?.newUsersThisWeek?.count || 0}</InfoValue>
+              <InfoValue>
+                {stats?.stats?.newUsersThisWeek?.count || 0}
+              </InfoValue>
             </InfoItem>
             <InfoItem>
               <InfoLabel>Certificates This Month</InfoLabel>
-              <InfoValue>{stats?.stats?.certificatesIssued?.count || 0}</InfoValue>
+              <InfoValue>
+                {stats?.stats?.certificatesIssued?.count || 0}
+              </InfoValue>
             </InfoItem>
           </InfoList>
         </InfoCard>
 
         <InfoCard>
           <InfoTitle>Quick Actions</InfoTitle>
-          <ActionButton onClick={() => window.location.href = '/admin/events/create'}>
+          <ActionButton
+            onClick={() => (window.location.href = "/admin/events/create")}
+          >
             Create New Event
           </ActionButton>
-          <ActionButton onClick={() => window.location.href = '/admin/notifications'}>
+          <ActionButton
+            onClick={() => (window.location.href = "/admin/notifications")}
+          >
             Send Notification
           </ActionButton>
-          <ActionButton onClick={() => window.location.href = '/admin/registrations?status=pending'}>
+          <ActionButton
+            onClick={() =>
+              (window.location.href = "/admin/registrations?status=pending")
+            }
+          >
             Review Registrations
           </ActionButton>
         </InfoCard>
@@ -124,24 +150,31 @@ const AdminDashboard = () => {
 };
 
 const Container = styled.div`
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 100%;
 `;
 
 const Header = styled.div`
-  margin-bottom: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 `;
 
-const Title = styled.h1`
-  font-size: 32px;
-  font-weight: bold;
-  color: #333;
+const Title = styled.h1.attrs({
+  className: "text-gray-900 dark:text-white",
+})`
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
   margin-bottom: 8px;
 `;
 
-const Subtitle = styled.p`
+const Subtitle = styled.p.attrs({
+  className: "text-gray-500 dark:text-gray-400",
+})`
   font-size: 16px;
-  color: #666;
+  max-width: 600px;
+  line-height: 1.5;
 `;
 
 const LoadingContainer = styled.div`
@@ -149,130 +182,254 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   height: 400px;
-  font-size: 18px;
-  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+  color: #64748b;
 `;
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
 `;
 
-const StatsCard = styled.div`
-  background: white;
-  border-radius: 12px;
+const StatsCard = styled.div.attrs({
+  className: "bg-white dark:bg-gray-800",
+})`
+  border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
   display: flex;
-  gap: 16px;
-  border-left: 4px solid ${props => props.$color};
-  transition: transform 0.2s;
+  gap: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: ${(props) => props.$color};
+    opacity: 0.8;
+  }
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark & {
+    border-color: rgba(255, 255, 255, 0.05);
   }
 `;
 
 const CardIcon = styled.div`
   flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: ${(props) => props.color}15; /* 15% opacity */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    stroke-width: 2.5px;
+  }
 `;
 
 const CardContent = styled.div`
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 `;
 
-const CardTitle = styled.div`
+const CardTitle = styled.div.attrs({
+  className: "text-gray-500 dark:text-gray-400",
+})`
   font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 `;
 
-const CardValue = styled.div`
+const CardValue = styled.div.attrs({
+  className: "text-gray-900 dark:text-white",
+})`
   font-size: 32px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
 `;
 
 const Growth = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
-  color: ${props => props.$positive ? '#34a853' : '#ea4335'};
+  font-size: 13px;
+  font-weight: 600;
+  color: ${(props) => (props.$positive ? "#10b981" : "#ef4444")};
   margin-top: 8px;
+  background: ${(props) => (props.$positive ? "#10b98115" : "#ef444415")};
+  padding: 2px 8px;
+  border-radius: 99px;
+  align-self: flex-start;
 `;
 
 const InfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
-const InfoCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+const InfoCard = styled.div.attrs({
+  className: "bg-white dark:bg-gray-800",
+})`
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  .dark & {
+    border-color: rgba(255, 255, 255, 0.05);
+  }
 `;
 
-const InfoTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+const InfoTitle = styled.h3.attrs({
+  className: "text-gray-900 dark:text-white",
+})`
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &::before {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 24px;
+    background: linear-gradient(to bottom, #4285f4, #3b82f6);
+    border-radius: 3px;
+  }
 `;
 
 const InfoList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 `;
 
 const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background 0.2s;
 
   &:last-child {
     border-bottom: none;
   }
+
+  .dark & {
+    border-color: rgba(255, 255, 255, 0.05);
+  }
 `;
 
-const InfoLabel = styled.span`
-  font-size: 14px;
-  color: #666;
+const InfoLabel = styled.span.attrs({
+  className: "text-gray-600 dark:text-gray-300",
+})`
+  font-size: 15px;
+  font-weight: 500;
 `;
 
-const InfoValue = styled.span`
+const InfoValue = styled.span.attrs({
+  className: "text-gray-900 dark:text-white",
+})`
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  font-feature-settings: "tnum";
 `;
 
 const ActionButton = styled.button`
   width: 100%;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #4285f4, #ea4335);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 16px;
+  background: white;
+  color: #333;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  margin-bottom: 12px;
-  transition: transform 0.2s;
+  margin-bottom: 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
   &:hover {
     transform: translateY(-2px);
+    border-color: #4285f4;
+    color: #4285f4;
+    box-shadow: 0 8px 16px rgba(66, 133, 244, 0.1);
+  }
+
+  &::after {
+    content: "→";
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.2s;
+  }
+
+    transform: translateX(0);
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      border-color: #4285f4;
+      color: #4285f4;
+    }
   }
 
   &:last-child {
     margin-bottom: 0;
+  }
+
+  /* Primary Action Variant */
+  &:first-of-type {
+    background: linear-gradient(135deg, #4285f4, #3b82f6);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.25);
+
+    &:hover {
+      box-shadow: 0 8px 20px rgba(66, 133, 244, 0.35);
+      border-color: transparent;
+      color: white;
+    }
   }
 `;
 

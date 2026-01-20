@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import axios from 'axios';
-import { API_BASE_URL, getAuthHeaders } from '../../utils/apiUtils';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Users, 
-  Clock, 
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import axios from "axios";
+import { API_BASE_URL, getAuthHeaders } from "../../utils/apiUtils";
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Users,
+  Clock,
   Tag,
   Edit,
   Trash2,
   CheckCircle,
   XCircle,
-  Download
-} from 'lucide-react';
+  Download,
+} from "lucide-react";
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -24,48 +24,54 @@ const EventDetails = () => {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchEventDetails();
-    fetchRegistrations();
-  }, [id]);
-
-  const fetchEventDetails = async () => {
+  const fetchEventDetails = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/events/${id}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admin/events/${id}`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
       setEvent(response.data.event);
     } catch (error) {
-      console.error('Failed to fetch event:', error);
-      alert('Failed to load event details');
+      console.error("Failed to fetch event:", error);
+      alert("Failed to load event details");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/registrations?eventId=${id}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admin/registrations?eventId=${id}`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
       setRegistrations(response.data.registrations || []);
     } catch (error) {
-      console.error('Failed to fetch registrations:', error);
+      console.error("Failed to fetch registrations:", error);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchEventDetails();
+    fetchRegistrations();
+  }, [fetchEventDetails, fetchRegistrations]);
 
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete "${event.name}"?`)) return;
 
     try {
       await axios.delete(`${API_BASE_URL}/api/admin/events/${id}`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      alert('Event deleted successfully');
-      navigate('/admin/events');
+      alert("Event deleted successfully");
+      navigate("/admin/events");
     } catch (error) {
-      console.error('Failed to delete event:', error);
-      alert('Failed to delete event');
+      console.error("Failed to delete event:", error);
+      alert("Failed to delete event");
     }
   };
 
@@ -74,13 +80,15 @@ const EventDetails = () => {
       await axios.patch(
         `${API_BASE_URL}/api/admin/events/${id}/publish`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
       setEvent({ ...event, published: !event.published });
-      alert(`Event ${!event.published ? 'published' : 'unpublished'} successfully`);
+      alert(
+        `Event ${!event.published ? "published" : "unpublished"} successfully`,
+      );
     } catch (error) {
-      console.error('Failed to toggle publish:', error);
-      alert('Failed to update event status');
+      console.error("Failed to toggle publish:", error);
+      alert("Failed to update event status");
     }
   };
 
@@ -95,7 +103,7 @@ const EventDetails = () => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={() => navigate('/admin/events')}>
+        <BackButton onClick={() => navigate("/admin/events")}>
           <ArrowLeft size={20} />
           Back to Events
         </BackButton>
@@ -105,8 +113,12 @@ const EventDetails = () => {
             Edit
           </ActionButton>
           <ActionButton $primary onClick={handleTogglePublish}>
-            {event.published ? <XCircle size={18} /> : <CheckCircle size={18} />}
-            {event.published ? 'Unpublish' : 'Publish'}
+            {event.published ? (
+              <XCircle size={18} />
+            ) : (
+              <CheckCircle size={18} />
+            )}
+            {event.published ? "Unpublish" : "Publish"}
           </ActionButton>
           <ActionButton $danger onClick={handleDelete}>
             <Trash2 size={18} />
@@ -123,18 +135,18 @@ const EventDetails = () => {
                 <img src={event.image} alt={event.name} />
               </EventImage>
             )}
-            
+
             <EventContent>
               <TitleSection>
                 <Title>{event.name}</Title>
                 <StatusBadge $published={event.published}>
-                  {event.published ? 'Published' : 'Draft'}
+                  {event.published ? "Published" : "Draft"}
                 </StatusBadge>
               </TitleSection>
 
               <TypeSection>
                 <TypeBadge>{event.type}</TypeBadge>
-                {event.eventCategory && event.eventCategory !== 'general' && (
+                {event.eventCategory && event.eventCategory !== "general" && (
                   <CategoryBadge>{event.eventCategory}</CategoryBadge>
                 )}
               </TypeSection>
@@ -145,11 +157,13 @@ const EventDetails = () => {
                 <InfoItem>
                   <Calendar size={20} />
                   <InfoLabel>Date</InfoLabel>
-                  <InfoValue>{new Date(event.date).toLocaleDateString('en-IN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}</InfoValue>
+                  <InfoValue>
+                    {new Date(event.date).toLocaleDateString("en-IN", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </InfoValue>
                 </InfoItem>
 
                 <InfoItem>
@@ -167,7 +181,9 @@ const EventDetails = () => {
                 <InfoItem>
                   <Users size={20} />
                   <InfoLabel>Capacity</InfoLabel>
-                  <InfoValue>{event.registeredCount || 0} / {event.capacity}</InfoValue>
+                  <InfoValue>
+                    {event.registeredCount || 0} / {event.capacity}
+                  </InfoValue>
                 </InfoItem>
               </InfoGrid>
 
@@ -196,36 +212,38 @@ const EventDetails = () => {
             <StatItem>
               <StatLabel>Approved</StatLabel>
               <StatValue $color="#34a853">
-                {registrations.filter(r => r.status === 'approved').length}
+                {registrations.filter((r) => r.status === "approved").length}
               </StatValue>
             </StatItem>
             <StatItem>
               <StatLabel>Pending</StatLabel>
               <StatValue $color="#fbbc04">
-                {registrations.filter(r => r.status === 'pending').length}
+                {registrations.filter((r) => r.status === "pending").length}
               </StatValue>
             </StatItem>
             <StatItem>
               <StatLabel>Rejected</StatLabel>
               <StatValue $color="#ea4335">
-                {registrations.filter(r => r.status === 'rejected').length}
+                {registrations.filter((r) => r.status === "rejected").length}
               </StatValue>
             </StatItem>
             <StatItem>
               <StatLabel>Attended</StatLabel>
               <StatValue $color="#4285f4">
-                {registrations.filter(r => r.attended).length}
+                {registrations.filter((r) => r.attended).length}
               </StatValue>
             </StatItem>
           </StatsCard>
 
           <QuickActionsCard>
             <StatsTitle>Quick Actions</StatsTitle>
-            <QuickActionButton onClick={() => navigate('/admin/registrations?eventId=' + id)}>
+            <QuickActionButton
+              onClick={() => navigate("/admin/registrations?eventId=" + id)}
+            >
               <Users size={18} />
               View Registrations
             </QuickActionButton>
-            <QuickActionButton onClick={() => alert('Export coming soon!')}>
+            <QuickActionButton onClick={() => alert("Export coming soon!")}>
               <Download size={18} />
               Export Registrations
             </QuickActionButton>
@@ -248,7 +266,8 @@ const LoadingContainer = styled.div`
   align-items: center;
   height: 400px;
   font-size: 18px;
-  color: #666;
+  color: #64748b;
+  font-weight: 500;
 `;
 
 const ErrorContainer = styled.div`
@@ -287,7 +306,19 @@ const BackButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #f5f5f5;
+    background: #f8fafc;
+    color: #0f172a;
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background: #334155;
+      color: white;
+    }
   }
 `;
 
@@ -306,9 +337,13 @@ const ActionButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${props => props.$danger ? '#fee' : props.$primary ? '#e3f2fd' : 'white'};
-  border: 1px solid ${props => props.$danger ? '#ea4335' : props.$primary ? '#4285f4' : '#ddd'};
-  color: ${props => props.$danger ? '#ea4335' : props.$primary ? '#4285f4' : '#333'};
+  background: ${(props) =>
+    props.$danger ? "#fee" : props.$primary ? "#e3f2fd" : "white"};
+  border: 1px solid
+    ${(props) =>
+      props.$danger ? "#ea4335" : props.$primary ? "#4285f4" : "#ddd"};
+  color: ${(props) =>
+    props.$danger ? "#ea4335" : props.$primary ? "#4285f4" : "#333"};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -316,8 +351,9 @@ const ActionButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: ${props => props.$danger ? '#ea4335' : props.$primary ? '#4285f4' : '#f5f5f5'};
-    color: ${props => props.$danger || props.$primary ? 'white' : '#333'};
+    background: ${(props) =>
+      props.$danger ? "#ea4335" : props.$primary ? "#4285f4" : "#f5f5f5"};
+    color: ${(props) => (props.$danger || props.$primary ? "white" : "#333")};
   }
 
   @media (max-width: 768px) {
@@ -348,13 +384,24 @@ const EventCard = styled.div`
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  .dark & {
+    background: #1e293b;
+    box-shadow: none;
+    border: 1px solid #334155;
+  }
 `;
 
 const EventImage = styled.div`
   width: 100%;
   height: 400px;
-  background: #f0f0f0;
+  height: 400px;
+  background: #f1f5f9;
+
+  .dark & {
+    background: #0f172a;
+  }
 
   img {
     width: 100%;
@@ -390,8 +437,12 @@ const TitleSection = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: #333;
+  color: #0f172a;
   flex: 1;
+
+  .dark & {
+    color: white;
+  }
 
   @media (max-width: 768px) {
     font-size: 24px;
@@ -403,7 +454,7 @@ const StatusBadge = styled.div`
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
-  background: ${props => props.$published ? '#34a853' : '#666'};
+  background: ${(props) => (props.$published ? "#34a853" : "#666")};
   color: white;
 `;
 
@@ -435,7 +486,11 @@ const CategoryBadge = styled.div`
 const Description = styled.p`
   font-size: 16px;
   line-height: 1.6;
-  color: #666;
+  color: #475569;
+
+  .dark & {
+    color: #cbd5e1;
+  }
   margin-bottom: 32px;
 `;
 
@@ -464,7 +519,7 @@ const InfoItem = styled.div`
 const InfoLabel = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #999;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -472,7 +527,11 @@ const InfoLabel = styled.div`
 const InfoValue = styled.div`
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: #0f172a;
+
+  .dark & {
+    color: white;
+  }
 `;
 
 const TagsSection = styled.div`
@@ -500,10 +559,15 @@ const TagsList = styled.div`
 
 const TagItem = styled.div`
   padding: 4px 12px;
-  background: #f0f0f0;
+  background: #f1f5f9;
   border-radius: 12px;
   font-size: 13px;
-  color: #666;
+  color: #475569;
+
+  .dark & {
+    background: #0f172a;
+    color: #94a3b8;
+  }
 `;
 
 const StatsCard = styled.div`
@@ -515,9 +579,13 @@ const StatsCard = styled.div`
 
 const StatsTitle = styled.h3`
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: #0f172a;
   margin-bottom: 20px;
+
+  .dark & {
+    color: white;
+  }
 `;
 
 const StatItem = styled.div`
@@ -525,7 +593,11 @@ const StatItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e2e8f0;
+
+  .dark & {
+    border-color: #334155;
+  }
 
   &:last-child {
     border-bottom: none;
@@ -534,13 +606,21 @@ const StatItem = styled.div`
 
 const StatLabel = styled.div`
   font-size: 14px;
-  color: #666;
+  color: #64748b;
+
+  .dark & {
+    color: #94a3b8;
+  }
 `;
 
 const StatValue = styled.div`
   font-size: 18px;
-  font-weight: 600;
-  color: ${props => props.$color || '#333'};
+  font-weight: 700;
+  color: ${(props) => props.$color || "#0f172a"};
+
+  .dark & {
+    color: ${(props) => props.$color || "white"};
+  }
 `;
 
 const QuickActionsCard = styled.div`
@@ -571,9 +651,21 @@ const QuickActionButton = styled.button`
   }
 
   &:hover {
-    background: #f5f5f5;
+    background: #f8fafc;
     border-color: #4285f4;
     color: #4285f4;
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background: #334155;
+      color: #93c5fd;
+      border-color: #60a5fa;
+    }
   }
 `;
 
