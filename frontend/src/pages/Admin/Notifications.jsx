@@ -38,7 +38,7 @@ const Notifications = () => {
 
   useEffect(() => {
     fetchNotifications();
-    fetchStats();
+    // fetchStats(); // Integrated into fetchNotifications
     fetchEvents();
   }, []);
 
@@ -47,12 +47,27 @@ const Notifications = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/admin/notifications",
+        `${import.meta.env.VITE_API_URL}/api/email/logs`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      setNotifications(response.data.notifications);
+      // Map API response to UI model if needed
+      setNotifications(response.data.logs);
+
+      // Also fetch stats
+      const statsResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/email/stats`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      setStats({
+        totalSent: statsResponse.data.stats.find(s => s._id === 'sent')?.count || 0,
+        failed: statsResponse.data.stats.find(s => s._id === 'failed')?.count || 0,
+        // ... map other stats
+      });
+
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     } finally {
@@ -60,26 +75,14 @@ const Notifications = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        "http://localhost:5000/api/admin/notifications/stats",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setStats(response.data);
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
-    }
-  };
+  // Removed separate fetchStats call as it is now called inside fetchNotifications logic to sync state
+  // const fetchStats = ... 
 
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/admin/events",
+        `${import.meta.env.VITE_API_URL}/api/admin/events`,
         {
           headers: { Authorization: `Bearer ${token}` },
           params: { limit: 100 },
@@ -94,18 +97,41 @@ const Notifications = () => {
   const handleCreate = async () => {
     try {
       const token = localStorage.getItem("token");
+
+      // Map form data to API structure
+      const apiData = {
+        title: formData.title,
+        subject: formData.title, // Use title as subject for now
+        message: formData.message,
+        filters: {}
+      };
+
+      if (formData.targetType === 'all') {
+        apiData.filters.listType = 'all';
+      } else if (formData.targetType === 'event') {
+        apiData.filters.eventId = formData.targetEvent;
+      } else if (formData.targetType === 'specific' && formData.specificEmails) {
+        // Parse emails from string
+        const emails = formData.specificEmails.split(',').map(e => e.trim()).filter(e => e);
+        if (emails.length === 0) {
+          alert("Please enter at least one valid email address");
+          return;
+        }
+        // Recipients array for API: { email, name (optional) }
+        apiData.recipients = emails.map(email => ({ email, name: 'User' }));
+      }
+
       await axios.post(
-        "http://localhost:5000/api/admin/notifications",
-        formData,
+        `${import.meta.env.VITE_API_URL}/api/email/bulk`,
+        apiData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setShowCreateModal(false);
       resetForm();
-      fetchNotifications();
-      fetchStats();
+      fetchNotifications(); // Refresh logs
     } catch (error) {
       console.error("Failed to create notification:", error);
-      alert("Failed to create notification");
+      alert("Failed to send notification: " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -401,8 +427,26 @@ const Notifications = () => {
                   <option value="all">All Users</option>
                   <option value="role">By Role</option>
                   <option value="event">By Event</option>
+                  <option value="specific">Specific Users</option>
                 </Select>
               </FormGroup>
+
+              {formData.targetType === "specific" && (
+                <FormGroup>
+                  <Label>Email Addresses (comma separated)</Label>
+                  <TextArea
+                    placeholder="john@example.com, jane@example.com"
+                    value={formData.specificEmails || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, specificEmails: e.target.value })
+                    }
+                    rows={3}
+                  />
+                  <small style={{ color: "#666", marginTop: "4px", display: "block" }}>
+                    Enter emails separated by commas
+                  </small>
+                </FormGroup>
+              )}
 
               {formData.targetType === "role" && (
                 <FormGroup>

@@ -3,6 +3,7 @@ import passport from 'passport';
 import User from '../models/User.js';
 import { sendTokenResponse, generateToken } from '../utils/auth.utils.js';
 import { protect } from '../middleware/auth.middleware.js';
+import emailService from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -29,6 +30,10 @@ router.post('/register', async (req, res, next) => {
       password,
       oauthProvider: 'email',
     });
+
+    // Send welcome email
+    emailService.sendWelcomeEmail(user)
+      .catch(err => console.error('Failed to send welcome email:', err));
 
     // Send token response
     sendTokenResponse(user, 201, res);
@@ -88,8 +93,8 @@ router.post('/login', async (req, res, next) => {
 // @access  Public
 router.get('/google', (req, res, next) => {
   console.log('🔵 Initiating Google OAuth flow');
-  passport.authenticate('google', { 
-    scope: ['profile', 'email'] 
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
   })(req, res, next);
 });
 
@@ -97,15 +102,15 @@ router.get('/google', (req, res, next) => {
 // @desc    Google OAuth callback
 // @access  Public
 router.get('/google/callback',
-  passport.authenticate('google', { 
+  passport.authenticate('google', {
     failureRedirect: `${process.env.FRONTEND_URL}/auth?error=google_auth_failed`,
-    session: false 
+    session: false
   }),
   (req, res) => {
     console.log('🟢 Google OAuth successful for user:', req.user.email);
     // Successful authentication
     const token = generateToken(req.user._id);
-    
+
     // Redirect to frontend with token
     const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${token}`;
     console.log('🔄 Redirecting to:', redirectUrl);
@@ -116,22 +121,22 @@ router.get('/google/callback',
 // @route   GET /api/auth/github
 // @desc    GitHub OAuth login
 // @access  Public
-router.get('/github', passport.authenticate('github', { 
-  scope: ['user:email'] 
+router.get('/github', passport.authenticate('github', {
+  scope: ['user:email']
 }));
 
 // @route   GET /api/auth/github/callback
 // @desc    GitHub OAuth callback
 // @access  Public
 router.get('/github/callback',
-  passport.authenticate('github', { 
+  passport.authenticate('github', {
     failureRedirect: `${process.env.FRONTEND_URL}/auth?error=github_auth_failed`,
-    session: false 
+    session: false
   }),
   (req, res) => {
     // Successful authentication
     const token = require('../utils/auth.utils.js').generateToken(req.user._id);
-    
+
     // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
   }
@@ -143,7 +148,7 @@ router.get('/github/callback',
 router.get('/profile', protect, async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     // Return user data directly (not nested in a user object)
     res.json(user.toPublicJSON());
   } catch (error) {

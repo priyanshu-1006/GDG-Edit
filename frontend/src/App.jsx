@@ -39,7 +39,8 @@ const AdminEvents = lazy(() => import("./pages/Admin/Events"));
 const EventDetails = lazy(() => import("./pages/Admin/EventDetails"));
 const EditEvent = lazy(() => import("./pages/Admin/EditEvent"));
 const AdminRegistrations = lazy(() => import("./pages/Admin/Registrations"));
-const AdminNotifications = lazy(() => import("./pages/Admin/Notifications"));
+const EmailCenter = lazy(() => import("./pages/Admin/EmailCenter"));
+const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin")); // Import
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const FollowCursor = lazy(() => import("./components/FollowCursor"));
@@ -89,6 +90,9 @@ function App() {
               <Route path="profile" element={<Profile />} />
             </Route>
 
+            {/* Admin Login - Separate Portal */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+
             {/* Admin Routes */}
             <Route
               path="/admin"
@@ -104,7 +108,7 @@ function App() {
               <Route path="events/:id" element={<EventDetails />} />
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="registrations" element={<AdminRegistrations />} />
-              <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
               <Route path="teams" element={<TeamManagement />} />
               <Route

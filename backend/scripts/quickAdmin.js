@@ -14,7 +14,7 @@ import User from '../models/User.js';
 
 const createQuickAdmin = async () => {
   try {
-    const [,, name, email, password, role = 'admin'] = process.argv;
+    const [, , name, email, password, role = 'admin'] = process.argv;
 
     if (!name || !email || !password) {
       console.log('❌ Missing required arguments!\n');
@@ -33,33 +33,31 @@ const createQuickAdmin = async () => {
     }
 
     console.log('🚀 Creating admin user...\n');
-    
+
     // Connect to database
     await connectDB();
     console.log('✅ Connected to database\n');
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
-    
+
     if (existingUser) {
       console.log('⚠️  User already exists. Updating role...\n');
       existingUser.role = role;
       existingUser.emailVerified = true;
       await existingUser.save();
-      
+
       console.log('✅ User updated successfully!');
       console.log('📧 Email:', existingUser.email);
       console.log('👤 Name:', existingUser.name);
       console.log('🔑 Role:', existingUser.role);
     } else {
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
       // Create admin user
+      // Password will be hashed by the User model
       const adminUser = await User.create({
         name,
         email,
-        password: hashedPassword,
+        password: password,
         role,
         oauthProvider: 'email',
         emailVerified: true

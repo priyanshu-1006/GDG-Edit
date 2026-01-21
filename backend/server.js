@@ -36,6 +36,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import setupRoutes from "./routes/setup.routes.js";
 import coreTeamRoutes from "./routes/coreTeam.routes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import emailRoutes from "./routes/email.routes.js";
 
 // Initialize app
 const app = express();
@@ -122,6 +123,7 @@ app.use("/api/setup", setupRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/core-team", coreTeamRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/email", emailRoutes); // Use
 
 // Health check
 app.get("/health", (req, res) => {

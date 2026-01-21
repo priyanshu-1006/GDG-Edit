@@ -4,6 +4,8 @@ import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
+import emailService from '../services/emailService.js';
+
 const router = express.Router();
 
 // @route   POST /api/registrations
@@ -71,10 +73,11 @@ router.post('/', protect, async (req, res, next) => {
     // Update event registered count
     event.registeredCount += 1;
     await event.save();
-
-    // Populate user and event
-    await registration.populate('user', 'name email');
     await registration.populate('event', 'name date time location');
+
+    // Send confirmation email (async, don't wait)
+    emailService.sendRegistrationConfirmation(req.user, registration.event, registration._id.toString())
+      .catch(err => console.error('Failed to send registration email:', err));
 
     res.status(201).json({
       success: true,
@@ -181,7 +184,7 @@ router.put('/:id/attendance', protect, authorize('admin', 'event_manager', 'supe
   try {
     const registration = await Registration.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         attended: true,
         attendanceTime: Date.now(),
       },

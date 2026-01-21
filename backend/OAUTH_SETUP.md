@@ -40,7 +40,7 @@ Click **SAVE**
 
 ## 🔐 GitHub OAuth Configuration
 
-Your GitHub OAuth is also configured! You need to verify the settings:
+Your GitHub OAuth is also configured! You need to verify the setting:
 
 ### Step 1: Go to GitHub Settings
 1. Open: https://github.com/settings/developers

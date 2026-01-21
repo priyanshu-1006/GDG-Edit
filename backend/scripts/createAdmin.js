@@ -15,7 +15,7 @@ const question = (query) => new Promise((resolve) => rl.question(query, resolve)
 const createAdminUser = async () => {
   try {
     console.log('🚀 GDG Admin User Creation Script\n');
-    
+
     // Connect to database
     await connectDB();
     console.log('✅ Connected to database\n');
@@ -24,7 +24,7 @@ const createAdminUser = async () => {
     const name = await question('Enter admin name: ');
     const email = await question('Enter admin email: ');
     const password = await question('Enter admin password: ');
-    
+
     console.log('\nSelect role:');
     console.log('1. event_manager (Can manage events and registrations)');
     console.log('2. admin (Full admin access except user role changes)');
@@ -41,11 +41,11 @@ const createAdminUser = async () => {
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
-    
+
     if (existingUser) {
       console.log('\n⚠️  User with this email already exists!');
       const update = await question('Do you want to update their role to ' + role + '? (yes/no): ');
-      
+
       if (update.toLowerCase() === 'yes' || update.toLowerCase() === 'y') {
         existingUser.role = role;
         await existingUser.save();
@@ -58,12 +58,12 @@ const createAdminUser = async () => {
       }
     } else {
       // Create new admin user
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
+      // Password will be hashed by the User model pre-save hook
+
       const adminUser = await User.create({
         name,
         email,
-        password: hashedPassword,
+        password: password, // Send plain password
         role,
         oauthProvider: 'email',
         emailVerified: true // Auto-verify admin users

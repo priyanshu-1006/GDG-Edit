@@ -8,7 +8,7 @@ This script seeds your MongoDB database with all the GDG MMMUT events, making th
 ## 🚀 Quick Start
 
 ### Option 1: Add New Events (Safe - Recommended)
-This keeps existing events and only adds new ones:
+This keeps existing events and only adds new one:
 
 ```powershell
 cd backend
@@ -16,7 +16,7 @@ npm run seed-events
 ```
 
 ### Option 2: Clear & Re-seed (Destructive)
-⚠️ **WARNING**: This deletes ALL existing events first!
+⚠️ **WARNING**: This delete ALL existing events first!
 
 ```powershell
 cd backend
