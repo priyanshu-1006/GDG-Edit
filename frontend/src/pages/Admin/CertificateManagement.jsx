@@ -200,10 +200,7 @@ export default function CertificateManagement() {
                     color="green"
                     onClick={() =>
                       window.open(
-                        cert.isDynamic
-                          ? `/verification/${cert.certificateCode}`
-                          : cert.certificateUrl ||
-                              `/verification/${cert.certificateCode}`,
+                        `/verification/${cert.certificateCode}`,
                         "_blank",
                       )
                     }

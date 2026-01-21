@@ -87,29 +87,68 @@ router.post(
   authorize("admin", "event_manager", "super_admin"),
   async (req, res, next) => {
     try {
-      const { userId, eventId, certificateUrl } = req.body;
+      const {
+        userId,
+        eventId,
+        certificateUrl,
+        recipientName,
+        recipientEmail,
+        certificateCode,
+        issuedAt,
+      } = req.body;
 
-      // Check if certificate already issued
-      const existing = await Certificate.findOne({
-        user: userId,
-        event: eventId,
-      });
+      // Check if certificate already issued (if userId is provided)
+      if (userId) {
+        const existing = await Certificate.findOne({
+          user: userId,
+          event: eventId,
+        });
 
-      if (existing) {
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: "Certificate already issued for this user and event",
+          });
+        }
+      }
+
+      // If no userId, ensure recipientName is provided
+      if (!userId && !recipientName) {
         return res.status(400).json({
           success: false,
-          message: "Certificate already issued for this user and event",
+          message: "Recipient Name is required for manual issuance",
         });
       }
 
-      // Generate unique certificate code
-      const certificateCode = `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      // Generate or use provided certificate code
+      const finalCertificateCode =
+        certificateCode ||
+        `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      // Check unique code if custom provided
+      if (certificateCode) {
+        const codeExists = await Certificate.findOne({
+          certificateCode: finalCertificateCode,
+        });
+        if (codeExists) {
+          return res.status(400).json({
+            success: false,
+            message: "Certificate Code already exists",
+          });
+        }
+      }
 
       const certificate = await Certificate.create({
-        user: userId,
+        user: userId || undefined,
         event: eventId,
-        certificateUrl,
-        certificateCode,
+        recipientName,
+        recipientEmail,
+        certificateUrl: certificateUrl.startsWith("/")
+          ? certificateUrl
+          : `/${certificateUrl}`,
+        certificateCode: finalCertificateCode,
+        issuedAt: issuedAt ? new Date(issuedAt) : undefined,
+        isDynamic: false, // Ensure manual certificates are treated as static
       });
 
       await certificate.populate("user event");
@@ -141,13 +180,13 @@ router.post(
       }
 
       // Construct URL
-      const protocol = req.protocol;
-      const host = req.get("host"); // e.g. localhost:5000
-      const url = `${protocol}://${host}/uploads/certificates/${req.file.filename}`;
+      // Return Relative URL
+      const url = `/uploads/certificates/${req.file.filename}`;
 
       res.json({
         success: true,
         url,
+        filename: req.file.filename,
       });
     } catch (error) {
       next(error);

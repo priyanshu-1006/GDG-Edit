@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import PropTypes from "prop-types";
-import { X, Check } from "lucide-react";
+import { X, Check, Upload } from "lucide-react";
 import { toast } from "react-toastify";
-import { apiClient as api } from "../../../utils/apiUtils";
+import { apiClient as api, API_BASE_URL } from "../../../utils/apiUtils";
+import axios from "axios";
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -176,27 +177,22 @@ const Button = styled.button`
   }
 `;
 
-const Hint = styled.p`
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 0.25rem;
-
-  .dark & {
-    color: #94a3b8;
-  }
-`;
-
 const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
-  const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
 
   const [formData, setFormData] = useState({
-    userId: "",
+    recipientName: "",
+    recipientEmail: "",
+    certificateCode: "",
     eventId: "",
+    issueDate: new Date().toISOString().split("T")[0],
     certificateUrl: "",
   });
+
+  const [file, setFile] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -209,17 +205,11 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
     try {
       // Parallel fetch using axios directly or api client
       // Assuming api.get returns response.data
-      const [usersResponse, eventsResponse] = await Promise.all([
-        api.get("/api/users?limit=100"), // Get first 100 users for now
-        api.get("/api/events?limit=100&upcoming=false"), // Get past events mostly
-      ]);
-
-      // Handle different API response structures if needed
-      setUsers(usersResponse.data.users || []);
-      setEvents(eventsResponse.data.events || []);
+      const res = await api.get("/api/events?limit=100&upcoming=false"); // Get past events mostly
+      setEvents(res.data.events || []);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast.error("Failed to load users or events");
+      toast.error("Failed to load events");
     } finally {
       setFetchingData(false);
     }
@@ -233,19 +223,82 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
     }));
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!file) return null;
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}/api/certificates/upload-template`, // Reusing template upload endpoint which handles images
+        uploadData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      return res.data.secure_url || res.data.url;
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error("Failed to upload certificate file");
+      throw err;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.userId || !formData.eventId || !formData.certificateUrl) {
+    if (
+      !formData.recipientName ||
+      !formData.recipientEmail ||
+      !formData.certificateCode ||
+      !formData.eventId
+    ) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (!formData.certificateUrl && !file) {
+      toast.error("Please provide a Certificate URL or upload a file");
       return;
     }
 
     setLoading(true);
     try {
-      await api.post("/certificates", formData);
+      let finalUrl = formData.certificateUrl;
+
+      if (file) {
+        setUploading(true);
+        finalUrl = await uploadFile();
+        setUploading(false);
+      }
+
+      const payload = {
+        ...formData,
+        issuedAt: formData.issueDate,
+        certificateUrl: finalUrl,
+      };
+
+      await api.post("/api/certificates", payload);
       toast.success("Certificate issued successfully");
-      setFormData({ userId: "", eventId: "", certificateUrl: "" }); // Reset form
+      setFormData({
+        recipientName: "",
+        recipientEmail: "",
+        certificateCode: "",
+        eventId: "",
+        issueDate: new Date().toISOString().split("T")[0],
+        certificateUrl: "",
+      });
+      setFile(null);
       onSuccess(); // Refresh parent list
       onClose(); // Close modal
     } catch (error) {
@@ -255,6 +308,7 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
       );
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -292,40 +346,104 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
             </FormGroup>
 
             <FormGroup>
-              <Label>Recipient (User)</Label>
-              <Select
-                name="userId"
-                value={formData.userId}
+              <Label>Recipient Name</Label>
+              <Input
+                type="text"
+                name="recipientName"
+                value={formData.recipientName}
                 onChange={handleChange}
                 required
-              >
-                <option value="">Select a User</option>
-                {users.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </Select>
-              <Hint>
-                Only showing first 100 users. Use search in future versions.
-              </Hint>
+              />
             </FormGroup>
 
             <FormGroup>
-              <Label>Certificate URL</Label>
+              <Label>Recipient Email</Label>
+              <Input
+                type="email"
+                name="recipientEmail"
+                value={formData.recipientEmail}
+                onChange={handleChange}
+                required
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Certificate ID / Code</Label>
+              <Input
+                type="text"
+                name="certificateCode"
+                value={formData.certificateCode}
+                onChange={handleChange}
+                required
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Issue Date</Label>
+              <Input
+                type="date"
+                name="issueDate"
+                value={formData.issueDate}
+                onChange={handleChange}
+                required
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Certificate File or URL</Label>
+
+              <div style={{ marginBottom: "1rem" }}>
+                <label
+                  htmlFor="cert-file"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.75rem",
+                    border: "1px dashed #cbd5e1",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    background: file ? "#f0fdf4" : "transparent",
+                    color: file ? "#15803d" : "inherit",
+                  }}
+                >
+                  <Upload size={18} />
+                  {file ? file.name : "Upload Image/PDF"}
+                </label>
+                <input
+                  id="cert-file"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
+              <div
+                style={{
+                  textAlign: "center",
+                  margin: "0.5rem 0",
+                  fontSize: "0.75rem",
+                  color: "#64748b",
+                }}
+              >
+                OR
+              </div>
+
               <Input
                 type="url"
                 name="certificateUrl"
                 value={formData.certificateUrl}
                 onChange={handleChange}
                 placeholder="https://example.com/certificate.pdf"
-                required
+                disabled={!!file}
               />
-              <Hint>Link to the hosted certificate file (PDF/Image)</Hint>
             </FormGroup>
 
-            <Button type="submit" disabled={loading}>
-              {loading ? (
+            <Button type="submit" disabled={loading || uploading}>
+              {uploading ? (
+                "Uploading File..."
+              ) : loading ? (
                 "Issuing..."
               ) : (
                 <>

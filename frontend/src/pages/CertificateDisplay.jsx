@@ -1,8 +1,10 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
+
 import Header from "../components/Header";
 import { Download } from "lucide-react";
+import { API_BASE_URL } from "../utils/apiUtils";
 
 const Container = styled.div`
   max-width: 800px;
@@ -55,7 +57,7 @@ const CertificateDisplay = () => {
     const fetchCertificate = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/certificates/verify/${serial}`,
+          `${API_BASE_URL}/api/certificates/verify/${serial}`,
         );
         const result = await res.json();
 
@@ -75,9 +77,12 @@ const CertificateDisplay = () => {
     if (data && data.isDynamic && data.certificateUrl && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
+
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.src = data.certificateUrl;
+      img.src = data.certificateUrl.startsWith("/")
+        ? API_BASE_URL + data.certificateUrl
+        : data.certificateUrl;
 
       img.onload = () => {
         // Set canvas resolution to image resolution
@@ -269,6 +274,12 @@ const CertificateDisplay = () => {
   const recipient = data.recipientName || data.user?.name || "N/A";
   const eventName = data.event?.name || "GDG Event";
 
+  // Construct absolute URL for display/download
+  const finalImageUrl =
+    data.certificateUrl && data.certificateUrl.startsWith("/")
+      ? `${API_BASE_URL}${data.certificateUrl}`
+      : data.certificateUrl;
+
   const handleDownload = async () => {
     if (data.isDynamic && canvasRef.current) {
       // 1. Dynamic Certificate (Canvas)
@@ -287,7 +298,7 @@ const CertificateDisplay = () => {
     } else if (data.certificateUrl) {
       // 2. Static Certificate (Image URL)
       try {
-        const response = await fetch(data.certificateUrl);
+        const response = await fetch(finalImageUrl);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -300,7 +311,7 @@ const CertificateDisplay = () => {
       } catch (err) {
         console.error("Download failed", err);
         // Fallback to simple new tab open if CORS fails
-        window.open(data.certificateUrl, "_blank");
+        window.open(finalImageUrl, "_blank");
       }
     }
   };
@@ -329,7 +340,14 @@ const CertificateDisplay = () => {
         {data.isDynamic ? (
           <Canvas ref={canvasRef} />
         ) : (
-          <CertificateImage src={data.certificateUrl} alt="Certificate" />
+          <CertificateImage
+            src={finalImageUrl}
+            alt="Certificate"
+            onError={(e) => {
+              console.error("Image failed to load:", finalImageUrl);
+              // Don't hide it, let the browser show broken icon so we know
+            }}
+          />
         )}
 
         <div style={{ marginTop: "20px" }}>
