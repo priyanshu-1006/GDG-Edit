@@ -210,8 +210,8 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
       // Parallel fetch using axios directly or api client
       // Assuming api.get returns response.data
       const [usersResponse, eventsResponse] = await Promise.all([
-        api.get("/users?limit=100"), // Get first 100 users for now
-        api.get("/events?limit=100&upcoming=false"), // Get past events mostly
+        api.get("/api/users?limit=100"), // Get first 100 users for now
+        api.get("/api/events?limit=100&upcoming=false"), // Get past events mostly
       ]);
 
       // Handle different API response structures if needed

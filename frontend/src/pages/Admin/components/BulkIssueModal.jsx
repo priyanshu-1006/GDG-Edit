@@ -31,6 +31,9 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
   const [isCustomEvent, setIsCustomEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [customEventName, setCustomEventName] = useState("");
+  const [issueDate, setIssueDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
 
   const [templateFile, setTemplateFile] = useState(null);
   const [templateUrl, setTemplateUrl] = useState("");
@@ -210,6 +213,7 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
         formData.append("eventId", selectedEvent);
       }
       formData.append("templateUrl", finalTemplateUrl);
+      formData.append("issueDate", issueDate);
 
       if (layoutConfig) {
         formData.append("layoutConfig", JSON.stringify(layoutConfig));
@@ -363,6 +367,18 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
                     className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-lg outline-none focus:border-blue-500 transition-colors"
                   />
                 )}
+
+                <div className="mt-6">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Date of Issue
+                  </label>
+                  <input
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-lg outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
               </div>
             )}
 

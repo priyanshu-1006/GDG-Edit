@@ -180,6 +180,7 @@ router.post(
         fontSize,
         color,
         layoutConfig,
+        issueDate,
       } = req.body;
 
       if ((!eventId && !customEventName) || !templateUrl) {
@@ -330,6 +331,7 @@ router.post(
             isDynamic: true,
             positioning,
             extraData,
+            issuedAt: issueDate ? new Date(issueDate) : Date.now(),
           });
           results.success++;
         } catch (rowError) {
