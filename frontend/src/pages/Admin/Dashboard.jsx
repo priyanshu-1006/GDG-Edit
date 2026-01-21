@@ -39,31 +39,51 @@ const AdminDashboard = () => {
     return <LoadingContainer>Loading dashboard...</LoadingContainer>;
   }
 
+  if (!stats) {
+    return (
+      <Container>
+        <LoadingContainer>
+          <div style={{ textAlign: "center" }}>
+            <p>Failed to load dashboard data.</p>
+            <ActionButton
+              onClick={fetchDashboardStats}
+              style={{ marginTop: 20, justifyContent: "center" }}
+            >
+              Retry
+            </ActionButton>
+          </div>
+        </LoadingContainer>
+      </Container>
+    );
+  }
+
+  const statsObj = stats?.stats || {};
+
   const statsCards = [
     {
       title: "Total Users",
-      value: stats?.stats?.totalUsers?.count || 0,
+      value: statsObj.totalUsers?.count || 0,
       icon: Users,
       color: "#4285f4",
-      growth: stats?.stats?.totalUsers?.change || 0,
+      growth: statsObj.totalUsers?.change || 0,
     },
     {
       title: "Total Events",
-      value: stats?.stats?.activeEvents?.total || 0,
+      value: statsObj.activeEvents?.total || 0,
       icon: Calendar,
       color: "#ea4335",
       growth: 0,
     },
     {
       title: "Pending Registrations",
-      value: stats?.stats?.pendingRegistrations?.count || 0,
+      value: statsObj.pendingRegistrations?.count || 0,
       icon: ClipboardCheck,
       color: "#fbbc04",
       growth: 0,
     },
     {
       title: "Certificates Issued",
-      value: stats?.stats?.certificatesIssued?.count || 0,
+      value: statsObj.certificatesIssued?.count || 0,
       icon: Award,
       color: "#34a853",
       growth: 0,
@@ -80,7 +100,7 @@ const AdminDashboard = () => {
       <StatsGrid>
         {statsCards.map((card, index) => (
           <StatsCard key={index} $color={card.color}>
-            <CardIcon>
+            <CardIcon color={card.color}>
               <card.icon size={32} color={card.color} />
             </CardIcon>
             <CardContent>
@@ -204,8 +224,11 @@ const StatsCard = styled.div.attrs({
     0 2px 4px -1px rgba(0, 0, 0, 0.03);
   display: flex;
   gap: 20px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition:
+    margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease;
+  min-width: 0;
+  background: ${(props) => props.theme.colors.surfaceElevated || "#ffffff"};
   position: relative;
   overflow: hidden;
 
@@ -400,6 +423,8 @@ const ActionButton = styled.button`
     transition: all 0.2s;
   }
 
+  &:hover::after {
+    opacity: 1;
     transform: translateX(0);
   }
 

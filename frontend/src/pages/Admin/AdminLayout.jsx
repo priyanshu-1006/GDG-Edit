@@ -115,8 +115,8 @@ const Container = styled.div`
   display: flex;
   min-height: 100vh;
   font-family: "Inter", sans-serif;
-  background: var(--admin-main-bg);
-  color: var(--text-primary);
+  background: ${(props) => props.theme.colors.admin?.mainBg || "#f3f4f6"};
+  color: ${(props) => props.theme.colors.text.primary};
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -124,9 +124,10 @@ const Container = styled.div`
 
 const Sidebar = styled.aside`
   width: 280px;
-  background: var(--admin-sidebar-bg);
-  color: var(--admin-sidebar-text);
-  border-right: 1px solid var(--admin-sidebar-border);
+  background: ${(props) => props.theme.colors.admin?.sidebarBg || "#ffffff"};
+  color: ${(props) => props.theme.colors.admin?.sidebarText || "#333333"};
+  border-right: 1px solid
+    ${(props) => props.theme.colors.admin?.sidebarBorder || "rgba(0,0,0,0.1)"};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -241,7 +242,7 @@ const MainContent = styled.main`
     margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.2s ease;
   min-width: 0;
-  background: var(--admin-main-bg);
+  background: ${(props) => props.theme.colors.admin?.mainBg || "#f3f4f6"};
 
   @media (max-width: 768px) {
     margin-left: 0;
