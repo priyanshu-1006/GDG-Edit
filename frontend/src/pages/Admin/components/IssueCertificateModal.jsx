@@ -259,11 +259,10 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
 
     if (
       !formData.recipientName ||
-      !formData.recipientEmail ||
       !formData.certificateCode ||
       !formData.eventId
     ) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -357,13 +356,12 @@ const IssueCertificateModal = ({ isOpen, onClose, onSuccess }) => {
             </FormGroup>
 
             <FormGroup>
-              <Label>Recipient Email</Label>
+              <Label>Recipient Email (Optional)</Label>
               <Input
                 type="email"
                 name="recipientEmail"
                 value={formData.recipientEmail}
                 onChange={handleChange}
-                required
               />
             </FormGroup>
 

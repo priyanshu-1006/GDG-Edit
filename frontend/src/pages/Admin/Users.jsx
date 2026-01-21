@@ -13,6 +13,7 @@ import axios from "axios";
 import { API_BASE_URL, getAuthHeaders } from "../../utils/apiUtils";
 
 const Users = () => {
+  console.log("Users Component Rendered");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,6 +29,17 @@ const Users = () => {
     newRole: "",
   });
   const [changingRole, setChangingRole] = useState(false);
+  const [addUserModal, setAddUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "student",
+    college: "",
+    year: "",
+    phone: "",
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -58,6 +70,7 @@ const Users = () => {
   }, [fetchUsers]);
 
   const handleSuspendUser = async (userId, suspend) => {
+    console.log("handleSuspendUser called", { userId, suspend });
     try {
       await axios.patch(
         `${API_BASE_URL}/api/admin/users/${userId}/suspend`,
@@ -72,6 +85,7 @@ const Users = () => {
   };
 
   const handleOpenRoleChange = (user) => {
+    console.log("handleOpenRoleChange called", user);
     setRoleChangeModal({ open: true, user, newRole: user.role });
   };
 
@@ -110,7 +124,39 @@ const Users = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setCreatingUser(true);
+      await axios.post(`${API_BASE_URL}/api/admin/users`, newUser, {
+        headers: getAuthHeaders(),
+      });
+      alert("User created successfully");
+      setAddUserModal(false);
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        role: "student",
+        college: "",
+        year: "",
+        phone: "",
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to create user:", error);
+      alert(error.response?.data?.message || "Failed to create user");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const handleExportUsers = async () => {
+    console.log("handleExportUsers called");
     try {
       const response = await axios.get(
         `${API_BASE_URL}/api/admin/users/export`,
@@ -135,7 +181,7 @@ const Users = () => {
   };
 
   return (
-    <Container>
+    <Container onClick={() => console.log("Container clicked")}>
       <Header>
         <Title>User Management</Title>
         <HeaderActions>
@@ -143,7 +189,7 @@ const Users = () => {
             <Download size={20} />
             Export CSV
           </ExportButton>
-          <AddButton>
+          <AddButton onClick={() => setAddUserModal(true)}>
             <UserPlus size={20} />
             Add User
           </AddButton>
@@ -347,6 +393,88 @@ const Users = () => {
                 }
               >
                 {changingRole ? "Changing..." : "Change Role"}
+              </ConfirmButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Add User Modal */}
+      {addUserModal && (
+        <ModalOverlay onClick={() => setAddUserModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Add New User</ModalTitle>
+              <CloseButton onClick={() => setAddUserModal(false)}>
+                &times;
+              </CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <FormGroup>
+                <Label>Name *</Label>
+                <Input
+                  type="text"
+                  placeholder="Full Name"
+                  value={newUser.name}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, name: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Password *</Label>
+                <Input
+                  type="password"
+                  placeholder="Initial Password"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Phone</Label>
+                <Input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={newUser.phone}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, phone: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Role</Label>
+                <RoleSelect
+                  value={newUser.role}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, role: e.target.value })
+                  }
+                >
+                  <option value="student">Student</option>
+                  <option value="event_manager">Event Manager</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </RoleSelect>
+              </FormGroup>
+            </ModalBody>
+            <ModalFooter>
+              <CancelButton onClick={() => setAddUserModal(false)}>
+                Cancel
+              </CancelButton>
+              <ConfirmButton onClick={handleCreateUser} disabled={creatingUser}>
+                {creatingUser ? "Creating..." : "Create User"}
               </ConfirmButton>
             </ModalFooter>
           </ModalContent>
@@ -1025,6 +1153,33 @@ const ConfirmButton = styled.button`
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+  }
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: all 0.2s;
+  outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .dark & {
+    background: #0f172a;
+    border-color: #334155;
+    color: white;
+
+    &:focus {
+      border-color: #60a5fa;
+    }
   }
 `;
 
