@@ -40,6 +40,7 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
 
   const [excelFile, setExcelFile] = useState(null);
   const [previewData, setPreviewData] = useState(null); // Data for previewing (first row)
+  const [previewImageLoaded, setPreviewImageLoaded] = useState(false);
 
   // Legacy state for backward compatibility fallback
   const [pos, setPos] = useState({ x: 50, y: 50 });
@@ -509,8 +510,12 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
                       style={{ width: "fit-content" }}
                     >
                       <img
+                        id="preview-cert-img"
                         src={localPreviewUrl}
                         alt="Preview"
+                        onLoad={() => {
+                          setPreviewImageLoaded(true);
+                        }}
                         className="max-h-[50vh] object-contain block"
                       />
                       {layoutConfig.map((el, idx) => {
@@ -550,11 +555,31 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
                         }
 
                         // Prepare styles
+                        // Prepare styles
                         let widthStyle = el.width;
-                        let fontSizeStyle = Math.max(10, el.fontSize * 0.6); // Font scaling
+                        let heightStyle = "auto";
+                        let fontSizeStyle;
 
-                        // Heuristic: If width is pixels (number or "300px"), scale it by 0.6 to match preview scale
-                        // This prevents fixed-width boxes from being too wide relative to the smaller preview image
+                        // Robust Font Scaling: Use ratio if available, else fallback
+                        const previewImgH = previewImageLoaded
+                          ? document.getElementById("preview-cert-img")
+                              ?.offsetHeight || 500
+                          : 500;
+
+                        if (el.fontSizeRatio) {
+                          fontSizeStyle = el.fontSizeRatio * previewImgH;
+                        } else {
+                          // Legacy Fallback
+                          fontSizeStyle = Math.max(10, el.fontSize * 0.6);
+                        }
+
+                        if (el.heightRatio) {
+                          heightStyle = `${el.heightRatio * previewImgH}px`;
+                        } else if (el.height) {
+                          heightStyle = el.height;
+                        }
+
+                        // Heuristic for width scaling only if pixels
                         if (typeof el.width === "number") {
                           widthStyle = `${el.width * 0.6}px`;
                         } else if (
@@ -564,6 +589,14 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
                           const pxVal = parseFloat(el.width);
                           if (!isNaN(pxVal)) widthStyle = `${pxVal * 0.6}px`;
                         }
+
+                        // Flex alignment to match Rnd
+                        const justifyContentMap = {
+                          left: "flex-start",
+                          center: "center",
+                          right: "flex-end",
+                          justify: "space-between",
+                        };
 
                         return (
                           <div
@@ -577,8 +610,14 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
                               fontWeight: el.fontWeight,
                               textAlign: el.textAlign,
                               width: widthStyle,
+                              height: heightStyle,
+                              lineHeight: 1.2, // Match designer
                               transform: "translate(0, 0)",
                               whiteSpace: "pre-wrap",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent:
+                                justifyContentMap[el.textAlign] || "center",
                             }}
                           >
                             {content}

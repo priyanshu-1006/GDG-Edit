@@ -87,9 +87,20 @@ const CertificateDisplay = () => {
         ctx.drawImage(img, 0, 0);
 
         // Helper to render a single text element
+        // Helper to render a single text element with Wrapping
         const renderText = (el, data) => {
-          const { text, x, y, fontSize, color, fontWeight, textAlign, width } =
-            el;
+          const {
+            text,
+            x,
+            y,
+            fontSize,
+            color,
+            fontWeight,
+            textAlign,
+            width,
+            fontSizeRatio,
+            heightRatio,
+          } = el;
 
           // Variable substitution
           const finalText = text.replace(/\{(.+?)\}/g, (match, p1) => {
@@ -104,7 +115,6 @@ const CertificateDisplay = () => {
             if (["date"].includes(keyLC)) {
               return new Date(data.issuedAt).toLocaleDateString();
             }
-            // Extract extraData
             if (data.extraData) {
               if (data.extraData[p1]) return data.extraData[p1];
               const foundKey = Object.keys(data.extraData).find(
@@ -115,24 +125,39 @@ const CertificateDisplay = () => {
             return match;
           });
 
-          ctx.font = `${fontWeight || "normal"} ${fontSize}px Arial, sans-serif`;
+          // 1. Calculate Font Size
+          let finalFontSize = fontSize;
+          if (fontSizeRatio) {
+            finalFontSize = fontSizeRatio * img.height;
+          } else {
+            finalFontSize = (fontSize / 800) * img.height;
+          }
+
+          // VISUAL CORRECTION: Canvas text often renders smaller/thinner than DOM text
+          // Apply a 1.33 factor (approx pt conversion) to match user expectation from Designer
+          finalFontSize = finalFontSize * 1.33;
+
+          // Use a better font stack to match web preview
+          ctx.font = `${fontWeight || "normal"} ${finalFontSize}px Inter, Roboto, "Helvetica Neue", Arial, sans-serif`;
           ctx.fillStyle = color || "black";
           ctx.textAlign = textAlign || "center";
           ctx.textBaseline = "middle";
 
-          // Calculate Box Width relative to current canvas image for alignment purposes
+          // 2. Calculate Box Width
           let boxW = 0;
           if (typeof width === "number") {
-            boxW = img.width * (width / 800); // Scale pixels assuming 800px base
+            boxW = (width / 1000) * img.width;
           } else if (typeof width === "string" && width.includes("%")) {
             boxW = img.width * (parseFloat(width) / 100);
           } else {
-            boxW = img.width * 0.4; // Fallback
+            boxW = img.width * 0.4;
           }
 
+          // 3. Calculate Position
           const xLeft = img.width * (x / 100);
-          const yPos = img.height * (y / 100);
+          const yTop = img.height * (y / 100);
 
+          // 4. Horizontal Anchor
           let xAnchor = xLeft;
           if (textAlign === "center") {
             xAnchor = xLeft + boxW / 2;
@@ -140,7 +165,47 @@ const CertificateDisplay = () => {
             xAnchor = xLeft + boxW;
           }
 
-          ctx.fillText(finalText, xAnchor, yPos);
+          // --- WRAPPING LOGIC ---
+          const words = finalText.split(" ");
+          let lines = [];
+          let currentLine = words[0];
+
+          for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const width = ctx.measureText(currentLine + " " + word).width;
+            if (width < boxW) {
+              currentLine += " " + word;
+            } else {
+              lines.push(currentLine);
+              currentLine = word;
+            }
+          }
+          lines.push(currentLine);
+
+          // 5. Vertical Anchor (Centering the BLOCK of text)
+          const lineHeight = finalFontSize * 1.2; // Match CSS line-height
+          const totalTextHeight = lines.length * lineHeight;
+
+          let blockYStart = yTop;
+
+          if (heightRatio) {
+            const boxH = heightRatio * img.height;
+            // Center the entire block within the box
+            blockYStart = yTop + (boxH - totalTextHeight) / 2 + lineHeight / 2;
+            // Note: adding lineHeight/2 because textBaseline is middle
+          } else {
+            // Fallback: mostly centering relative to font size itself
+            blockYStart = yTop + finalFontSize / 2;
+          }
+
+          // Draw each line
+          lines.forEach((line, index) => {
+            // Calculate vertical position for this line
+            // Logic: Start at calculated block start, add line height for each subsequent line
+            const lineY = blockYStart + index * lineHeight;
+
+            ctx.fillText(line, xAnchor, lineY);
+          });
         };
 
         // Handle New Array Format OR Legacy Object Format

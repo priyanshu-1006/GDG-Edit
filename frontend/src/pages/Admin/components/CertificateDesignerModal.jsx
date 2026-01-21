@@ -40,30 +40,54 @@ const CertificateDesignerModal = ({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // If initial config changes (or opens fresh), reset
+  const imgRef = useRef(null);
+
+  // If initial config changes (or opens fresh), reset
   useEffect(() => {
-    if (isOpen && initialConfig) {
-      setElements(initialConfig);
-    } else if (isOpen && (!initialConfig || initialConfig.length === 0)) {
-      setElements([
-        {
-          id: "recipient-name",
-          text: "{Name}",
-          x: 50,
-          y: 50,
-          fontSize: 30,
-          color: "#000000",
-          fontWeight: "bold",
-          width: "40%",
-          textAlign: "center",
-        },
-      ]);
+    if (isOpen) {
+      if (
+        initialConfig &&
+        Array.isArray(initialConfig) &&
+        initialConfig.length > 0
+      ) {
+        try {
+          // Deep clone to avoid reference issues
+          const clonedConfig = JSON.parse(JSON.stringify(initialConfig));
+          console.log(
+            "CertificateDesigner: Loading saved config",
+            clonedConfig,
+          );
+          setElements(clonedConfig);
+        } catch (err) {
+          console.error("CertificateDesigner: Error cloning config", err);
+          setElements(initialConfig);
+        }
+      } else {
+        console.log("CertificateDesigner: Loading default config (new/empty)");
+        setElements([
+          {
+            id: "recipient-name",
+            text: "{Name}",
+            x: 50,
+            y: 50,
+            fontSize: 30,
+            color: "#000000",
+            fontWeight: "bold",
+            width: "40%",
+            textAlign: "center",
+          },
+        ]);
+      }
     }
   }, [isOpen, initialConfig]);
 
-  // Reset load state when image changes
+  // Reset load state when image changes, check if already loaded
   useEffect(() => {
     setImageLoaded(false);
-  }, [imageUrl]);
+    if (imgRef.current && imgRef.current.complete) {
+      setImageLoaded(true);
+    }
+  }, [imageUrl, isOpen]);
 
   const addTextElement = () => {
     const newId = `text-${Date.now()}`;
@@ -102,7 +126,51 @@ const CertificateDesignerModal = ({
   };
 
   const handleSave = () => {
-    onSave(elements);
+    // Calculate relative font size based on image height
+    // Use imgRef for accuracy, fallback to container or default 800px
+    let referenceH = imgRef.current?.offsetHeight;
+    if (!referenceH || referenceH === 0) {
+      referenceH = containerRef.current?.offsetHeight || 800;
+    }
+
+    console.log(
+      "CertificateDesigner: Saving with Reference Height:",
+      referenceH,
+    );
+
+    const scaledElements = elements.map((el) => {
+      // Safety calculation
+      let ratio = el.fontSize / referenceH;
+      // Sanity check: if ratio is huge (> 0.5 for small font), it means referenceH was likely 0/small
+      if (ratio > 0.5) {
+        console.warn(
+          "CertificateDesigner: Calculated Ratio too large, resetting to default 0.05",
+          ratio,
+        );
+        ratio = 0.05;
+      }
+
+      // Calculate Height Ratio
+      let hRatio = null;
+      if (
+        el.height &&
+        typeof el.height === "string" &&
+        el.height.endsWith("px")
+      ) {
+        const hPx = parseFloat(el.height);
+        if (!isNaN(hPx)) {
+          hRatio = hPx / referenceH;
+        }
+      }
+
+      return {
+        ...el,
+        fontSizeRatio: ratio,
+        heightRatio: hRatio,
+      };
+    });
+
+    onSave(scaledElements);
     onClose();
   };
 
@@ -272,6 +340,7 @@ const CertificateDesignerModal = ({
                 }}
               >
                 <img
+                  ref={imgRef}
                   src={imageUrl}
                   alt="Certificate Template"
                   onLoad={() => {
@@ -287,7 +356,13 @@ const CertificateDesignerModal = ({
                     // Safe guard: Ensure container dimensions are valid
                     const parentW = containerRef.current?.offsetWidth || 0;
                     const parentH = containerRef.current?.offsetHeight || 0;
-                    if (!parentW || !parentH) return null;
+                    if (!parentW || !parentH) {
+                      console.warn(
+                        "CertificateDesigner: Parent dimensions 0, skipping render",
+                        el.id,
+                      );
+                      return null;
+                    }
 
                     return (
                       <Rnd
@@ -302,32 +377,47 @@ const CertificateDesignerModal = ({
                             el.width.includes("%")
                               ? el.width
                               : el.width,
-                          height: "auto",
+                          height: el.height || "auto",
                         }}
                         onDragStop={(e, d) => {
-                          // Recalculate based on current dimensions
-                          const currentW = containerRef.current.offsetWidth;
-                          const currentH = containerRef.current.offsetHeight;
+                          // USE VIEWPORT RECTANGLES FOR TOTAL ACCURACY
+                          // This bypasses internal library offsets and container quirks
+                          if (!imgRef.current) return;
+
+                          const imgRect =
+                            imgRef.current.getBoundingClientRect();
+                          const elRect = d.node.getBoundingClientRect();
+
+                          const relativeX = elRect.left - imgRect.left;
+                          const relativeY = elRect.top - imgRect.top;
+
                           updateElement(el.id, {
-                            x: (d.x / currentW) * 100,
-                            y: (d.y / currentH) * 100,
+                            x: (relativeX / imgRect.width) * 100,
+                            y: (relativeY / imgRect.height) * 100,
                           });
                         }}
                         onResizeStop={(e, direction, ref, delta, position) => {
-                          const currentW = containerRef.current.offsetWidth;
-                          const currentH = containerRef.current.offsetHeight;
-                          // Convert width to percentage
-                          const widthPx = parseFloat(ref.style.width);
-                          const widthPct = (widthPx / currentW) * 100;
+                          if (!imgRef.current) return;
+
+                          const imgRect =
+                            imgRef.current.getBoundingClientRect();
+                          const elRect = ref.getBoundingClientRect();
+
+                          // Calculate relative position strictly from visuals
+                          const relativeX = elRect.left - imgRect.left;
+                          const relativeY = elRect.top - imgRect.top;
+
+                          // Calculate relative width strictly from visuals
+                          // Note: elRect.width includes borders, so it matches visual box
+                          const widthPct = (elRect.width / imgRect.width) * 100;
 
                           updateElement(el.id, {
-                            width: `${widthPct}%`, // Save as percentage
-                            height: ref.style.height,
-                            x: (position.x / currentW) * 100,
-                            y: (position.y / currentH) * 100,
+                            width: `${widthPct}%`,
+                            height: ref.style.height, // Keep pixels for heightRatio calc later
+                            x: (relativeX / imgRect.width) * 100,
+                            y: (relativeY / imgRect.height) * 100,
                           });
                         }}
-                        bounds="parent"
                         onClick={() => setSelectedId(el.id)}
                         className={`border-2 ${selectedId === el.id ? "border-blue-500 z-50" : "border-transparent hover:border-blue-300 z-10"}`}
                         style={{ display: "flex", alignItems: "center" }}
