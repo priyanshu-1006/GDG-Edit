@@ -111,7 +111,10 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const downloadExcelTemplate = () => {
-    let fields = ["Name", "Email"];
+    // Basic fields
+    let fields = ["Certificate ID", "Recipient Name", "Recipient Email"];
+
+    // Add fields from layoutConfig
     if (layoutConfig) {
       layoutConfig.forEach((el) => {
         const match = el.text.match(/\{(.+?)\}/);
@@ -129,7 +132,14 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
 
     // Create one dummy row
     const data = [
-      fields.reduce((acc, curr) => ({ ...acc, [curr]: `Example ${curr}` }), {}),
+      fields.reduce(
+        (acc, curr) => ({
+          ...acc,
+          [curr]:
+            curr === "Certificate ID" ? "Optional: GDG-XXX" : `Example ${curr}`,
+        }),
+        {},
+      ),
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -218,13 +228,26 @@ const BulkIssueModal = ({ isOpen, onClose, onSuccess }) => {
       );
 
       if (res.data.success) {
-        toast.success(`Done! ${res.data.summary.success} sent.`);
+        const { success, failed, errors } = res.data.summary;
+
+        if (failed > 0) {
+          toast.warning(`Issued ${success} certificates. ${failed} failed.`);
+          // Show errors in an alert or toast details
+          alert(
+            `Partial Success:\nIssued: ${success}\nFailed: ${failed}\n\nErrors:\n${errors.join("\n")}`,
+          );
+        } else {
+          toast.success(`Successfully issued all ${success} certificates!`);
+        }
+
         onSuccess();
         onClose();
       }
     } catch (err) {
       console.error(err);
-      toast.error("Correction failed. Check inputs.");
+      toast.error(
+        "Process failed. Please verify your Excel file and connection.",
+      );
     } finally {
       setLoading(false);
     }

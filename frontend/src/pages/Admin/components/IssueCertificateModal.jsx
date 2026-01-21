@@ -3,7 +3,7 @@ import styled from "styled-components";
 import PropTypes from "prop-types";
 import { X, Check } from "lucide-react";
 import { toast } from "react-toastify";
-import api from "../../../config/api"; // Assuming this is where apiClient is
+import { apiClient as api } from "../../../utils/apiUtils";
 
 const ModalOverlay = styled.div`
   position: fixed;

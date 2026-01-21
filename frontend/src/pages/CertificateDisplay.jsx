@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
 import Header from "../components/Header";
+import { Download } from "lucide-react";
 
 const Container = styled.div`
   max-width: 800px;
@@ -268,6 +269,42 @@ const CertificateDisplay = () => {
   const recipient = data.recipientName || data.user?.name || "N/A";
   const eventName = data.event?.name || "GDG Event";
 
+  const handleDownload = async () => {
+    if (data.isDynamic && canvasRef.current) {
+      // 1. Dynamic Certificate (Canvas)
+      try {
+        const dataUrl = canvasRef.current.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.download = `Certificate-${data.certificateCode || "GDG"}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Download failed", err);
+        alert("Failed to download certificate. Please try again.");
+      }
+    } else if (data.certificateUrl) {
+      // 2. Static Certificate (Image URL)
+      try {
+        const response = await fetch(data.certificateUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Certificate-${data.certificateCode || "GDG"}.png`; // Force PNG ext
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Download failed", err);
+        // Fallback to simple new tab open if CORS fails
+        window.open(data.certificateUrl, "_blank");
+      }
+    }
+  };
+
   return (
     <div
       style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
@@ -297,17 +334,32 @@ const CertificateDisplay = () => {
 
         <div style={{ marginTop: "20px" }}>
           <button
-            onClick={() => window.print()}
+            onClick={handleDownload}
             style={{
-              padding: "10px 20px",
+              padding: "12px 24px",
               background: "#4285f4",
               color: "white",
               border: "none",
-              borderRadius: "5px",
+              borderRadius: "50px", // More rounded for modern look
               cursor: "pointer",
+              fontSize: "16px",
+              fontWeight: "bold",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow:
+                "0 4px 6px rgba(50,50,93,0.11), 0 1px 3px rgba(0,0,0,0.08)",
+              transition: "all 0.15s ease",
             }}
+            onMouseOver={(e) =>
+              (e.currentTarget.style.transform = "translateY(-1px)")
+            }
+            onMouseOut={(e) =>
+              (e.currentTarget.style.transform = "translateY(0)")
+            }
           >
-            Download / Print
+            <Download size={20} />
+            Download Certificate
           </button>
         </div>
       </Container>

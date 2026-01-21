@@ -246,73 +246,99 @@ router.post(
 
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
-        const nameKey = Object.keys(row).find(
-          (k) =>
-            k.toLowerCase().includes("name") &&
-            !k.toLowerCase().includes("team") &&
-            !k.toLowerCase().includes("event") &&
-            !k.toLowerCase().includes("file"),
-        );
-        const emailKey = Object.keys(row).find(
-          (k) =>
-            k.toLowerCase().includes("email") &&
-            !k.toLowerCase().includes("team") &&
-            !k.toLowerCase().includes("event"),
-        );
 
-        // Fallback: If no generic 'name' found, look literally for 'Recipient Name'
-        const finalNameKey =
-          nameKey ||
-          Object.keys(row).find((k) => k.toLowerCase() === "recipient name");
+        try {
+          const nameKey = Object.keys(row).find(
+            (k) =>
+              k.toLowerCase().includes("name") &&
+              !k.toLowerCase().includes("team") &&
+              !k.toLowerCase().includes("event") &&
+              !k.toLowerCase().includes("file"),
+          );
+          const emailKey = Object.keys(row).find(
+            (k) =>
+              k.toLowerCase().includes("email") &&
+              !k.toLowerCase().includes("team") &&
+              !k.toLowerCase().includes("event"),
+          );
 
-        const recipientName = finalNameKey ? row[finalNameKey] : null;
-        const recipientEmail = emailKey ? row[emailKey] : null;
+          // Fallback: If no generic 'name' found, look literally for 'Recipient Name'
+          const finalNameKey =
+            nameKey ||
+            Object.keys(row).find((k) => k.toLowerCase() === "recipient name");
 
-        if (!recipientName) {
-          results.failed++;
-          results.errors.push(`Row ${i + 1}: Name not found`);
-          continue;
-        }
+          const recipientName = finalNameKey ? row[finalNameKey] : null;
+          const recipientEmail = emailKey ? row[emailKey] : null;
 
-        // Check duplicates
-        if (recipientEmail) {
-          const query = {
-            recipientEmail,
-            ...(eventId ? { event: eventId } : { customEventName }),
-          };
-          const existing = await Certificate.findOne(query);
-          if (existing) {
+          if (!recipientName) {
             results.failed++;
-            results.errors.push(
-              `Row ${i + 1}: Certificate already exists for ${recipientEmail}`,
-            );
+            results.errors.push(`Row ${i + 1}: Name not found`);
             continue;
           }
-        }
 
-        // Extract extra data
-        const extraData = {};
-        dynamicFields.forEach((field) => {
-          const key = Object.keys(row).find(
-            (k) => k.toLowerCase() === field.toLowerCase(),
+          // Check duplicates
+          if (recipientEmail) {
+            const query = {
+              recipientEmail,
+              ...(eventId ? { event: eventId } : { customEventName }),
+            };
+            const existing = await Certificate.findOne(query);
+            if (existing) {
+              results.failed++;
+              results.errors.push(
+                `Row ${i + 1}: Certificate already exists for ${recipientEmail}`,
+              );
+              continue;
+            }
+          }
+
+          // Extract extra data
+          const extraData = {};
+          dynamicFields.forEach((field) => {
+            const key = Object.keys(row).find(
+              (k) => k.toLowerCase() === field.toLowerCase(),
+            );
+            if (key) extraData[field] = row[key];
+          });
+
+          // Check for custom Certificate ID in the Excel row
+          const idKey = Object.keys(row).find((k) =>
+            [
+              "certificate id",
+              "certificateid",
+              "cert id",
+              "certid",
+              "serial no",
+              "serialno",
+              "code",
+            ].includes(k.toLowerCase().trim()),
           );
-          if (key) extraData[field] = row[key];
-        });
 
-        const certificateCode = `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+          const customId = idKey ? row[idKey] : null;
 
-        await Certificate.create({
-          event: eventId || undefined,
-          customEventName: customEventName || undefined,
-          recipientName,
-          recipientEmail,
-          certificateUrl: templateUrl,
-          certificateCode,
-          isDynamic: true,
-          positioning,
-          extraData,
-        });
-        results.success++;
+          const certificateCode = customId
+            ? String(customId).trim()
+            : `GDG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+          await Certificate.create({
+            event: eventId || undefined,
+            customEventName: customEventName || undefined,
+            recipientName,
+            recipientEmail,
+            certificateUrl: templateUrl,
+            certificateCode,
+            isDynamic: true,
+            positioning,
+            extraData,
+          });
+          results.success++;
+        } catch (rowError) {
+          console.error(`Row ${i + 1} Error:`, rowError);
+          results.failed++;
+          results.errors.push(
+            `Row ${i + 1}: ${rowError.message || "Failed to issue"}`,
+          );
+        }
       }
 
       res.json({ success: true, summary: results });
