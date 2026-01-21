@@ -32,6 +32,7 @@
     "express-rate-limit": "^7.1.5",
     "express-session": "^1.17.3",
     "express-validator": "^7.0.1",
+    "groq-sdk": "^0.37.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
@@ -42,6 +43,7 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
+    "pdf-parse": "^2.4.5",
     "qrcode": "^1.5.3",
     "xlsx": "^0.18.5"
   },

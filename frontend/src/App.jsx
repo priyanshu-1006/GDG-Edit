@@ -43,6 +43,7 @@ const AdminNotifications = lazy(() => import("./pages/Admin/Notifications"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const FollowCursor = lazy(() => import("./components/FollowCursor"));
+const ChatWidget = lazy(() => import("./components/ChatWidget"));
 
 function App() {
   const { theme } = useTheme();
@@ -58,6 +59,7 @@ function App() {
         <StyledThemeProvider theme={theme}>
           <GlobalStyles />
           <FollowCursor />
+          <ChatWidget />
           <Routes>
             <Route element={<AppContainer />}>
               <Route path="/" index element={<HomePage />} />

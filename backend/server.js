@@ -35,6 +35,7 @@ import codingProfileRoutes from "./routes/codingProfile.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import setupRoutes from "./routes/setup.routes.js";
 import coreTeamRoutes from "./routes/coreTeam.routes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 // Initialize app
 const app = express();
@@ -120,6 +121,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/setup", setupRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/core-team", coreTeamRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
