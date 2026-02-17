@@ -46,6 +46,15 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const FollowCursor = lazy(() => import("./components/FollowCursor"));
 const ChatWidget = lazy(() => import("./components/ChatWidget"));
 
+// Immerse components
+const ImmerseLogin = lazy(() => import("./pages/Immerse/ImmerseLogin"));
+const ImmerseLayout = lazy(() => import("./pages/Immerse/ImmerseLayout"));
+const ImmerseDashboard = lazy(() => import("./pages/Immerse/ImmerseDashboard"));
+const ImmerseContacts = lazy(() => import("./pages/Immerse/ImmerseContacts"));
+const ImmerseCompose = lazy(() => import("./pages/Immerse/ImmerseCompose"));
+const ImmerseTemplates = lazy(() => import("./pages/Immerse/ImmerseTemplates"));
+const ImmerseLogs = lazy(() => import("./pages/Immerse/ImmerseLogs"));
+
 function App() {
   const { theme } = useTheme();
 
@@ -124,6 +133,20 @@ function App() {
                 }
               />
             </Route>
+
+            {/* Immerse Login - Separate Portal */}
+            <Route path="/immerse/login" element={<ImmerseLogin />} />
+
+            {/* Immerse Routes */}
+            <Route path="/immerse" element={<ImmerseLayout />}>
+              <Route index element={<ImmerseDashboard />} />
+              <Route path="dashboard" element={<ImmerseDashboard />} />
+              <Route path="contacts" element={<ImmerseContacts />} />
+              <Route path="compose" element={<ImmerseCompose />} />
+              <Route path="templates" element={<ImmerseTemplates />} />
+              <Route path="logs" element={<ImmerseLogs />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </StyledThemeProvider>

@@ -37,6 +37,7 @@ import setupRoutes from "./routes/setup.routes.js";
 import coreTeamRoutes from "./routes/coreTeam.routes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import emailRoutes from "./routes/email.routes.js";
+import immerseRoutes from "./routes/immerse.routes.js";
 
 // Initialize app
 const app = express();
@@ -58,7 +59,12 @@ app.use(morgan("dev"));
 // CORS Configuration - Allow multiple origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:5173"];
+  : [
+      "http://localhost:5173",
+      "https://gdg.mmmut.app",
+      "https://www.gdg.mmmut.app",
+      "https://gdg-frontend-seven.vercel.app"
+    ];
 
 app.use(
   cors({
@@ -123,7 +129,8 @@ app.use("/api/setup", setupRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/core-team", coreTeamRoutes);
 app.use("/api/chat", chatRoutes);
-app.use("/api/email", emailRoutes); // Use
+app.use("/api/email", emailRoutes);
+app.use("/api/immerse", immerseRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

@@ -64,6 +64,10 @@ FRONTEND_URL=http://localhost:5173
 
 # Session Secret (Change this!)
 SESSION_SECRET=your-session-secret-key-CHANGE-THIS
+
+# Immerse Mail System (Optional - for Immerse event management)
+IMMERSE_RESEND_API_KEY=your-resend-api-key
+IMMERSE_JWT_SECRET=your-immerse-jwt-secret-CHANGE-THIS
 ```
 
 ---
