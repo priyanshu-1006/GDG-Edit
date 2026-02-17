@@ -14,7 +14,9 @@ import {
   Menu,
   X,
   Send,
-  History
+  History,
+  ClipboardList,
+  Rocket
 } from 'lucide-react';
 
 const LayoutContainer = styled.div`
@@ -347,6 +349,16 @@ const ImmerseLayout = () => {
             </StyledNavLink>
             <StyledNavLink to="/immerse/logs" onClick={closeSidebar}>
               <History /> Email Logs
+            </StyledNavLink>
+          </NavSection>
+          
+          <NavSection>
+            <NavSectionTitle>Events</NavSectionTitle>
+            <StyledNavLink to="/immerse/registrations" onClick={closeSidebar}>
+              <ClipboardList /> Registrations
+            </StyledNavLink>
+            <StyledNavLink to="/immerse-2026" target="_blank" onClick={closeSidebar}>
+              <Rocket /> View Public Page
             </StyledNavLink>
           </NavSection>
           

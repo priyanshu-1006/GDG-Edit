@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { motion } from 'framer-motion';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import { FaBars, FaTimes } from 'react-icons/fa';
+import { Rocket } from 'lucide-react';
 import Logo from './Logo';
 import ProfileButton from './ProfileButton';
 import { useAuth } from '../contexts/useAuth';
@@ -98,6 +99,43 @@ const MenuButton = styled.button`
     display: block; /* show hamburger on mobile */
   }
 `;
+
+// Glowing animation for IMMERSE link
+const glowPulse = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(66, 133, 244, 0.3), 0 0 10px rgba(66, 133, 244, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(66, 133, 244, 0.5), 0 0 20px rgba(66, 133, 244, 0.3);
+  }
+`;
+
+const ImmerseNavLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #0d1b2a, #1b263b);
+  border: 1px solid rgba(66, 133, 244, 0.4);
+  border-radius: 20px;
+  color: #4285f4 !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  animation: ${glowPulse} 2s ease-in-out infinite;
+
+  &:hover {
+    background: linear-gradient(135deg, #1b263b, #0d1b2a);
+    transform: scale(1.05);
+    color: #8ab4f8 !important;
+  }
+
+  @media (max-width: 768px) {
+    margin-bottom: 1rem;
+  }
+`;
+
 const Button = styled.button`
   height: 2.5rem;
   width: 9rem;
@@ -188,6 +226,10 @@ const Header = () => {
       <Nav $isOpen={menuOpen}>
         <NavLink href="/" onClick={closeMenu}>Home</NavLink>
         <NavLink href="/events" onClick={closeMenu}>Events</NavLink>
+        <ImmerseNavLink to="/immerse-2026" onClick={closeMenu}>
+          <Rocket size={16} />
+          IMMERSE 2026
+        </ImmerseNavLink>
         <NavLink href="/team" onClick={closeMenu}>Team</NavLink>
         <NavLink href="/#sponsors" onClick={closeMenu}>Sponsor</NavLink>
         <NavLink href="/#contact" onClick={closeMenu}>Contact</NavLink>

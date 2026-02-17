@@ -51,9 +51,18 @@ const ImmerseLogin = lazy(() => import("./pages/Immerse/ImmerseLogin"));
 const ImmerseLayout = lazy(() => import("./pages/Immerse/ImmerseLayout"));
 const ImmerseDashboard = lazy(() => import("./pages/Immerse/ImmerseDashboard"));
 const ImmerseContacts = lazy(() => import("./pages/Immerse/ImmerseContacts"));
+const ImmerseCompanies = lazy(() => import("./pages/Immerse/ImmerseCompanies"));
+const ImmerseStudents = lazy(() => import("./pages/Immerse/ImmerseStudents"));
 const ImmerseCompose = lazy(() => import("./pages/Immerse/ImmerseCompose"));
 const ImmerseTemplates = lazy(() => import("./pages/Immerse/ImmerseTemplates"));
 const ImmerseLogs = lazy(() => import("./pages/Immerse/ImmerseLogs"));
+const ImmerseAnalytics = lazy(() => import("./pages/Immerse/ImmerseAnalytics"));
+const ImmerseSettings = lazy(() => import("./pages/Immerse/ImmerseSettings"));
+const ImmerseRegistrations = lazy(() => import("./pages/Immerse/ImmerseRegistrations"));
+
+// Immerse Public Pages
+const ImmerseLanding = lazy(() => import("./pages/Immerse/public/ImmerseLanding"));
+const ImmerseEventPage = lazy(() => import("./pages/Immerse/public/ImmerseEventPage"));
 
 function App() {
   const { theme } = useTheme();
@@ -137,14 +146,23 @@ function App() {
             {/* Immerse Login - Separate Portal */}
             <Route path="/immerse/login" element={<ImmerseLogin />} />
 
+            {/* Immerse 2026 Public Pages */}
+            <Route path="/immerse-2026" element={<ImmerseLanding />} />
+            <Route path="/immerse-2026/:slug" element={<ImmerseEventPage />} />
+
             {/* Immerse Routes */}
             <Route path="/immerse" element={<ImmerseLayout />}>
               <Route index element={<ImmerseDashboard />} />
               <Route path="dashboard" element={<ImmerseDashboard />} />
               <Route path="contacts" element={<ImmerseContacts />} />
+              <Route path="companies" element={<ImmerseCompanies />} />
+              <Route path="students" element={<ImmerseStudents />} />
               <Route path="compose" element={<ImmerseCompose />} />
               <Route path="templates" element={<ImmerseTemplates />} />
               <Route path="logs" element={<ImmerseLogs />} />
+              <Route path="analytics" element={<ImmerseAnalytics />} />
+              <Route path="registrations" element={<ImmerseRegistrations />} />
+              <Route path="settings" element={<ImmerseSettings />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

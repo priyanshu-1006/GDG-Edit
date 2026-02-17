@@ -79,4 +79,41 @@ export const immerseDashboard = {
   getStats: () => immerseApi.get('/dashboard/stats'),
 };
 
+// Public API instance (no auth required)
+export const immersePublicApi = axios.create({
+  baseURL: `${API_BASE_URL}/api/immerse`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Public API helpers
+export const immerseEvents = {
+  getAll: () => immersePublicApi.get('/events'),
+  getBySlug: (slug) => immersePublicApi.get(`/events/${slug}`),
+  register: (slug, data) => immersePublicApi.post(`/events/${slug}/register`, data),
+  checkStatus: (registrationId) => immersePublicApi.get(`/registration-status/${registrationId}`),
+};
+
+// Admin event & registration APIs
+export const immerseAdminEvents = {
+  getAll: () => immerseApi.get('/admin/events'),
+  create: (data) => immerseApi.post('/admin/events', data),
+  update: (id, data) => immerseApi.put(`/admin/events/${id}`, data),
+  delete: (id) => immerseApi.delete(`/admin/events/${id}`),
+  toggleRegistration: (id) => immerseApi.patch(`/admin/events/${id}/toggle-registration`),
+};
+
+export const immerseRegistrations = {
+  getAll: (params) => immerseApi.get('/admin/registrations', { params }),
+  getStats: () => immerseApi.get('/admin/registration-stats'),
+  getById: (id) => immerseApi.get(`/admin/registrations/${id}`),
+  update: (id, data) => immerseApi.put(`/admin/registrations/${id}`, data),
+  bulkUpdate: (data) => immerseApi.post('/admin/registrations/bulk-update', data),
+  checkIn: (id) => immerseApi.post(`/admin/registrations/${id}/checkin`),
+  delete: (id) => immerseApi.delete(`/admin/registrations/${id}`),
+  sendEmail: (data) => immerseApi.post('/admin/registrations/send-email', data),
+  export: (eventSlug) => immerseApi.get(`/admin/registrations/export/${eventSlug}`, { responseType: 'blob' }),
+};
+
 export default immerseApi;

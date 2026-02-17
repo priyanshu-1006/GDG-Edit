@@ -3,6 +3,8 @@ import ImmerseAdmin from '../models/ImmerseAdmin.js';
 import ImmerseContact from '../models/ImmerseContact.js';
 import ImmerseEmailTemplate from '../models/ImmerseEmailTemplate.js';
 import ImmerseEmailLog from '../models/ImmerseEmailLog.js';
+import ImmerseEvent from '../models/ImmerseEvent.js';
+import ImmerseRegistration from '../models/ImmerseRegistration.js';
 import immerseEmailService from '../services/immerseEmailService.js';
 import { protectImmerse, immerseSuperAdmin, generateImmerseToken } from '../middleware/immerseAuth.middleware.js';
 
@@ -145,9 +147,142 @@ router.get('/auth/admins', protectImmerse, immerseSuperAdmin, async (req, res) =
         const admins = await ImmerseAdmin.find().select('-password');
         res.json({
             success: true,
-            data: admins
+            admins: admins
         });
     } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+/**
+ * @route   PUT /api/immerse/auth/profile
+ * @desc    Update admin profile
+ * @access  Private
+ */
+router.put('/auth/profile', protectImmerse, async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        
+        // Check if email is being changed and if it's already taken
+        if (email && email !== req.immerseAdmin.email) {
+            const existingAdmin = await ImmerseAdmin.findOne({ email, _id: { $ne: req.immerseAdmin._id } });
+            if (existingAdmin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already in use'
+                });
+            }
+        }
+        
+        const admin = await ImmerseAdmin.findByIdAndUpdate(
+            req.immerseAdmin._id,
+            { name, email },
+            { new: true, runValidators: true }
+        ).select('-password');
+        
+        res.json({
+            success: true,
+            admin: {
+                id: admin._id,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role
+            }
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+/**
+ * @route   PUT /api/immerse/auth/change-password
+ * @desc    Change admin password
+ * @access  Private
+ */
+router.put('/auth/change-password', protectImmerse, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide current and new password'
+            });
+        }
+        
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters'
+            });
+        }
+        
+        const admin = await ImmerseAdmin.findById(req.immerseAdmin._id).select('+password');
+        
+        const isMatch = await admin.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password is incorrect'
+            });
+        }
+        
+        admin.password = newPassword;
+        await admin.save();
+        
+        res.json({
+            success: true,
+            message: 'Password updated successfully'
+        });
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+/**
+ * @route   DELETE /api/immerse/auth/admin/:id
+ * @desc    Delete an admin (super admin only)
+ * @access  Private - Super Admin
+ */
+router.delete('/auth/admin/:id', protectImmerse, immerseSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Prevent deleting yourself
+        if (id === req.immerseAdmin._id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete your own account'
+            });
+        }
+        
+        const admin = await ImmerseAdmin.findById(id);
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Admin not found'
+            });
+        }
+        
+        await ImmerseAdmin.findByIdAndDelete(id);
+        
+        res.json({
+            success: true,
+            message: 'Admin deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete admin error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
@@ -782,6 +917,822 @@ router.get('/dashboard/stats', protectImmerse, async (req, res) => {
             recentEmails,
             contactStatusStats
         });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// ==========================================
+// PUBLIC EVENT ROUTES (No auth required)
+// ==========================================
+
+// Get all active events (public)
+router.get('/events', async (req, res) => {
+    try {
+        const events = await ImmerseEvent.find({ isActive: true })
+            .sort({ order: 1 })
+            .select('-__v');
+
+        res.json({
+            success: true,
+            events
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Get single event by slug (public)
+router.get('/events/:slug', async (req, res) => {
+    try {
+        const event = await ImmerseEvent.findOne({ 
+            slug: req.params.slug,
+            isActive: true 
+        });
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            event
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Register for an event (public)
+router.post('/events/:slug/register', async (req, res) => {
+    try {
+        const event = await ImmerseEvent.findOne({ 
+            slug: req.params.slug,
+            isActive: true 
+        });
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (!event.registrationOpen) {
+            return res.status(400).json({
+                success: false,
+                message: 'Registration is closed for this event'
+            });
+        }
+
+        if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Registration deadline has passed'
+            });
+        }
+
+        if (event.maxParticipants && event.registrationCount >= event.maxParticipants) {
+            return res.status(400).json({
+                success: false,
+                message: 'Event is full'
+            });
+        }
+
+        const {
+            registrationType,
+            teamName,
+            teamMembers,
+            name,
+            email,
+            phone,
+            college,
+            year,
+            branch,
+            experience,
+            dietaryPreference,
+            tshirtSize,
+            projectIdea,
+            techStack,
+            additionalInfo
+        } = req.body;
+
+        // Check for existing registration
+        const existingRegistration = await ImmerseRegistration.findOne({
+            event: event._id,
+            $or: [
+                { email: email?.toLowerCase() },
+                { 'teamMembers.email': email?.toLowerCase() }
+            ]
+        });
+
+        if (existingRegistration) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already registered for this event'
+            });
+        }
+
+        // Validate team registration
+        if (registrationType === 'team') {
+            if (!teamMembers || teamMembers.length < event.teamSize.min) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Team must have at least ${event.teamSize.min} members`
+                });
+            }
+            if (teamMembers.length > event.teamSize.max) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Team cannot have more than ${event.teamSize.max} members`
+                });
+            }
+
+            // Check if any team member already registered
+            const teamEmails = teamMembers.map(m => m.email?.toLowerCase());
+            const existingTeamMember = await ImmerseRegistration.findOne({
+                event: event._id,
+                $or: [
+                    { email: { $in: teamEmails } },
+                    { 'teamMembers.email': { $in: teamEmails } }
+                ]
+            });
+
+            if (existingTeamMember) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'One or more team members are already registered for this event'
+                });
+            }
+        }
+
+        const registration = new ImmerseRegistration({
+            event: event._id,
+            eventSlug: event.slug,
+            registrationType,
+            teamName,
+            teamMembers: teamMembers?.map(m => ({
+                ...m,
+                email: m.email?.toLowerCase()
+            })),
+            name,
+            email: email?.toLowerCase(),
+            phone,
+            college,
+            year,
+            branch,
+            experience,
+            dietaryPreference,
+            tshirtSize,
+            projectIdea,
+            techStack,
+            additionalInfo,
+            status: 'pending'
+        });
+
+        await registration.save();
+
+        // Update event registration count
+        event.registrationCount += 1;
+        await event.save();
+
+        // Send confirmation email
+        try {
+            const leaderEmail = registrationType === 'team' 
+                ? teamMembers.find(m => m.isLeader)?.email 
+                : email;
+            
+            if (leaderEmail) {
+                await immerseEmailService.sendEmail({
+                    to: leaderEmail.toLowerCase(),
+                    subject: `Registration Confirmed: ${event.name} | IMMERSE 2026`,
+                    html: `
+                        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%); color: #fff; padding: 40px; border-radius: 16px;">
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h1 style="font-size: 28px; margin: 0; background: linear-gradient(135deg, ${event.gradientColors?.from || '#6366f1'}, ${event.gradientColors?.to || '#8b5cf6'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                                    🚀 Registration Confirmed!
+                                </h1>
+                            </div>
+                            
+                            <p style="color: #a0a0a0; font-size: 16px; line-height: 1.6;">
+                                Congratulations! Your registration for <strong style="color: #fff;">${event.name}</strong> has been confirmed.
+                            </p>
+                            
+                            <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+                                <h3 style="margin: 0 0 15px 0; color: #fff;">Registration Details</h3>
+                                <p style="margin: 8px 0; color: #a0a0a0;">
+                                    <strong style="color: #fff;">Registration ID:</strong> ${registration.registrationId}
+                                </p>
+                                <p style="margin: 8px 0; color: #a0a0a0;">
+                                    <strong style="color: #fff;">Event:</strong> ${event.name}
+                                </p>
+                                ${teamName ? `<p style="margin: 8px 0; color: #a0a0a0;"><strong style="color: #fff;">Team:</strong> ${teamName}</p>` : ''}
+                            </div>
+                            
+                            <p style="color: #a0a0a0; font-size: 14px; text-align: center; margin-top: 30px;">
+                                Keep this registration ID safe. You'll need it on the event day.
+                            </p>
+                            
+                            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <p style="color: #666; font-size: 12px;">
+                                    IMMERSE 2026 • Innovation Beyond Space & Time
+                                </p>
+                            </div>
+                        </div>
+                    `
+                });
+                registration.emailSent.confirmation = true;
+                registration.emailSent.confirmationAt = new Date();
+                await registration.save();
+            }
+        } catch (emailError) {
+            console.error('Failed to send confirmation email:', emailError);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful',
+            registrationId: registration.registrationId,
+            registration: {
+                id: registration._id,
+                registrationId: registration.registrationId,
+                event: event.name,
+                status: registration.status
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already registered for this event'
+            });
+        }
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed. Please try again.'
+        });
+    }
+});
+
+// Check registration status (public)
+router.get('/registration-status/:registrationId', async (req, res) => {
+    try {
+        const registration = await ImmerseRegistration.findOne({ 
+            registrationId: req.params.registrationId 
+        }).populate('event', 'name slug icon gradientColors');
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            registration: {
+                registrationId: registration.registrationId,
+                event: registration.event,
+                teamName: registration.teamName,
+                status: registration.status,
+                registeredAt: registration.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// ==========================================
+// ADMIN EVENT ROUTES
+// ==========================================
+
+// Get all events (admin)
+router.get('/admin/events', protectImmerse, async (req, res) => {
+    try {
+        const events = await ImmerseEvent.find()
+            .sort({ order: 1 });
+
+        res.json({
+            success: true,
+            events
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Create event (admin)
+router.post('/admin/events', protectImmerse, immerseSuperAdmin, async (req, res) => {
+    try {
+        const event = new ImmerseEvent(req.body);
+        await event.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Event created successfully',
+            event
+        });
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Event with this slug already exists'
+            });
+        }
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Update event (admin)
+router.put('/admin/events/:id', protectImmerse, immerseSuperAdmin, async (req, res) => {
+    try {
+        const event = await ImmerseEvent.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Event updated successfully',
+            event
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Delete event (admin)
+router.delete('/admin/events/:id', protectImmerse, immerseSuperAdmin, async (req, res) => {
+    try {
+        const event = await ImmerseEvent.findByIdAndDelete(req.params.id);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        // Delete associated registrations
+        await ImmerseRegistration.deleteMany({ event: req.params.id });
+
+        res.json({
+            success: true,
+            message: 'Event and associated registrations deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Toggle event registration (admin)
+router.patch('/admin/events/:id/toggle-registration', protectImmerse, async (req, res) => {
+    try {
+        const event = await ImmerseEvent.findById(req.params.id);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        event.registrationOpen = !event.registrationOpen;
+        await event.save();
+
+        res.json({
+            success: true,
+            message: `Registration ${event.registrationOpen ? 'opened' : 'closed'} for ${event.name}`,
+            registrationOpen: event.registrationOpen
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// ==========================================
+// ADMIN REGISTRATION ROUTES
+// ==========================================
+
+// Get all registrations with filters (admin)
+router.get('/admin/registrations', protectImmerse, async (req, res) => {
+    try {
+        const { 
+            eventSlug, 
+            status, 
+            search, 
+            page = 1, 
+            limit = 20 
+        } = req.query;
+
+        const query = {};
+
+        if (eventSlug) query.eventSlug = eventSlug;
+        if (status) query.status = status;
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { teamName: { $regex: search, $options: 'i' } },
+                { registrationId: { $regex: search, $options: 'i' } },
+                { 'teamMembers.name': { $regex: search, $options: 'i' } },
+                { 'teamMembers.email': { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const total = await ImmerseRegistration.countDocuments(query);
+        const registrations = await ImmerseRegistration.find(query)
+            .populate('event', 'name slug icon gradientColors')
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit));
+
+        res.json({
+            success: true,
+            registrations,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limit),
+                limit: parseInt(limit)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Get registration stats by event (admin)
+router.get('/admin/registration-stats', protectImmerse, async (req, res) => {
+    try {
+        const stats = await ImmerseRegistration.aggregate([
+            {
+                $group: {
+                    _id: '$eventSlug',
+                    total: { $sum: 1 },
+                    confirmed: {
+                        $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] }
+                    },
+                    pending: {
+                        $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+                    },
+                    attended: {
+                        $sum: { $cond: [{ $eq: ['$status', 'attended'] }, 1, 0] }
+                    },
+                    teams: {
+                        $sum: { $cond: [{ $eq: ['$registrationType', 'team'] }, 1, 0] }
+                    },
+                    individuals: {
+                        $sum: { $cond: [{ $eq: ['$registrationType', 'individual'] }, 1, 0] }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'immerseevents',
+                    localField: '_id',
+                    foreignField: 'slug',
+                    as: 'event'
+                }
+            },
+            { $unwind: '$event' },
+            {
+                $project: {
+                    eventSlug: '$_id',
+                    eventName: '$event.name',
+                    eventIcon: '$event.icon',
+                    gradientColors: '$event.gradientColors',
+                    total: 1,
+                    confirmed: 1,
+                    pending: 1,
+                    attended: 1,
+                    teams: 1,
+                    individuals: 1
+                }
+            },
+            { $sort: { 'event.order': 1 } }
+        ]);
+
+        const totalRegistrations = await ImmerseRegistration.countDocuments();
+        const totalConfirmed = await ImmerseRegistration.countDocuments({ status: 'confirmed' });
+        const totalPending = await ImmerseRegistration.countDocuments({ status: 'pending' });
+        const totalAttended = await ImmerseRegistration.countDocuments({ status: 'attended' });
+
+        res.json({
+            success: true,
+            stats,
+            summary: {
+                totalRegistrations,
+                totalConfirmed,
+                totalPending,
+                totalAttended
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Get single registration (admin)
+router.get('/admin/registrations/:id', protectImmerse, async (req, res) => {
+    try {
+        const registration = await ImmerseRegistration.findById(req.params.id)
+            .populate('event', 'name slug icon gradientColors teamSize');
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            registration
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Update registration status (admin)
+router.put('/admin/registrations/:id', protectImmerse, async (req, res) => {
+    try {
+        const { status, checkedIn, notes } = req.body;
+        const updateData = {};
+
+        if (status) updateData.status = status;
+        if (typeof checkedIn === 'boolean') {
+            updateData.checkedIn = checkedIn;
+            if (checkedIn) updateData.checkedInAt = new Date();
+        }
+        if (notes) updateData.notes = notes;
+
+        const registration = await ImmerseRegistration.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        ).populate('event', 'name slug');
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Registration updated successfully',
+            registration
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Bulk update registration status (admin)
+router.post('/admin/registrations/bulk-update', protectImmerse, async (req, res) => {
+    try {
+        const { ids, status } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide registration IDs'
+            });
+        }
+
+        const result = await ImmerseRegistration.updateMany(
+            { _id: { $in: ids } },
+            { status }
+        );
+
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} registrations updated to ${status}`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Check-in registration (admin)
+router.post('/admin/registrations/:id/checkin', protectImmerse, async (req, res) => {
+    try {
+        const registration = await ImmerseRegistration.findById(req.params.id)
+            .populate('event', 'name');
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        if (registration.checkedIn) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already checked in'
+            });
+        }
+
+        registration.checkedIn = true;
+        registration.checkedInAt = new Date();
+        registration.status = 'attended';
+        await registration.save();
+
+        res.json({
+            success: true,
+            message: `${registration.teamName || registration.name} checked in successfully`,
+            registration
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Delete registration (admin)
+router.delete('/admin/registrations/:id', protectImmerse, async (req, res) => {
+    try {
+        const registration = await ImmerseRegistration.findById(req.params.id);
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        // Decrement event registration count
+        await ImmerseEvent.findByIdAndUpdate(registration.event, {
+            $inc: { registrationCount: -1 }
+        });
+
+        await registration.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Registration deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Send email to registrants (admin)
+router.post('/admin/registrations/send-email', protectImmerse, async (req, res) => {
+    try {
+        const { registrationIds, subject, content, eventSlug } = req.body;
+
+        let registrations;
+        if (registrationIds && registrationIds.length > 0) {
+            registrations = await ImmerseRegistration.find({ _id: { $in: registrationIds } });
+        } else if (eventSlug) {
+            registrations = await ImmerseRegistration.find({ eventSlug });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide registration IDs or event slug'
+            });
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const reg of registrations) {
+            const email = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.email
+                : reg.email;
+
+            if (email) {
+                try {
+                    await immerseEmailService.sendEmail({
+                        to: email,
+                        subject,
+                        html: content.replace(/\{\{name\}\}/g, reg.teamName || reg.name)
+                            .replace(/\{\{registrationId\}\}/g, reg.registrationId)
+                    });
+                    successCount++;
+                } catch {
+                    failCount++;
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Emails sent: ${successCount} success, ${failCount} failed`,
+            successCount,
+            failCount
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Export registrations (admin)
+router.get('/admin/registrations/export/:eventSlug', protectImmerse, async (req, res) => {
+    try {
+        const registrations = await ImmerseRegistration.find({ 
+            eventSlug: req.params.eventSlug 
+        }).populate('event', 'name');
+
+        const csvRows = [
+            'Registration ID,Type,Team/Name,Email,Phone,College,Year,Branch,Status,Registered At'
+        ];
+
+        for (const reg of registrations) {
+            const name = reg.teamName || reg.name;
+            const email = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.email
+                : reg.email;
+            const phone = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.phone
+                : reg.phone;
+            const college = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.college
+                : reg.college;
+            const year = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.year
+                : reg.year;
+            const branch = reg.registrationType === 'team'
+                ? reg.teamMembers.find(m => m.isLeader)?.branch
+                : reg.branch;
+
+            csvRows.push(
+                `${reg.registrationId},${reg.registrationType},"${name}",${email},${phone},"${college}",${year},"${branch}",${reg.status},${reg.createdAt.toISOString()}`
+            );
+        }
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=registrations-${req.params.eventSlug}.csv`);
+        res.send(csvRows.join('\n'));
     } catch (error) {
         res.status(500).json({
             success: false,
