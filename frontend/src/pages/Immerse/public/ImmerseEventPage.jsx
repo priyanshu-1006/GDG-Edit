@@ -174,7 +174,7 @@ const EventTitle = styled(motion.h1)`
 
 const EventTagline = styled(motion.p)`
   font-size: 1.25rem;
-  color: ${props => props.color || '#4285f4'};
+  color: ${props => props.$color || '#4285f4'};
   margin-bottom: 1rem;
 `;
 
@@ -216,7 +216,7 @@ const CardTitle = styled.h3`
   margin-bottom: 1.5rem;
   
   svg {
-    color: ${props => props.iconColor || '#4285f4'};
+    color: ${props => props.$iconColor || '#4285f4'};
   }
 `;
 
@@ -236,7 +236,7 @@ const ListItem = styled.li`
   margin-bottom: 0.75rem;
   
   svg {
-    color: ${props => props.color || '#22c55e'};
+    color: ${props => props.$color || '#22c55e'};
     flex-shrink: 0;
     margin-top: 2px;
   }
@@ -255,7 +255,7 @@ const MetaItem = styled.div`
   text-align: center;
   
   svg {
-    color: ${props => props.color || '#4285f4'};
+    color: ${props => props.$color || '#4285f4'};
     margin-bottom: 0.5rem;
   }
 `;
@@ -757,8 +757,17 @@ const ImmerseEventPage = () => {
       };
 
       if (formData.registrationType === 'team') {
+        // Find the team leader for main registration fields
+        const leader = formData.teamMembers.find(m => m.isLeader) || formData.teamMembers[0];
         payload.teamName = formData.teamName;
         payload.teamMembers = formData.teamMembers;
+        // Set leader data as main registration fields
+        payload.name = leader.name;
+        payload.email = leader.email;
+        payload.phone = leader.phone;
+        payload.college = leader.college;
+        payload.year = leader.year;
+        payload.branch = leader.branch;
       } else {
         payload.name = formData.name;
         payload.email = formData.email;
@@ -863,7 +872,7 @@ const ImmerseEventPage = () => {
               {event.name}
             </EventTitle>
             <EventTagline
-              color={event.gradientColors?.from}
+              $color={event.gradientColors?.from}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -888,7 +897,7 @@ const ImmerseEventPage = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <CardTitle iconColor={event.gradientColors?.from}>
+                  <CardTitle $iconColor={event.gradientColors?.from}>
                     <Target />
                     Objectives
                   </CardTitle>
@@ -910,13 +919,13 @@ const ImmerseEventPage = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <CardTitle iconColor={event.gradientColors?.to}>
+                  <CardTitle $iconColor={event.gradientColors?.to}>
                     <Zap />
                     {event.focusAreas?.length > 0 ? 'Focus Areas' : 'Challenge Scope'}
                   </CardTitle>
                   <List>
                     {(event.focusAreas || event.challengeScope || []).map((item, idx) => (
-                      <ListItem key={idx} color={event.gradientColors?.from}>
+                      <ListItem key={idx} $color={event.gradientColors?.from}>
                         <Star size={18} />
                         {item}
                       </ListItem>
@@ -932,7 +941,7 @@ const ImmerseEventPage = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.6 }}
                 >
-                  <CardTitle iconColor="#f59e0b">
+                  <CardTitle $iconColor="#f59e0b">
                     <Trophy />
                     Evaluation Criteria
                   </CardTitle>
@@ -958,12 +967,12 @@ const ImmerseEventPage = () => {
                   Event Details
                 </CardTitle>
                 <MetaGrid>
-                  <MetaItem color={event.gradientColors?.from}>
+                  <MetaItem $color={event.gradientColors?.from}>
                     <Users size={24} />
                     <MetaLabel>Team Size</MetaLabel>
                     <MetaValue>{formatTeamSize(event.teamSize)}</MetaValue>
                   </MetaItem>
-                  <MetaItem color={event.gradientColors?.to}>
+                  <MetaItem $color={event.gradientColors?.to}>
                     <Target size={24} />
                     <MetaLabel>Event Type</MetaLabel>
                     <MetaValue style={{ textTransform: 'capitalize' }}>{event.eventType}</MetaValue>
