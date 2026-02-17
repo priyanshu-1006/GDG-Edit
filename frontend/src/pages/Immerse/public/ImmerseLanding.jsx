@@ -110,16 +110,14 @@ const Logo = styled(Link)`
   text-decoration: none;
   
   svg {
-    color: #6366f1;
+    color: #4285f4;
   }
 `;
 
 const LogoText = styled.span`
   font-size: 1.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #4285f4;
 `;
 
 const NavLinks = styled.div`
@@ -175,10 +173,7 @@ const HeroTitle = styled(motion.h1)`
   margin-bottom: 1.5rem;
   
   span.gradient {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899, #f43f5e);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 200% auto;
+    color: #4285f4;
   }
   
   span.white {
@@ -206,7 +201,7 @@ const PrimaryButton = styled(Link)`
   align-items: center;
   gap: 0.5rem;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #4285f4;
   color: white;
   text-decoration: none;
   border-radius: 12px;
@@ -217,7 +212,7 @@ const PrimaryButton = styled(Link)`
   
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 10px 30px rgba(66, 133, 244, 0.4);
   }
 `;
 
@@ -260,9 +255,7 @@ const StatItem = styled.div`
 const StatNumber = styled.div`
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #4285f4;
 `;
 
 const StatLabel = styled.div`
@@ -289,9 +282,7 @@ const SectionTitle = styled(motion.h2)`
   margin-bottom: 1rem;
   
   span {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #4285f4;
   }
 `;
 
@@ -450,9 +441,7 @@ const AboutTitle = styled(motion.h2)`
   margin-bottom: 1.5rem;
   
   span {
-    background: linear-gradient(135deg, #6366f1, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #4285f4;
   }
 `;
 
@@ -477,7 +466,7 @@ const FeatureItem = styled.div`
   svg {
     width: 24px;
     height: 24px;
-    color: #6366f1;
+    color: #4285f4;
   }
   
   span {
@@ -541,7 +530,7 @@ const FooterLogo = styled.div`
   gap: 0.75rem;
   
   svg {
-    color: #6366f1;
+    color: #4285f4;
   }
 `;
 
@@ -737,7 +726,7 @@ const ImmerseLanding = () => {
             events.map((event, index) => (
               <EventCard
                 key={event._id}
-                gradient={`${event.gradientColors?.from || '#6366f1'}, ${event.gradientColors?.to || '#8b5cf6'}`}
+                gradient={`${event.gradientColors?.from || '#4285f4'}, ${event.gradientColors?.to || '#34a853'}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -745,7 +734,7 @@ const ImmerseLanding = () => {
               >
                 <EventIcon 
                   className="event-icon"
-                  gradient={`${event.gradientColors?.from || '#6366f1'}, ${event.gradientColors?.to || '#8b5cf6'}`}
+                  gradient={`${event.gradientColors?.from || '#4285f4'}, ${event.gradientColors?.to || '#34a853'}`}
                 >
                   {event.icon}
                 </EventIcon>

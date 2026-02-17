@@ -47,7 +47,7 @@ const Title = styled.h1`
   gap: 0.75rem;
   
   svg {
-    color: #6366f1;
+    color: #4285f4;
   }
 `;
 
@@ -69,7 +69,7 @@ const Button = styled.button`
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   background: ${props => props.variant === 'primary' 
-    ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' 
+    ? 'linear-gradient(135deg, #4285f4, #34a853)' 
     : 'rgba(255, 255, 255, 0.05)'};
   border: 1px solid ${props => props.variant === 'primary' 
     ? 'transparent' 
@@ -115,13 +115,13 @@ const StatIcon = styled.div`
   width: 50px;
   height: 50px;
   border-radius: 12px;
-  background: ${props => props.bg || 'rgba(99, 102, 241, 0.1)'};
+  background: ${props => props.bg || 'rgba(66, 133, 244, 0.1)'};
   display: flex;
   align-items: center;
   justify-content: center;
   
   svg {
-    color: ${props => props.color || '#6366f1'};
+    color: ${props => props.color || '#4285f4'};
   }
 `;
 
@@ -174,7 +174,7 @@ const SearchInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
 `;
 
@@ -190,7 +190,7 @@ const Select = styled.select`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
   
   option {
@@ -276,8 +276,8 @@ const StatusBadge = styled.span`
         `;
       case 'attended':
         return `
-          background: rgba(99, 102, 241, 0.1);
-          color: #818cf8;
+          background: rgba(66, 133, 244, 0.1);
+          color: #4285f4;
         `;
       case 'cancelled':
       case 'no-show':
@@ -301,7 +301,7 @@ const EventTag = styled.span`
   padding: 0.35rem 0.75rem;
   border-radius: 8px;
   font-size: 0.8rem;
-  background: ${props => props.bg || 'rgba(99, 102, 241, 0.1)'};
+  background: ${props => props.bg || 'rgba(66, 133, 244, 0.1)'};
   color: white;
 `;
 
@@ -323,7 +323,7 @@ const Checkbox = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #6366f1;
+  accent-color: #4285f4;
 `;
 
 const Pagination = styled.div`
@@ -346,8 +346,8 @@ const PageButtons = styled.div`
 
 const PageButton = styled.button`
   padding: 0.5rem 1rem;
-  background: ${props => props.active ? '#6366f1' : 'rgba(255, 255, 255, 0.05)'};
-  border: 1px solid ${props => props.active ? '#6366f1' : 'rgba(255, 255, 255, 0.1)'};
+  background: ${props => props.active ? '#4285f4' : 'rgba(255, 255, 255, 0.05)'};
+  border: 1px solid ${props => props.active ? '#4285f4' : 'rgba(255, 255, 255, 0.1)'};
   border-radius: 8px;
   color: white;
   font-size: 0.9rem;
@@ -355,7 +355,7 @@ const PageButton = styled.button`
   transition: all 0.3s;
   
   &:hover:not(:disabled) {
-    background: ${props => props.active ? '#6366f1' : 'rgba(255, 255, 255, 0.1)'};
+    background: ${props => props.active ? '#4285f4' : 'rgba(255, 255, 255, 0.1)'};
   }
   
   &:disabled {
@@ -494,7 +494,7 @@ const TeamMemberName = styled.div`
 
 const LeaderBadge = styled.span`
   padding: 0.25rem 0.5rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #4285f4, #34a853);
   border-radius: 6px;
   font-size: 0.7rem;
   color: white;
@@ -534,7 +534,7 @@ const LoadingState = styled.div`
   
   svg {
     animation: spin 1s linear infinite;
-    color: #6366f1;
+    color: #4285f4;
   }
   
   @keyframes spin {
@@ -560,7 +560,7 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
 `;
 
@@ -590,7 +590,7 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
 `;
 
@@ -798,7 +798,7 @@ const ImmerseRegistrations = () => {
     if (event?.gradientColors) {
       return `linear-gradient(135deg, ${event.gradientColors.from}, ${event.gradientColors.to})`;
     }
-    return 'rgba(99, 102, 241, 0.2)';
+    return 'rgba(66, 133, 244, 0.2)';
   };
 
   return (
@@ -835,7 +835,7 @@ const ImmerseRegistrations = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <StatIcon bg="rgba(99, 102, 241, 0.1)" color="#6366f1">
+          <StatIcon bg="rgba(66, 133, 244, 0.1)" color="#4285f4">
             <Users size={24} />
           </StatIcon>
           <StatContent>
@@ -874,7 +874,7 @@ const ImmerseRegistrations = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <StatIcon bg="rgba(139, 92, 246, 0.1)" color="#8b5cf6">
+          <StatIcon bg="rgba(52, 168, 83, 0.1)" color="#34a853">
             <UserCheck size={24} />
           </StatIcon>
           <StatContent>
@@ -929,7 +929,7 @@ const ImmerseRegistrations = () => {
             gap: '0.5rem',
             marginBottom: '1rem',
             padding: '0.75rem 1rem',
-            background: 'rgba(99, 102, 241, 0.1)',
+            background: 'rgba(66, 133, 244, 0.1)',
             borderRadius: '12px',
             alignItems: 'center',
             flexWrap: 'wrap'
@@ -1003,8 +1003,8 @@ const ImmerseRegistrations = () => {
                       <Td>
                         <code style={{ 
                           fontSize: '0.8rem', 
-                          color: '#818cf8',
-                          background: 'rgba(99, 102, 241, 0.1)',
+                          color: '#4285f4',
+                          background: 'rgba(66, 133, 244, 0.1)',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '4px'
                         }}>
@@ -1141,7 +1141,7 @@ const ImmerseRegistrations = () => {
                 <DetailGrid>
                   <DetailItem>
                     <DetailLabel>Registration ID</DetailLabel>
-                    <DetailValue style={{ fontFamily: 'monospace', color: '#818cf8' }}>
+                    <DetailValue style={{ fontFamily: 'monospace', color: '#4285f4' }}>
                       {viewModal.registrationId}
                     </DetailValue>
                   </DetailItem>

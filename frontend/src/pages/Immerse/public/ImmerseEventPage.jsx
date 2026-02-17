@@ -115,16 +115,14 @@ const Logo = styled(Link)`
   text-decoration: none;
   
   svg {
-    color: #6366f1;
+    color: #4285f4;
   }
 `;
 
 const LogoText = styled.span`
   font-size: 1.25rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #4285f4;
 `;
 
 const MainContent = styled.main`
@@ -176,7 +174,7 @@ const EventTitle = styled(motion.h1)`
 
 const EventTagline = styled(motion.p)`
   font-size: 1.25rem;
-  color: ${props => props.color || '#818cf8'};
+  color: ${props => props.color || '#4285f4'};
   margin-bottom: 1rem;
 `;
 
@@ -218,7 +216,7 @@ const CardTitle = styled.h3`
   margin-bottom: 1.5rem;
   
   svg {
-    color: ${props => props.iconColor || '#6366f1'};
+    color: ${props => props.iconColor || '#4285f4'};
   }
 `;
 
@@ -257,7 +255,7 @@ const MetaItem = styled.div`
   text-align: center;
   
   svg {
-    color: ${props => props.color || '#6366f1'};
+    color: ${props => props.color || '#4285f4'};
     margin-bottom: 0.5rem;
   }
 `;
@@ -316,7 +314,7 @@ const Label = styled.label`
   svg {
     width: 16px;
     height: 16px;
-    color: #6366f1;
+    color: #4285f4;
   }
 `;
 
@@ -336,8 +334,8 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
   }
 `;
 
@@ -354,7 +352,7 @@ const Select = styled.select`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
   
   option {
@@ -380,7 +378,7 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #4285f4;
   }
 `;
 
@@ -420,7 +418,7 @@ const TeamMemberTitle = styled.h4`
 
 const LeaderBadge = styled.span`
   padding: 0.25rem 0.5rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #4285f4;
   border-radius: 6px;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -448,18 +446,18 @@ const AddMemberButton = styled.button`
   gap: 0.5rem;
   width: 100%;
   padding: 1rem;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px dashed rgba(99, 102, 241, 0.3);
+  background: rgba(66, 133, 244, 0.1);
+  border: 1px dashed rgba(66, 133, 244, 0.3);
   border-radius: 12px;
-  color: #818cf8;
+  color: #4285f4;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s;
   margin-bottom: 1.5rem;
   
   &:hover {
-    background: rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(66, 133, 244, 0.15);
+    border-color: rgba(66, 133, 244, 0.5);
   }
   
   &:disabled {
@@ -475,7 +473,7 @@ const SubmitButton = styled.button`
   gap: 0.75rem;
   width: 100%;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, ${props => props.gradient || '#6366f1, #8b5cf6'});
+  background: ${props => props.gradient ? `linear-gradient(135deg, ${props.gradient})` : '#4285f4'};
   border: none;
   border-radius: 12px;
   color: white;
@@ -487,7 +485,7 @@ const SubmitButton = styled.button`
   
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 10px 30px rgba(66, 133, 244, 0.4);
   }
   
   &:disabled {
@@ -614,7 +612,7 @@ const RegistrationIdLabel = styled.div`
 const RegistrationId = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #818cf8;
+  color: #4285f4;
   font-family: monospace;
 `;
 
@@ -628,7 +626,7 @@ const LoadingOverlay = styled.div`
   
   svg {
     animation: spin 1s linear infinite;
-    color: #6366f1;
+    color: #4285f4;
   }
   
   @keyframes spin {
@@ -816,14 +814,14 @@ const ImmerseEventPage = () => {
                 <AlertMessage>The event you are looking for does not exist.</AlertMessage>
               </AlertContent>
             </Alert>
-            <Link to="/immerse-2026" style={{ color: '#818cf8' }}>← Back to Events</Link>
+            <Link to="/immerse-2026" style={{ color: '#4285f4' }}>← Back to Events</Link>
           </Container>
         </MainContent>
       </PageWrapper>
     );
   }
 
-  const gradient = `${event.gradientColors?.from || '#6366f1'}, ${event.gradientColors?.to || '#8b5cf6'}`;
+  const gradient = `${event.gradientColors?.from || '#4285f4'}, ${event.gradientColors?.to || '#34a853'}`;
 
   return (
     <PageWrapper>
@@ -1001,7 +999,7 @@ const ImmerseEventPage = () => {
                     </SuccessText>
                     <Link 
                       to="/immerse-2026" 
-                      style={{ color: '#818cf8', textDecoration: 'none' }}
+                      style={{ color: '#4285f4', textDecoration: 'none' }}
                     >
                       ← Explore More Events
                     </Link>

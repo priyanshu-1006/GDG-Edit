@@ -115,7 +115,7 @@ const ImmerseNavLink = styled(Link)`
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: linear-gradient(135deg, #0d1b2a, #1b263b);
+  background: #0d1b2a;
   border: 1px solid rgba(66, 133, 244, 0.4);
   border-radius: 20px;
   color: #4285f4 !important;
@@ -126,7 +126,7 @@ const ImmerseNavLink = styled(Link)`
   animation: ${glowPulse} 2s ease-in-out infinite;
 
   &:hover {
-    background: linear-gradient(135deg, #1b263b, #0d1b2a);
+    background: #1b263b;
     transform: scale(1.05);
     color: #8ab4f8 !important;
   }

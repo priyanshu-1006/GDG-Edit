@@ -33,11 +33,6 @@ const float = keyframes`
   50% { transform: translateY(-10px); }
 `;
 
-const shimmer = keyframes`
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-`;
-
 // Promo Modal Styled Components
 const PromoModal = styled(motion.div)`
   position: fixed;
@@ -69,7 +64,7 @@ const PromoIcon = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #4285f4, #00c3ff);
+  background: #4285f4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,18 +98,17 @@ const PromoButton = styled(Link)`
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: linear-gradient(90deg, #4285f4, #00c3ff, #4285f4);
-  background-size: 200% auto;
+  background: #4285f4;
   color: white;
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: 8px;
   text-decoration: none;
-  animation: ${shimmer} 3s linear infinite;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
   
   &:hover {
     transform: scale(1.05);
+    background: #3367d6;
   }
 `;
 
