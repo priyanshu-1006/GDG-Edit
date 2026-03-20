@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Eye, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Eye, FileSpreadsheet, Download, Edit2, AlertCircle } from "lucide-react";
 import { apiClient } from "../../utils/apiUtils";
 import IssueCertificateModal from "./components/IssueCertificateModal";
 import BulkIssueModal from "./components/BulkIssueModal";
@@ -30,6 +30,25 @@ const Title = styled.h1`
 const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+const EventSelect = styled.select`
+  height: 40px;
+  min-width: 220px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: white;
+  color: #0f172a;
+  font-size: 14px;
+
+  .dark & {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
 `;
 
 const AddButton = styled.button`
@@ -48,6 +67,39 @@ const AddButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 6px -1px rgba(66, 133, 244, 0.2);
+  }
+`;
+
+const SecondaryButton = styled.button`
+  background: #ffffff;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:not(:disabled):hover {
+    background: #eff6ff;
+  }
+
+  .dark & {
+    background: #0f172a;
+    color: #93c5fd;
+    border-color: #1d4ed8;
+
+    &:not(:disabled):hover {
+      background: #1e293b;
+    }
   }
 `;
 
@@ -108,17 +160,74 @@ const ActionButton = styled.button`
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
-  color: ${(props) => (props.color === "red" ? "#ef4444" : "#10b981")};
+  color: ${(props) => (props.$tone === "red" ? "#ef4444" : props.$tone === "blue" ? "#3b82f6" : "#10b981")};
   transition: all 0.2s;
 
   &:hover {
-    background: ${(props) => (props.color === "red" ? "#fef2f2" : "#ecfdf5")};
+    background: ${(props) =>
+      props.$tone === "red" ? "#fef2f2" : props.$tone === "blue" ? "#eff6ff" : "#ecfdf5"};
   }
 
   .dark & {
     &:hover {
-      background: ${(props) => (props.color === "red" ? "#7f1d1d" : "#064e3b")};
+      background: ${(props) =>
+        props.$tone === "red" ? "#7f1d1d" : props.$tone === "blue" ? "#1e3a8a" : "#064e3b"};
     }
+  }
+`;
+
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+`;
+
+const DangerButton = styled.button`
+  background: #ef4444;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: #fca5a5;
+  }
+
+  &:not(:disabled):hover {
+    background: #dc2626;
+  }
+
+  .dark & {
+    &:not(:disabled):hover {
+      background: #b91c1c;
+    }
+  }
+`;
+
+const SelectionInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #1e40af;
+  font-weight: 500;
+
+  .dark & {
+    background: #1e3a8a;
+    border-color: #1d4ed8;
+    color: #93c5fd;
   }
 `;
 
@@ -127,12 +236,24 @@ export default function CertificateManagement() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [selectedCerts, setSelectedCerts] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCerts = async () => {
     try {
       const res = await apiClient.get("/api/certificates");
       if (res.data.success) {
-        setCerts(res.data.certificates || []);
+        const fetchedCerts = res.data.certificates || [];
+        setCerts(fetchedCerts);
+
+        if (!selectedEventId) {
+          const firstEventId = fetchedCerts.find((c) => c.event?._id)?.event?._id;
+          if (firstEventId) {
+            setSelectedEventId(firstEventId);
+          }
+        }
       }
     } catch (error) {
       console.error(error);
@@ -145,6 +266,48 @@ export default function CertificateManagement() {
     fetchCerts();
   }, []);
 
+  const eventOptions = [...new Map(
+    certs
+      .filter((cert) => cert.event?._id)
+      .map((cert) => [cert.event._id, { id: cert.event._id, name: cert.event.name || "Untitled Event" }]),
+  ).values()];
+
+  const handleDownloadZip = async () => {
+    if (!selectedEventId) {
+      alert("Please select an event first.");
+      return;
+    }
+
+    try {
+      setIsDownloadingZip(true);
+      const response = await apiClient.get(
+        `/api/certificates/download/event/${selectedEventId}/zip`,
+        { responseType: "blob" },
+      );
+
+      const disposition = response.headers["content-disposition"];
+      let fileName = "event-certificates.zip";
+      const match = disposition?.match(/filename=\"?([^\"]+)\"?/i);
+      if (match && match[1]) {
+        fileName = match[1];
+      }
+
+      const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(fileUrl);
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Failed to download ZIP file.");
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     try {
@@ -156,6 +319,52 @@ export default function CertificateManagement() {
     }
   };
 
+  const handleSelectCert = (id) => {
+    const newSelected = new Set(selectedCerts);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedCerts(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCerts.size === certs.length) {
+      setSelectedCerts(new Set());
+    } else {
+      setSelectedCerts(new Set(certs.map((c) => c._id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCerts.size === 0) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedCerts.size} certificate(s)? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        Array.from(selectedCerts).map((id) =>
+          apiClient.delete(`/api/certificates/${id}`).catch((err) => {
+            console.error(`Failed to delete ${id}:`, err);
+            return Promise.reject(err);
+          })
+        )
+      );
+      setSelectedCerts(new Set());
+      fetchCerts();
+      alert("Certificates deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Some certificates failed to delete. " + (err.response?.data?.message || ""));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) return <Container>Loading...</Container>;
 
   return (
@@ -163,6 +372,24 @@ export default function CertificateManagement() {
       <Header>
         <Title>Certificate Management</Title>
         <ButtonGroup>
+          <EventSelect
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+          >
+            <option value="">Select event for ZIP export</option>
+            {eventOptions.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.name}
+              </option>
+            ))}
+          </EventSelect>
+          <SecondaryButton
+            onClick={handleDownloadZip}
+            disabled={!selectedEventId || isDownloadingZip}
+          >
+            <Download size={18} />
+            {isDownloadingZip ? "Preparing ZIP..." : "Download Event ZIP"}
+          </SecondaryButton>
           <AddButton onClick={() => setIsBulkModalOpen(true)}>
             <FileSpreadsheet size={20} /> Bulk Issue
           </AddButton>
@@ -171,9 +398,28 @@ export default function CertificateManagement() {
           </AddButton>
         </ButtonGroup>
       </Header>
+      
+      {selectedCerts.size > 0 && (
+        <SelectionInfo>
+          <AlertCircle size={20} />
+          <span>{selectedCerts.size} certificate(s) selected</span>
+          <DangerButton onClick={handleBulkDelete} disabled={isDeleting}>
+            <Trash2 size={18} />
+            {isDeleting ? "Deleting..." : "Delete Selected"}
+          </DangerButton>
+        </SelectionInfo>
+      )}
+
       <Table>
         <thead>
           <tr>
+            <Th style={{ width: "40px" }}>
+              <Checkbox
+                type="checkbox"
+                checked={selectedCerts.size === certs.length && certs.length > 0}
+                onChange={handleSelectAll}
+              />
+            </Th>
             <Th>Code</Th>
             <Th>Recipient</Th>
             <Th>Event</Th>
@@ -184,20 +430,27 @@ export default function CertificateManagement() {
         <tbody>
           {certs.length === 0 ? (
             <tr>
-              <Td colSpan="5" style={{ textAlign: "center" }}>
+              <Td colSpan="6" style={{ textAlign: "center" }}>
                 No certificates found
               </Td>
             </tr>
           ) : (
             certs.map((cert) => (
               <tr key={cert._id}>
+                <Td style={{ width: "40px" }}>
+                  <Checkbox
+                    type="checkbox"
+                    checked={selectedCerts.has(cert._id)}
+                    onChange={() => handleSelectCert(cert._id)}
+                  />
+                </Td>
                 <Td>{cert.certificateCode}</Td>
                 <Td>{cert.recipientName || cert.user?.name || "Unknown"}</Td>
                 <Td>{cert.event?.name || "Unknown"}</Td>
                 <Td>{new Date(cert.issuedAt).toLocaleDateString()}</Td>
                 <Td>
                   <ActionButton
-                    color="green"
+                    $tone="green"
                     onClick={() =>
                       window.open(
                         `/verification/${cert.certificateCode}`,
@@ -208,7 +461,7 @@ export default function CertificateManagement() {
                     <Eye size={18} />
                   </ActionButton>
                   <ActionButton
-                    color="red"
+                    $tone="red"
                     onClick={() => handleDelete(cert._id)}
                   >
                     <Trash2 size={18} />
