@@ -8,7 +8,7 @@ class ImmerseEmailService {
     constructor() {
         // Use the global Resend API key. Trim whitespace to prevent Vercel pasted errors.
         this.apiKey = process.env.RESEND_API_KEY?.trim();
-        this.domain = 'immerse.mmmut.app';
+        this.domain = 'gdg.mmmut.app';
 
         console.log('📧 Immerse Email Service Initializing...');
         console.log('   API Key present:', !!this.apiKey);

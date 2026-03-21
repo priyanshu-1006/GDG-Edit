@@ -26,7 +26,7 @@ export const sendGlobalEmail = async ({
   subject, 
   html, 
   text, 
-  from = '"IMMERSE 2026 - MMMUT" <team@immerse.mmmut.app>' 
+  from = '"GDG MMMUT" <team@gdg.mmmut.app>'
 }) => {
   try {
     // Attempt 1: Resend
