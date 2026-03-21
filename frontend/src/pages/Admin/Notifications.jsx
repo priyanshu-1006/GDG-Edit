@@ -144,7 +144,6 @@ const Notifications = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchNotifications();
-      fetchStats();
       alert("Notification sent successfully!");
     } catch (error) {
       console.error("Failed to send notification:", error);
@@ -166,7 +165,6 @@ const Notifications = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchNotifications();
-      fetchStats();
       alert("Notification scheduled successfully!");
     } catch (error) {
       console.error("Failed to schedule notification:", error);
@@ -186,7 +184,6 @@ const Notifications = () => {
         },
       );
       fetchNotifications();
-      fetchStats();
     } catch (error) {
       console.error("Failed to delete notification:", error);
     }
@@ -521,6 +518,12 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
 `;
 
 const Title = styled.h1`
@@ -567,6 +570,14 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 32px;
+
+  @media (max-width: 500px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 360px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StatCard = styled.div`
@@ -640,6 +651,10 @@ const NotificationCard = styled.div`
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
+
+  @media (max-width: 500px) {
+    padding: 16px;
+  }
 
   .dark & {
     background: #1e293b;

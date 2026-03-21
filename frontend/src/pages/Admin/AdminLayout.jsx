@@ -292,6 +292,10 @@ const TopBar = styled.header.attrs({
   top: 0;
   z-index: 900;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
 `;
 
 const TopBarLeft = styled.div`
@@ -320,6 +324,10 @@ const PageTitle = styled.h2.attrs({
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.5px;
+
+  @media (max-width: 480px) {
+    font-size: 18px;
+  }
 `;
 
 const TopBarRight = styled.div`
@@ -364,6 +372,10 @@ const UserInfo = styled.div`
   text-align: right;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
 `;
 
 const UserName = styled.span.attrs({
@@ -441,6 +453,14 @@ const Content = styled.div`
   padding: 32px;
   max-width: 1600px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 `;
 
 export default AdminLayout;

@@ -502,6 +502,13 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const Title = styled.h1.attrs({
@@ -515,6 +522,11 @@ const Title = styled.h1.attrs({
 const HeaderActions = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    width: 100%;
+  }
 `;
 
 const ExportButton = styled.button`
@@ -569,7 +581,7 @@ const FilterBar = styled.div`
 
 const SearchBox = styled.div`
   flex: 1;
-  min-width: 300px;
+  min-width: 200px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -811,6 +823,12 @@ const Pagination = styled.div`
   background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
 
   .dark & {
     background: #1e293b;

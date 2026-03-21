@@ -600,6 +600,14 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 `;
 
 const Header = styled.div`
@@ -1006,6 +1014,8 @@ const LogsHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
   
   h3 {
     margin: 0;
