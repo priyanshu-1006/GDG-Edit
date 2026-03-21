@@ -11,6 +11,16 @@ import { sendGlobalEmail } from '../utils/unifiedEmail.js';
 
 const router = express.Router();
 
+const isGoogleConfigured =
+  !!process.env.GOOGLE_CLIENT_ID &&
+  !!process.env.GOOGLE_CLIENT_SECRET &&
+  process.env.GOOGLE_CLIENT_ID.trim() !== "your-google-client-id";
+
+const isGithubConfigured =
+  !!process.env.GITHUB_CLIENT_ID &&
+  !!process.env.GITHUB_CLIENT_SECRET &&
+  process.env.GITHUB_CLIENT_ID !== "your-github-client-id";
+
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
@@ -97,6 +107,14 @@ router.post('/login', async (req, res, next) => {
 // @access  Public
 router.get('/google', (req, res, next) => {
   console.log('🔵 Initiating Google OAuth flow');
+
+  if (!isGoogleConfigured) {
+    return res.status(503).json({
+      success: false,
+      message: 'Google OAuth is not configured on server',
+    });
+  }
+
   passport.authenticate('google', {
     scope: ['profile', 'email']
   })(req, res, next);
@@ -106,6 +124,12 @@ router.get('/google', (req, res, next) => {
 // @desc    Google OAuth callback
 // @access  Public
 router.get('/google/callback',
+  (req, res, next) => {
+    if (!isGoogleConfigured) {
+      return res.redirect(`${process.env.FRONTEND_URL}/auth?error=google_oauth_not_configured`);
+    }
+    next();
+  },
   passport.authenticate('google', {
     failureRedirect: `${process.env.FRONTEND_URL}/auth?error=google_auth_failed`,
     session: false
@@ -125,21 +149,36 @@ router.get('/google/callback',
 // @route   GET /api/auth/github
 // @desc    GitHub OAuth login
 // @access  Public
-router.get('/github', passport.authenticate('github', {
-  scope: ['user:email']
-}));
+router.get('/github', (req, res, next) => {
+  if (!isGithubConfigured) {
+    return res.status(503).json({
+      success: false,
+      message: 'GitHub OAuth is not configured on server',
+    });
+  }
+
+  passport.authenticate('github', {
+    scope: ['user:email']
+  })(req, res, next);
+});
 
 // @route   GET /api/auth/github/callback
 // @desc    GitHub OAuth callback
 // @access  Public
 router.get('/github/callback',
+  (req, res, next) => {
+    if (!isGithubConfigured) {
+      return res.redirect(`${process.env.FRONTEND_URL}/auth?error=github_oauth_not_configured`);
+    }
+    next();
+  },
   passport.authenticate('github', {
     failureRedirect: `${process.env.FRONTEND_URL}/auth?error=github_auth_failed`,
     session: false
   }),
   (req, res) => {
     // Successful authentication
-    const token = require('../utils/auth.utils.js').generateToken(req.user._id);
+    const token = generateToken(req.user._id);
 
     // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);

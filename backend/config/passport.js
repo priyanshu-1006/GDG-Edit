@@ -42,12 +42,17 @@ if (
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          console.log('Google OAuth callback received for:', profile.emails[0].value);
+          const primaryEmail = profile.emails?.[0]?.value;
+          if (!primaryEmail) {
+            return done(new Error('Google account email not available'), null);
+          }
+
+          console.log('Google OAuth callback received for:', primaryEmail);
           // Check if user already exists
           let user = await User.findOne({ 
             $or: [
               { googleId: profile.id },
-              { email: profile.emails[0].value }
+              { email: primaryEmail }
             ]
           });
 
@@ -72,7 +77,7 @@ if (
           // Create new user
           user = await User.create({
             name: profile.displayName,
-            email: profile.emails[0].value,
+            email: primaryEmail,
             profilePhoto: profile.photos[0]?.value,
             googleId: profile.id,
             oauthProvider: 'google',
