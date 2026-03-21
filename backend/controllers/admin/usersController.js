@@ -1,6 +1,7 @@
 import User from '../../models/User.js';
 import Registration from '../../models/Registration.js';
 import Certificate from '../../models/Certificate.js';
+import { sendGlobalEmail } from '../../utils/unifiedEmail.js';
 
 /**
  * @desc    Get all users with filtering, searching, and pagination
@@ -350,6 +351,73 @@ export const toggleSuspendUser = async (req, res) => {
 };
 
 /**
+ * @desc    Toggle Super Admin approval for Event Managers
+ * @route   PATCH /api/admin/users/:id/approve
+ * @access  Private/SuperAdmin
+ */
+export const toggleApproval = async (req, res) => {
+  try {
+    const { isApproved } = req.body;
+
+    const user = await User.findById(req.params.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Only allow toggling for event managers (or other roles if needed later)
+    if (user.role !== 'event_manager') {
+      return res.status(400).json({
+        success: false,
+        message: 'Approval toggling is currently only applicable for Event Managers.'
+      });
+    }
+
+    user.isApproved = isApproved;
+    await user.save();
+
+    // Send email notification if they just got approved
+    if (isApproved) {
+      sendGlobalEmail({
+        to: user.email,
+        subject: 'GDG MMMUT: Event Manager Account Approved!',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+            <div style="background:#0f9d58;padding:30px 40px;text-align:center;">
+              <h1 style="color:#fff;margin:0;font-size:24px;">Account Approved</h1>
+            </div>
+            <div style="padding:40px;">
+              <p style="color:#202124;font-size:16px;">Hello ${user.name},</p>
+              <p style="color:#202124;font-size:16px;">Good news! Your GDG MMMUT Event Manager account has been approved by a Super Admin.</p>
+              <p style="color:#202124;font-size:16px;">You can now log in to the admin dashboard and start managing events.</p>
+              <div style="text-align:center;margin-top:30px;">
+                <a href="${process.env.FRONTEND_URL}/admin/login" style="background:#4285f4;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">Visit Admin Dashboard</a>
+              </div>
+            </div>
+          </div>
+        `
+      }).catch(err => console.error("Failed to send approval email:", err));
+    }
+
+    res.json({
+      success: true,
+      message: isApproved ? 'Event Manager approved successfully!' : 'Event Manager approval revoked.',
+      user
+    });
+  } catch (error) {
+    console.error('Toggle approval error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle approval status',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @desc    Export users to CSV
  * @route   GET /api/admin/users/export
  * @access  Private/Admin
@@ -396,5 +464,6 @@ export default {
   deleteUser,
   changeUserRole,
   toggleSuspendUser,
+  toggleApproval,
   exportUsers
 };

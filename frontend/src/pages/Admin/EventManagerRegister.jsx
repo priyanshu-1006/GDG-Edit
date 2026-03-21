@@ -3,7 +3,6 @@ import styled, { keyframes } from "styled-components";
 import { Mail, Shield, Lock, ArrowRight, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/useAuth";
 
 const API = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
 
@@ -22,7 +21,7 @@ const EventManagerRegister = () => {
   const [canResend, setCanResend] = useState(false);
   const otpRefs = useRef([]);
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  // useAuth removed because auto-login is disabled for pending approvals
 
   // Countdown timer for OTP expiry
   useEffect(() => {
@@ -171,13 +170,7 @@ const EventManagerRegister = () => {
         password,
       });
       if (data.success) {
-        // Auto-login
-        localStorage.setItem("token", data.token);
-        if (authLogin) {
-          await authLogin(email, password);
-        }
         setStep(4); // Success screen
-        setTimeout(() => navigate("/event-manager"), 2000);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
@@ -352,10 +345,10 @@ const EventManagerRegister = () => {
               <SuccessIconWrapper>
                 <CheckCircle size={48} />
               </SuccessIconWrapper>
-              <StepTitle style={{ justifyContent: "center" }}>Welcome Aboard! 🎉</StepTitle>
+              <StepTitle style={{ justifyContent: "center" }}>Registration Complete! 🎉</StepTitle>
               <StepDesc style={{ textAlign: "center" }}>
-                You are now an Event Manager at GDG MMMUT.<br />
-                Redirecting to your dashboard...
+                Your Event Manager account has been successfully created.<br /><br />
+                However, it is currently <strong>Pending Super Admin Approval</strong>. You will receive an email once your account is verified and ready for login!
               </StepDesc>
             </StepContent>
           )}

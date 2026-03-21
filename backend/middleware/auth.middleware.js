@@ -34,6 +34,14 @@ export const protect = async (req, res, next) => {
         });
       }
 
+      // Block unapproved event managers
+      if (req.user.role === 'event_manager' && req.user.isApproved === false) {
+        return res.status(403).json({
+          success: false,
+          message: "Your event manager account is pending Super Admin approval.",
+        });
+      }
+
       next();
     } catch (error) {
       return res.status(401).json({

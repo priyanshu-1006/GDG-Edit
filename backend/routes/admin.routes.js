@@ -38,6 +38,7 @@ router.put('/users/:id', logActivity('update', 'user'), usersController.updateUs
 router.delete('/users/:id', requireSuperAdmin, logActivity('delete', 'user'), usersController.deleteUser);
 router.patch('/users/:id/role', requireSuperAdmin, logActivity('change_role', 'user'), usersController.changeUserRole);
 router.patch('/users/:id/suspend', logActivity('suspend', 'user'), usersController.toggleSuspendUser);
+router.patch('/users/:id/approve', requireSuperAdmin, logActivity('approve', 'user'), usersController.toggleApproval);
 
 // ============================================
 // EVENT MANAGEMENT ROUTES

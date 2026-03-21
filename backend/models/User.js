@@ -62,6 +62,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isApproved: {
+    type: Boolean,
+    default: true,
+  },
   lastLogin: {
     type: Date,
     default: Date.now,
