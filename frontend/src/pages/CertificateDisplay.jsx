@@ -56,15 +56,20 @@ const CertificateDisplay = () => {
   useEffect(() => {
     const fetchCertificate = async () => {
       try {
+        console.log(`[Certificate Display] Loading certificate: ${serial}`);
         const res = await fetch(
           `${API_BASE_URL}/api/certificates/verify/${serial}`,
         );
         const result = await res.json();
 
-        if (!res.ok || !result.success)
-          throw new Error(result.message || "Invalid certificate.");
+        if (!res.ok || !result.success) {
+          const errorMsg = result.message || "Certificate not found.";
+          console.error(`[Certificate Display] Error (${res.status}): ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
         setData(result.certificate);
       } catch (err) {
+        console.error(`[Certificate Display] Failed to load:`, err);
         setError(err.message);
       }
     };
@@ -97,6 +102,7 @@ const CertificateDisplay = () => {
         const renderText = (el, data) => {
           const {
             text,
+            content,
             x,
             y,
             fontSize,
@@ -106,20 +112,41 @@ const CertificateDisplay = () => {
             width,
             fontSizeRatio,
             heightRatio,
+            id,
           } = el;
 
+          const recipientName =
+            data.recipientName || data.user?.name || "Valued Member";
+          const recipientEmail = data.recipientEmail || data.user?.email || "";
+
+          // Support both new and legacy layout element schemas.
+          let rawText = "";
+          if (typeof text === "string") rawText = text;
+          else if (typeof content === "string") rawText = content;
+
+          if (!rawText && typeof id === "string" && /name/i.test(id)) {
+            rawText = "{Name}";
+          }
+
+          if (!rawText) {
+            return { drewName: false };
+          }
+
           // Variable substitution
-          const finalText = text.replace(/\{(.+?)\}/g, (match, p1) => {
+          const finalText = rawText.replace(/\{(.+?)\}/g, (match, p1) => {
             const keyLC = p1.toLowerCase();
             // Standard Fields
             if (["name", "recipient name", "recipientname"].includes(keyLC)) {
-              return data.recipientName || data.user?.name || match;
+              return recipientName || match;
             }
-            if (["email", "recipient email"].includes(keyLC)) {
-              return data.recipientEmail || data.user?.email || match;
+            if (["email", "recipient email", "recipientemail"].includes(keyLC)) {
+              return recipientEmail || match;
             }
             if (["date"].includes(keyLC)) {
               return new Date(data.issuedAt).toLocaleDateString();
+            }
+            if (["certi id", "certi_id", "certificate id", "certificate_id", "certificateid", "certiid", "id"].includes(keyLC)) {
+              return data.certificateCode || data._id || match;
             }
             if (data.extraData) {
               if (data.extraData[p1]) return data.extraData[p1];
@@ -212,11 +239,47 @@ const CertificateDisplay = () => {
 
             ctx.fillText(line, xAnchor, lineY);
           });
+
+          const lowerText = rawText.toLowerCase();
+          const drewName =
+            lowerText.includes("{name}") ||
+            lowerText.includes("{recipient name}") ||
+            lowerText.includes("{recipientname}") ||
+            (typeof id === "string" && /name/i.test(id));
+
+          return { drewName };
+        };
+
+        const drawNameFallback = () => {
+          const recipientName =
+            data.recipientName || data.user?.name || "Valued Member";
+          const fallbackFontSize = Math.max(28, img.height * 0.06);
+          ctx.font = `700 ${fallbackFontSize}px Inter, Roboto, \"Helvetica Neue\", Arial, sans-serif`;
+          ctx.fillStyle = "#000000";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(recipientName, img.width / 2, img.height * 0.52);
         };
 
         // Handle New Array Format OR Legacy Object Format
         if (Array.isArray(data.positioning)) {
-          data.positioning.forEach((el) => renderText(el, data));
+          let hasNameElement = false;
+
+          data.positioning.forEach((el) => {
+            try {
+              const { drewName } = renderText(el, data);
+              if (drewName) hasNameElement = true;
+            } catch (renderError) {
+              console.error("Failed to render certificate text element", {
+                element: el,
+                error: renderError,
+              });
+            }
+          });
+
+          if (!hasNameElement) {
+            drawNameFallback();
+          }
         } else {
           // Legacy Fallback
           const { x, y, fontSize, color } = data.positioning || {
@@ -252,7 +315,19 @@ const CertificateDisplay = () => {
       >
         <Header />
         <Container>
-          <ErrorText>❌ {error}</ErrorText>
+          <ErrorText>❌ Certificate Not Found</ErrorText>
+          <p style={{ marginTop: "20px", color: "#666", fontSize: "16px" }}>
+            <strong>Certificate Code:</strong> <code style={{ background: "#f5f5f5", padding: "4px 8px", borderRadius: "4px" }}>{serial}</code>
+          </p>
+          <p style={{ color: "#666", fontSize: "16px", marginTop: "10px" }}>
+            {error}
+          </p>
+          <p style={{ color: "#866", fontSize: "14px", marginTop: "20px", lineHeight: "1.6" }}>
+            <strong>Troubleshooting:</strong><br/>
+            • Make sure you've entered the correct certificate code<br/>
+            • Check for extra spaces or typos<br/>
+            • The certificate code is usually provided in your confirmation email
+          </p>
         </Container>
       </div>
     );
@@ -265,7 +340,7 @@ const CertificateDisplay = () => {
       >
         <Header />
         <Container>
-          <h3>Loading certificate...</h3>
+          <h3>Loading certificate {serial ? `(${serial})` : ""}...</h3>
         </Container>
       </div>
     );

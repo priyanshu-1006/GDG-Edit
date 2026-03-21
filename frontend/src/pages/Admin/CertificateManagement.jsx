@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Eye, FileSpreadsheet, Pencil, X, Check } from "lucide-react";
+import { Plus, Trash2, Eye, FileSpreadsheet, Download, Edit2, AlertCircle } from "lucide-react";
 import { apiClient } from "../../utils/apiUtils";
 import IssueCertificateModal from "./components/IssueCertificateModal";
 import BulkIssueModal from "./components/BulkIssueModal";
@@ -21,12 +21,34 @@ const Title = styled.h1`
   font-size: 24px;
   font-weight: 700;
   color: #0f172a;
-  .dark & { color: white; }
+
+  .dark & {
+    color: white;
+  }
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+const EventSelect = styled.select`
+  height: 40px;
+  min-width: 220px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: white;
+  color: #0f172a;
+  font-size: 14px;
+
+  .dark & {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
 `;
 
 const AddButton = styled.button`
@@ -41,9 +63,43 @@ const AddButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 6px -1px rgba(66, 133, 244, 0.2);
+  }
+`;
+
+const SecondaryButton = styled.button`
+  background: #ffffff;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:not(:disabled):hover {
+    background: #eff6ff;
+  }
+
+  .dark & {
+    background: #0f172a;
+    color: #93c5fd;
+    border-color: #1d4ed8;
+
+    &:not(:disabled):hover {
+      background: #1e293b;
+    }
   }
 `;
 
@@ -56,7 +112,11 @@ const Table = styled.table`
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
-  .dark & { background: #1e293b; border-color: #334155; }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+  }
 `;
 
 const Th = styled.th`
@@ -68,7 +128,12 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   border-bottom: 1px solid #e2e8f0;
-  .dark & { background: #0f172a; color: #94a3b8; border-color: #334155; }
+
+  .dark & {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+  }
 `;
 
 const Td = styled.td`
@@ -77,8 +142,15 @@ const Td = styled.td`
   vertical-align: middle;
   color: #334155;
   font-size: 14px;
-  .dark & { color: #e2e8f0; border-color: #334155; }
-  tr:last-child & { border-bottom: none; }
+
+  .dark & {
+    color: #e2e8f0;
+    border-color: #334155;
+  }
+
+  tr:last-child & {
+    border-bottom: none;
+  }
 `;
 
 const ActionButton = styled.button`
@@ -88,70 +160,75 @@ const ActionButton = styled.button`
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
-  color: ${(p) => p.color === "red" ? "#ef4444" : p.color === "blue" ? "#3b82f6" : "#10b981"};
+  color: ${(props) => (props.$tone === "red" ? "#ef4444" : props.$tone === "blue" ? "#3b82f6" : "#10b981")};
   transition: all 0.2s;
+
   &:hover {
-    background: ${(p) => p.color === "red" ? "#fef2f2" : p.color === "blue" ? "#eff6ff" : "#ecfdf5"};
+    background: ${(props) =>
+      props.$tone === "red" ? "#fef2f2" : props.$tone === "blue" ? "#eff6ff" : "#ecfdf5"};
   }
+
   .dark & {
     &:hover {
-      background: ${(p) => p.color === "red" ? "#7f1d1d" : p.color === "blue" ? "#1e3a5f" : "#064e3b"};
+      background: ${(props) =>
+        props.$tone === "red" ? "#7f1d1d" : props.$tone === "blue" ? "#1e3a8a" : "#064e3b"};
     }
   }
 `;
 
-const Overlay = styled.div`
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 2000;
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 `;
 
-const Modal = styled.div`
-  background: white; border-radius: 16px; width: 100%; max-width: 480px;
-  padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-  .dark & { background: #1e293b; }
-`;
+const DangerButton = styled.button`
+  background: #ef4444;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
 
-const ModalTitle = styled.h2`
-  font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #0f172a;
-  display: flex; justify-content: space-between; align-items: center;
-  .dark & { color: white; }
-`;
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: #fca5a5;
+  }
 
-const Field = styled.div`margin-bottom: 14px;`;
+  &:not(:disabled):hover {
+    background: #dc2626;
+  }
 
-const Label = styled.label`
-  display: block; font-size: 12px; font-weight: 600;
-  text-transform: uppercase; color: #64748b; margin-bottom: 4px;
-  .dark & { color: #94a3b8; }
-`;
-
-const Input = styled.input`
-  width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0;
-  border-radius: 8px; font-size: 14px; outline: none;
-  background: white; color: #0f172a; transition: border-color 0.15s;
-  &:focus { border-color: #4285f4; }
   .dark & {
-    background: #0f172a; border-color: #334155; color: #e2e8f0;
-    &:focus { border-color: #60a5fa; }
+    &:not(:disabled):hover {
+      background: #b91c1c;
+    }
   }
 `;
 
-const SaveBtn = styled.button`
-  width: 100%; padding: 12px; background: #4285f4; color: white;
-  border: none; border-radius: 10px; font-weight: 600; font-size: 14px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  gap: 8px; margin-top: 8px; transition: background 0.15s;
-  &:hover { background: #3367d6; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
-`;
+const SelectionInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #1e40af;
+  font-weight: 500;
 
-const CloseBtn = styled.button`
-  background: none; border: none; cursor: pointer; color: #64748b;
-  padding: 4px; border-radius: 6px;
-  &:hover { background: #f1f5f9; }
-  .dark & { color: #94a3b8; &:hover { background: #334155; } }
+  .dark & {
+    background: #1e3a8a;
+    border-color: #1d4ed8;
+    color: #93c5fd;
+  }
 `;
 
 export default function CertificateManagement() {
@@ -159,14 +236,25 @@ export default function CertificateManagement() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [editCert, setEditCert] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [saving, setSaving] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [selectedCerts, setSelectedCerts] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCerts = async () => {
     try {
       const res = await apiClient.get("/api/certificates");
-      if (res.data.success) setCerts(res.data.certificates || []);
+      if (res.data.success) {
+        const fetchedCerts = res.data.certificates || [];
+        setCerts(fetchedCerts);
+
+        if (!selectedEventId) {
+          const firstEventId = fetchedCerts.find((c) => c.event?._id)?.event?._id;
+          if (firstEventId) {
+            setSelectedEventId(firstEventId);
+          }
+        }
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -174,7 +262,51 @@ export default function CertificateManagement() {
     }
   };
 
-  useEffect(() => { fetchCerts(); }, []);
+  useEffect(() => {
+    fetchCerts();
+  }, []);
+
+  const eventOptions = [...new Map(
+    certs
+      .filter((cert) => cert.event?._id)
+      .map((cert) => [cert.event._id, { id: cert.event._id, name: cert.event.name || "Untitled Event" }]),
+  ).values()];
+
+  const handleDownloadZip = async () => {
+    if (!selectedEventId) {
+      alert("Please select an event first.");
+      return;
+    }
+
+    try {
+      setIsDownloadingZip(true);
+      const response = await apiClient.get(
+        `/api/certificates/download/event/${selectedEventId}/zip`,
+        { responseType: "blob" },
+      );
+
+      const disposition = response.headers["content-disposition"];
+      let fileName = "event-certificates.zip";
+      const match = disposition?.match(/filename=\"?([^\"]+)\"?/i);
+      if (match && match[1]) {
+        fileName = match[1];
+      }
+
+      const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(fileUrl);
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Failed to download ZIP file.");
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
@@ -187,30 +319,49 @@ export default function CertificateManagement() {
     }
   };
 
-  const openEdit = (cert) => {
-    setEditCert(cert);
-    setEditForm({
-      recipientName: cert.recipientName || cert.user?.name || "",
-      recipientEmail: cert.recipientEmail || "",
-      customEventName: cert.event?.name || cert.customEventName || "",
-      certificateCode: cert.certificateCode || "",
-      certificateUrl: cert.certificateUrl || "",
-      issuedAt: cert.issuedAt ? cert.issuedAt.split("T")[0] : "",
-    });
+  const handleSelectCert = (id) => {
+    const newSelected = new Set(selectedCerts);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedCerts(newSelected);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editCert) return;
-    setSaving(true);
+  const handleSelectAll = () => {
+    if (selectedCerts.size === certs.length) {
+      setSelectedCerts(new Set());
+    } else {
+      setSelectedCerts(new Set(certs.map((c) => c._id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCerts.size === 0) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedCerts.size} certificate(s)? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
     try {
-      await apiClient.put(`/api/certificates/${editCert._id}`, editForm);
-      setEditCert(null);
+      await Promise.all(
+        Array.from(selectedCerts).map((id) =>
+          apiClient.delete(`/api/certificates/${id}`).catch((err) => {
+            console.error(`Failed to delete ${id}:`, err);
+            return Promise.reject(err);
+          })
+        )
+      );
+      setSelectedCerts(new Set());
       fetchCerts();
+      alert("Certificates deleted successfully!");
     } catch (err) {
       console.error(err);
-      alert("Save failed. " + (err.response?.data?.message || ""));
+      alert("Some certificates failed to delete. " + (err.response?.data?.message || ""));
     } finally {
-      setSaving(false);
+      setIsDeleting(false);
     }
   };
 
@@ -221,6 +372,24 @@ export default function CertificateManagement() {
       <Header>
         <Title>Certificate Management</Title>
         <ButtonGroup>
+          <EventSelect
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+          >
+            <option value="">Select event for ZIP export</option>
+            {eventOptions.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.name}
+              </option>
+            ))}
+          </EventSelect>
+          <SecondaryButton
+            onClick={handleDownloadZip}
+            disabled={!selectedEventId || isDownloadingZip}
+          >
+            <Download size={18} />
+            {isDownloadingZip ? "Preparing ZIP..." : "Download Event ZIP"}
+          </SecondaryButton>
           <AddButton onClick={() => setIsBulkModalOpen(true)}>
             <FileSpreadsheet size={20} /> Bulk Issue
           </AddButton>
@@ -229,9 +398,28 @@ export default function CertificateManagement() {
           </AddButton>
         </ButtonGroup>
       </Header>
+      
+      {selectedCerts.size > 0 && (
+        <SelectionInfo>
+          <AlertCircle size={20} />
+          <span>{selectedCerts.size} certificate(s) selected</span>
+          <DangerButton onClick={handleBulkDelete} disabled={isDeleting}>
+            <Trash2 size={18} />
+            {isDeleting ? "Deleting..." : "Delete Selected"}
+          </DangerButton>
+        </SelectionInfo>
+      )}
+
       <Table>
         <thead>
           <tr>
+            <Th style={{ width: "40px" }}>
+              <Checkbox
+                type="checkbox"
+                checked={selectedCerts.size === certs.length && certs.length > 0}
+                onChange={handleSelectAll}
+              />
+            </Th>
             <Th>Code</Th>
             <Th>Recipient</Th>
             <Th>Event</Th>
@@ -242,25 +430,40 @@ export default function CertificateManagement() {
         <tbody>
           {certs.length === 0 ? (
             <tr>
-              <Td colSpan="5" style={{ textAlign: "center" }}>
+              <Td colSpan="6" style={{ textAlign: "center" }}>
                 No certificates found
               </Td>
             </tr>
           ) : (
             certs.map((cert) => (
               <tr key={cert._id}>
+                <Td style={{ width: "40px" }}>
+                  <Checkbox
+                    type="checkbox"
+                    checked={selectedCerts.has(cert._id)}
+                    onChange={() => handleSelectCert(cert._id)}
+                  />
+                </Td>
                 <Td>{cert.certificateCode}</Td>
                 <Td>{cert.recipientName || cert.user?.name || "Unknown"}</Td>
-                <Td>{cert.event?.name || cert.customEventName || "Unknown"}</Td>
+                <Td>{cert.event?.name || "Unknown"}</Td>
                 <Td>{new Date(cert.issuedAt).toLocaleDateString()}</Td>
                 <Td>
-                  <ActionButton color="green" onClick={() => window.open(`/verification/${cert.certificateCode}`, "_blank")}>
+                  <ActionButton
+                    $tone="green"
+                    onClick={() =>
+                      window.open(
+                        `/verification/${cert.certificateCode}`,
+                        "_blank",
+                      )
+                    }
+                  >
                     <Eye size={18} />
                   </ActionButton>
-                  <ActionButton color="blue" onClick={() => openEdit(cert)}>
-                    <Pencil size={18} />
-                  </ActionButton>
-                  <ActionButton color="red" onClick={() => handleDelete(cert._id)}>
+                  <ActionButton
+                    $tone="red"
+                    onClick={() => handleDelete(cert._id)}
+                  >
                     <Trash2 size={18} />
                   </ActionButton>
                 </Td>
@@ -270,47 +473,16 @@ export default function CertificateManagement() {
         </tbody>
       </Table>
 
-      <IssueCertificateModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchCerts} />
-      <BulkIssueModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} onSuccess={fetchCerts} />
-
-      {editCert && (
-        <Overlay onClick={() => setEditCert(null)}>
-          <Modal onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>
-              Edit Certificate
-              <CloseBtn onClick={() => setEditCert(null)}><X size={20} /></CloseBtn>
-            </ModalTitle>
-            <Field>
-              <Label>Certificate Code</Label>
-              <Input value={editForm.certificateCode} onChange={(e) => setEditForm({ ...editForm, certificateCode: e.target.value })} />
-            </Field>
-            <Field>
-              <Label>Recipient Name</Label>
-              <Input value={editForm.recipientName} onChange={(e) => setEditForm({ ...editForm, recipientName: e.target.value })} />
-            </Field>
-            <Field>
-              <Label>Recipient Email</Label>
-              <Input value={editForm.recipientEmail} onChange={(e) => setEditForm({ ...editForm, recipientEmail: e.target.value })} />
-            </Field>
-            <Field>
-              <Label>Event Name</Label>
-              <Input value={editForm.customEventName} onChange={(e) => setEditForm({ ...editForm, customEventName: e.target.value })} />
-            </Field>
-            <Field>
-              <Label>Issue Date</Label>
-              <Input type="date" value={editForm.issuedAt} onChange={(e) => setEditForm({ ...editForm, issuedAt: e.target.value })} />
-            </Field>
-            <Field>
-              <Label>Certificate URL</Label>
-              <Input value={editForm.certificateUrl} onChange={(e) => setEditForm({ ...editForm, certificateUrl: e.target.value })} />
-            </Field>
-            <SaveBtn onClick={handleSaveEdit} disabled={saving}>
-              <Check size={18} />
-              {saving ? "Saving..." : "Save Changes"}
-            </SaveBtn>
-          </Modal>
-        </Overlay>
-      )}
+      <IssueCertificateModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchCerts}
+      />
+      <BulkIssueModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={fetchCerts}
+      />
     </Container>
   );
 }
