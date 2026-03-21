@@ -188,7 +188,6 @@ immerseRegistrationSchema.pre('save', async function(next) {
 
 // Index for faster queries
 immerseRegistrationSchema.index({ event: 1, email: 1 }, { unique: true });
-immerseRegistrationSchema.index({ registrationId: 1 });
 immerseRegistrationSchema.index({ eventSlug: 1, status: 1 });
 immerseRegistrationSchema.index({ email: 1 });
 

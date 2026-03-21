@@ -186,7 +186,7 @@ const HomePage = () => {
       <SponsorsSection />
       <ContactSection />
       
-      {/* IMMERSE 2026 Promo Modal */}
+      {/* GDG Induction Promo Modal */}
       <AnimatePresence>
         {showPromo && (
           <PromoModal
@@ -204,13 +204,13 @@ const HomePage = () => {
               </PromoIcon>
               <PromoText>
                 <PromoTitle>
-                  IMMERSE 2026 <Sparkles size={14} />
+                  GDG MMMUT Induction <Sparkles size={14} />
                 </PromoTitle>
                 <PromoSubtitle>
-                  Registrations are now open! Join our interstellar journey of innovation.
+                  Applications are now open! Join our community of developers and innovators.
                 </PromoSubtitle>
-                <PromoButton to="/immerse-2026">
-                  Register Now
+                <PromoButton to="/induction">
+                  Apply Now
                   <Sparkles size={14} />
                 </PromoButton>
               </PromoText>

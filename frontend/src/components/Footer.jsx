@@ -158,7 +158,7 @@ const Footer = () => {
               <FaGithub />
             </SocialIcon>
             <SocialIcon 
-              href="https://www.linkedin.com/company/gdgmmmut/" 
+              href="https://www.linkedin.com/company/gdgoncampusmmmut/" 
               target="_blank" 
               whileHover={{ y: -3 }}
               aria-label="LinkedIn"

@@ -12,9 +12,13 @@ import notificationsController from '../controllers/admin/notificationsControlle
 
 const router = express.Router();
 
-// All admin routes require authentication and admin role
+// All admin portal routes require authentication and at least event_manager role
 router.use(protect);
-router.use(requireAdmin);
+router.use(requireEventManager);
+
+// Strictly lock User Management and Notifications behind full Admin role
+router.use('/users', requireAdmin);
+router.use('/notifications', requireAdmin);
 
 // ============================================
 // DASHBOARD ROUTES

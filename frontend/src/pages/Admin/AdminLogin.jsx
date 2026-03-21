@@ -1,23 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Lock, Mail, ArrowRight, Shield } from "lucide-react";
+import { useAuth } from "../../contexts/useAuth";
 
-// You can copy Logo/Brand components from AuthPage if needed, or use text
 const AdminLogin = () => {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (user && ["admin", "super_admin", "event_manager"].includes(user.role)) {
+            const currentPath = window.location.pathname;
+
+            // Only auto-redirect if the user's role matches this portal
+            if (currentPath.includes("super-admin") && user.role === 'super_admin') {
+                navigate("/super-admin");
+            } else if (currentPath.includes("event-manager") && user.role === 'event_manager') {
+                navigate("/event-manager");
+            } else if (currentPath.includes("/admin") && !currentPath.includes("super-admin") && !currentPath.includes("event-manager")) {
+                if (user.role === 'admin' || user.role === 'super_admin') {
+                    navigate(user.role === 'super_admin' ? "/super-admin" : "/admin");
+                }
+            }
+        }
+    }, [user, navigate]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Standard login, but we'll check role after
-            // Alternatively, use a specific admin-login endpoint if created
             const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
                 email,
                 password
@@ -25,8 +41,25 @@ const AdminLogin = () => {
 
             const { token, user } = response.data;
 
-            if (user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'event_manager') {
-                alert("Access Denied: You do not have admin privileges.");
+            // Determine which portal the user is trying to access
+            const currentPath = window.location.pathname;
+            let allowedRoles = [];
+            let portalLabel = "";
+
+            if (currentPath.includes("super-admin")) {
+                allowedRoles = ["super_admin"];
+                portalLabel = "Super Admin Portal";
+            } else if (currentPath.includes("event-manager")) {
+                allowedRoles = ["event_manager"];
+                portalLabel = "Event Manager Portal";
+            } else {
+                // /admin portal — admins and super_admins can access
+                allowedRoles = ["admin", "super_admin"];
+                portalLabel = "Admin Portal";
+            }
+
+            if (!allowedRoles.includes(user.role)) {
+                alert(`Access Denied: Your account does not have ${portalLabel} privileges.`);
                 setLoading(false);
                 return;
             }
@@ -34,7 +67,13 @@ const AdminLogin = () => {
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
 
-            navigate("/admin");
+            if (user.role === 'super_admin') {
+                window.location.href = "/super-admin";
+            } else if (user.role === 'event_manager') {
+                window.location.href = "/event-manager";
+            } else {
+                window.location.href = "/admin";
+            }
         } catch (error) {
             console.error("Login failed", error);
             alert(error.response?.data?.message || "Login failed");
@@ -43,12 +82,17 @@ const AdminLogin = () => {
         }
     };
 
+    const path = window.location.pathname;
+    let portalName = "Admin Portal";
+    if (path.includes("super-admin")) portalName = "Super Admin Portal";
+    else if (path.includes("event-manager")) portalName = "Event Manager Portal";
+
     return (
         <Container>
             <LoginCard>
                 <Header>
                     <Shield size={48} color="#4285f4" />
-                    <Title>Admin Portal</Title>
+                    <Title>{portalName}</Title>
                     <Subtitle>Secure access for GDG MMMUT Organizers</Subtitle>
                 </Header>
 

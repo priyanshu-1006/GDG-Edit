@@ -13,7 +13,6 @@ import {
   Calendar,
   TrendingUp,
   AlertCircle,
-  ChevronDown,
   RefreshCw,
 } from "lucide-react";
 import axios from "axios";
@@ -328,9 +327,9 @@ const EmailCenter = () => {
             <p style="margin: 0; font-size: 13px;">
               <a href="https://gdg.mmmut.app" style="color: #4285f4; text-decoration: none;">Website</a>
               &nbsp;|&nbsp;
-              <a href="https://instagram.com/gdsc.mmmut" style="color: #4285f4; text-decoration: none;">Instagram</a>
+              <a href="https://www.instagram.com/gdgmmmut" style="color: #4285f4; text-decoration: none;">Instagram</a>
               &nbsp;|&nbsp;
-              <a href="https://linkedin.com/company/gdsc-mmmut" style="color: #4285f4; text-decoration: none;">LinkedIn</a>
+              <a href="https://www.linkedin.com/company/gdgoncampusmmmut/" style="color: #4285f4; text-decoration: none;">LinkedIn</a>
             </p>
             <p style="margin: 16px 0 0; font-size: 12px; color: #9aa0a6;">
               You received this email because you're a member of GDG MMMUT community.

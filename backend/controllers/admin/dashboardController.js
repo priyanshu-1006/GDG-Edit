@@ -15,7 +15,7 @@ export const getDashboardStats = async (req, res) => {
       totalUsers,
       totalEvents,
       pendingRegistrations,
-      certificatesThisMonth,
+      totalCertificates,
       activeEvents,
       newUsersThisWeek
     ] = await Promise.all([
@@ -28,12 +28,8 @@ export const getDashboardStats = async (req, res) => {
       // Pending registrations
       Registration.countDocuments({ status: 'pending' }),
       
-      // Certificates issued this month
-      Certificate.countDocuments({
-        issuedAt: {
-          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        }
-      }),
+      // Total Certificates issued
+      Certificate.countDocuments(),
       
       // Active events (upcoming + ongoing)
       Event.countDocuments({
@@ -76,8 +72,8 @@ export const getDashboardStats = async (req, res) => {
           count: pendingRegistrations
         },
         certificatesIssued: {
-          count: certificatesThisMonth,
-          label: 'This Month'
+          count: totalCertificates,
+          label: 'Total'
         },
         newUsersThisWeek: {
           count: newUsersThisWeek

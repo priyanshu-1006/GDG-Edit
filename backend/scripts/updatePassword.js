@@ -13,11 +13,17 @@ const updateAdminPassword = async () => {
     const email = 'admin@gdg.com';
     const newPassword = 'admin@123';
 
-    const user = await User.findOne({ email }).select('+password');
+    let user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      console.log('❌ User not found');
-      process.exit(1);
+      console.log('⚠️ User not found. Creating a new Admin user...');
+      user = new User({
+        name: 'Admin User',
+        email,
+        role: 'admin',
+        oauthProvider: 'email',
+        emailVerified: true
+      });
     }
 
     // Set the password directly - the pre-save hook will hash it

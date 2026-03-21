@@ -5,8 +5,8 @@ import ImmerseEmailTemplate from '../models/ImmerseEmailTemplate.js';
 
 class ImmerseEmailService {
     constructor() {
-        // Use dedicated Immerse Resend API key
-        this.apiKey = process.env.IMMERSE_RESEND_API_KEY;
+        // Use dedicated Immerse Resend API key or fallback to global key
+        this.apiKey = process.env.IMMERSE_RESEND_API_KEY || process.env.RESEND_API_KEY;
         this.domain = 'immerse.mmmut.app';
 
         console.log('📧 Immerse Email Service Initializing...');

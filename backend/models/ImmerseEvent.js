@@ -138,7 +138,6 @@ const immerseEventSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-immerseEventSchema.index({ slug: 1 });
 immerseEventSchema.index({ isActive: 1, order: 1 });
 
 const ImmerseEvent = mongoose.model('ImmerseEvent', immerseEventSchema);

@@ -1,9 +1,13 @@
 import express from 'express';
 import passport from 'passport';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import OTP from '../models/OTP.js';
 import { sendTokenResponse, generateToken } from '../utils/auth.utils.js';
 import { protect } from '../middleware/auth.middleware.js';
 import emailService from '../services/emailService.js';
+import { sendGlobalEmail } from '../utils/unifiedEmail.js';
 
 const router = express.Router();
 
@@ -190,6 +194,197 @@ router.post('/logout', protect, (req, res) => {
     success: true,
     message: 'Logged out successfully',
   });
+});
+
+// ============================================
+// EVENT MANAGER SELF-REGISTRATION FLOW
+// ============================================
+
+// @route   POST /api/auth/event-manager/send-otp
+// @desc    Send OTP to @mmmut.ac.in email for event manager registration
+// @access  Public
+router.post('/event-manager/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    // Validate domain
+    if (!email.toLowerCase().endsWith('@mmmut.ac.in')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @mmmut.ac.in email addresses are allowed',
+      });
+    }
+
+    // Check if user already exists with event_manager or higher role
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser && ['event_manager', 'admin', 'super_admin'].includes(existingUser.role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already registered. Please login instead.',
+      });
+    }
+
+    // Delete any previous OTPs for this email
+    await OTP.deleteMany({ email: email.toLowerCase() });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Save OTP (auto-expires in 2 minutes via TTL index)
+    await OTP.create({ email: email.toLowerCase(), otp });
+
+    // Send OTP email
+    const emailSent = await sendGlobalEmail({
+      to: email,
+      subject: 'Your GDG MMMUT Event Manager Verification Code',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+          <div style="background:#4285f4;padding:30px 40px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:24px;">GDG MMMUT</h1>
+            <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Event Manager Verification</p>
+          </div>
+          <div style="padding:40px;">
+            <p style="color:#202124;font-size:16px;margin:0 0 20px;">Your verification code is:</p>
+            <div style="background:#f8f9fa;border:2px solid #4285f4;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+              <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#4285f4;">${otp}</span>
+            </div>
+            <p style="color:#5f6368;font-size:14px;margin:0 0 8px;">⏱ This code expires in <strong>2 minutes</strong>.</p>
+            <p style="color:#5f6368;font-size:14px;margin:0;">If you didn't request this, please ignore this email.</p>
+          </div>
+          <div style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e8eaed;">
+            <p style="color:#9aa0a6;font-size:12px;margin:0;">Google Developer Group — MMMUT Gorakhpur</p>
+          </div>
+        </div>
+      `,
+    });
+
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: 'Failed to send OTP email. Please try again.' });
+    }
+
+    console.log(`📧 OTP sent to ${email} for event manager registration`);
+    res.json({ success: true, message: 'OTP sent to your email. It will expire in 2 minutes.' });
+  } catch (error) {
+    console.error('Event manager send-otp error:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+// @route   POST /api/auth/event-manager/verify-otp
+// @desc    Verify OTP and issue temporary registration token
+// @access  Public
+router.post('/event-manager/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    // Find valid OTP
+    const otpRecord = await OTP.findOne({ email: email.toLowerCase(), otp });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP. Please request a new one.',
+      });
+    }
+
+    // OTP is valid — delete it so it can't be reused
+    await OTP.deleteMany({ email: email.toLowerCase() });
+
+    // Issue a short-lived temporary JWT for registration (10 min validity)
+    const tempToken = jwt.sign(
+      { email: email.toLowerCase(), purpose: 'event_manager_register' },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    res.json({
+      success: true,
+      message: 'OTP verified successfully. You can now set your password.',
+      tempToken,
+    });
+  } catch (error) {
+    console.error('Event manager verify-otp error:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+// @route   POST /api/auth/event-manager/register
+// @desc    Complete event manager registration with password
+// @access  Public (requires tempToken from verify-otp)
+router.post('/event-manager/register', async (req, res) => {
+  try {
+    const { tempToken, name, password } = req.body;
+
+    if (!tempToken || !name || !password) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // Verify the temporary token
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Registration session expired. Please start over.',
+      });
+    }
+
+    if (decoded.purpose !== 'event_manager_register') {
+      return res.status(401).json({ success: false, message: 'Invalid registration token' });
+    }
+
+    const email = decoded.email;
+
+    // Check if a user already exists with this email
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // If they exist as a student, upgrade them to event_manager
+      if (user.role === 'student') {
+        user.role = 'event_manager';
+        user.name = name;
+        user.password = password; // Will be hashed by the pre-save hook
+        user.emailVerified = true;
+        await user.save();
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'This email is already registered with a higher role. Please login instead.',
+        });
+      }
+    } else {
+      // Create a brand new user with event_manager role
+      user = await User.create({
+        name,
+        email,
+        password,
+        role: 'event_manager',
+        oauthProvider: 'email',
+        emailVerified: true,
+      });
+    }
+
+    console.log(`🎉 New event manager registered: ${email}`);
+
+    // Auto-login: send token response
+    sendTokenResponse(user, 201, res);
+  } catch (error) {
+    console.error('Event manager register error:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
 });
 
 export default router;

@@ -15,6 +15,7 @@ import {
   X,
   LogOut,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../../contexts/useAuth";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -25,21 +26,44 @@ const AdminLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const menuItems = [
-    { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
-    { path: "/admin/users", icon: Users, label: "Users" },
-    { path: "/admin/events", icon: Calendar, label: "Events" },
-    {
-      path: "/admin/registrations",
-      icon: ClipboardList,
-      label: "Registrations",
-    },
-    { path: "/admin/emails", icon: Mail, label: "Email Center" },
-    { path: "/admin/certificates", icon: Award, label: "Certificates" },
-    { path: "/admin/teams", icon: Users2, label: "Teams" },
-    { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
-    { path: "/admin/settings", icon: Settings, label: "Settings" },
-  ];
+  const basePath = user?.role === 'super_admin' ? '/super-admin'
+    : user?.role === 'event_manager' ? '/event-manager'
+    : '/admin';
+
+  let menuItems = [];
+  if (user?.role === 'super_admin') {
+    menuItems = [
+      { path: basePath, icon: LayoutDashboard, label: "Dashboard", exact: true },
+      { path: `${basePath}/users`, icon: Users, label: "Users" },
+      { path: `${basePath}/events`, icon: Calendar, label: "Events" },
+      { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
+      { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+      { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
+      { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
+      { path: `${basePath}/teams`, icon: Users2, label: "Teams" },
+      { path: `${basePath}/analytics`, icon: BarChart3, label: "Analytics" },
+      { path: `${basePath}/settings`, icon: Settings, label: "Settings" },
+    ];
+  } else if (user?.role === 'admin') {
+    menuItems = [
+      { path: basePath, icon: LayoutDashboard, label: "Dashboard", exact: true },
+      { path: `${basePath}/events`, icon: Calendar, label: "Events" },
+      { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
+      { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+      { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
+      { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
+      { path: `${basePath}/teams`, icon: Users2, label: "Teams" },
+      { path: `${basePath}/analytics`, icon: BarChart3, label: "Analytics" },
+      { path: `${basePath}/settings`, icon: Settings, label: "Settings" },
+    ];
+  } else if (user?.role === 'event_manager') {
+    menuItems = [
+      { path: basePath, icon: LayoutDashboard, label: "Dashboard", exact: true },
+      { path: `${basePath}/events`, icon: Calendar, label: "Events" },
+      { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
+      { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+    ];
+  }
 
   const handleLogout = () => {
     logout();
@@ -50,7 +74,7 @@ const AdminLayout = () => {
     <Container>
       <Sidebar $open={sidebarOpen}>
         <SidebarHeader>
-          <Logo>GDG Admin</Logo>
+          <Logo>{user?.role === 'super_admin' ? 'GDG Super Admin' : (user?.role === 'event_manager' ? 'GDG Event Manager' : 'GDG Admin')}</Logo>
           <CloseButton onClick={() => setSidebarOpen(false)}>
             <X size={24} />
           </CloseButton>
@@ -72,7 +96,13 @@ const AdminLayout = () => {
             <MenuButton onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu size={24} />
             </MenuButton>
-            <PageTitle>Admin Portal</PageTitle>
+            <PageTitle>
+              {user?.role === 'super_admin' 
+                ? 'Super Admin Portal' 
+                : user?.role === 'event_manager'
+                  ? 'Event Manager Portal'
+                  : 'Admin Portal'}
+            </PageTitle>
           </TopBarLeft>
 
           <TopBarRight>

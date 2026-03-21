@@ -1,7 +1,8 @@
 import Registration from '../../models/Registration.js';
 import Event from '../../models/Event.js';
 import User from '../../models/User.js';
-import sendMail from '../../utils/sendEmail.utils.js'
+import sendMail from '../../utils/sendEmail.utils.js';
+import Induction from '../../models/Induction.js';
 
 /**
  * @desc    Get all registrations with filtering
@@ -35,7 +36,6 @@ export const getAllRegistrations = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Apply search filter after population
     if (search) {
       registrations = registrations.filter(reg => 
         reg.user?.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -44,7 +44,49 @@ export const getAllRegistrations = async (req, res) => {
       );
     }
 
-    const total = await Registration.countDocuments(filter);
+    let total = await Registration.countDocuments(filter);
+
+    // Dynamic Injection: If viewing an Induction Event, inject Induction records as dummy Registrations
+    if (eventId) {
+      const eventObj = await Event.findById(eventId);
+      if (eventObj && (eventObj.name.toLowerCase().includes('induction') || eventObj.tags?.includes('Induction Event'))) {
+        const inductions = await Induction.find().sort({ createdAt: -1 });
+        
+        let mappedInductions = inductions.map(ind => ({
+          _id: ind._id,
+          user: {
+            name: `${ind.firstName} ${ind.lastName}`,
+            email: ind.email,
+            phone: ind.phone,
+            college: 'MMMUT',
+            year: ind.year || 'N/A',
+            branch: ind.branch || 'N/A'
+          },
+          event: {
+            _id: eventObj._id,
+            name: eventObj.name,
+            date: eventObj.date
+          },
+          status: ind.status || 'pending',
+          attended: false,
+          createdAt: ind.createdAt
+        }));
+
+        if (status) {
+          mappedInductions = mappedInductions.filter(ind => ind.status === status);
+        }
+
+        if (search) {
+          mappedInductions = mappedInductions.filter(ind => 
+            ind.user.name.toLowerCase().includes(search.toLowerCase()) ||
+            ind.user.email.toLowerCase().includes(search.toLowerCase())
+          );
+        }
+
+        total += mappedInductions.length;
+        registrations = [...registrations, ...mappedInductions];
+      }
+    }
 
     // Set no-cache headers to prevent stale data
     res.set({

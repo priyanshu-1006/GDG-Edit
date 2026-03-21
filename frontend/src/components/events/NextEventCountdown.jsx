@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { useAuth } from '../../contexts/useAuth';
+import PropTypes from 'prop-types';
 
 
 const Countdown = styled(motion.div)`
@@ -72,9 +72,9 @@ const Label = styled.div`
     color: ${theme.colors.text.tertiary || '#9ca3af'}; /* dark:text-gray-400 */
   `}
 `
-const NextEventCountdown = ({ event, setClose }) => {
+const NextEventCountdown = ({ event }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  const { onEvent } = useAuth()
+
   useEffect(() => {
     const calculateTimeLeft = () => {
       const difference = new Date(event?.date).getTime() - new Date().getTime();
@@ -97,11 +97,6 @@ const NextEventCountdown = ({ event, setClose }) => {
     return () => clearInterval(timer);
   }, [event?.date]);
 
-  function handleClick() {
-    onEvent(event);
-    setClose(false)
-  }
-
   return (
     <Countdown
       initial={{ opacity: 0, y: 20 }}
@@ -120,9 +115,15 @@ const NextEventCountdown = ({ event, setClose }) => {
         </div>
 
         <div style={{ marginTop: "1.5rem" }}>
-          <button disabled className="btn-primary" style={{ width: "full" }} onClick={handleClick}>
-            Coming Soon
-          </button>
+          {timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0 ? (
+            <button className="btn-primary" style={{ width: "full" }} onClick={() => window.location.href = '/induction'}>
+              Apply Now →
+            </button>
+          ) : (
+            <button disabled className="btn-primary" style={{ width: "full", opacity: 0.6, cursor: "not-allowed" }}>
+              Opens Tomorrow
+            </button>
+          )}
         </div>
       </div>
     </Countdown>
@@ -140,5 +141,17 @@ const CountdownItem = ({ value, label }) => (
     </Label>
   </div>
 );
+
+CountdownItem.propTypes = {
+  value: PropTypes.number.isRequired,
+  label: PropTypes.string.isRequired,
+};
+
+NextEventCountdown.propTypes = {
+  event: PropTypes.shape({
+    date: PropTypes.string,
+    title: PropTypes.string,
+  }),
+};
 
 export default NextEventCountdown;

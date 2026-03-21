@@ -4,10 +4,8 @@ import {
   Search,
   Download,
   UserPlus,
-  MoreVertical,
-  Ban,
-  UserCheck,
   Shield,
+  Trash2,
 } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL, getAuthHeaders } from "../../utils/apiUtils";
@@ -69,18 +67,18 @@ const Users = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleSuspendUser = async (userId, suspend) => {
-    console.log("handleSuspendUser called", { userId, suspend });
+  const handleDeleteUser = async (userId, name) => {
+    if (!window.confirm(`Are you sure you want to permanently delete user ${name}? This action cannot be undone.`)) return;
+
     try {
-      await axios.patch(
-        `${API_BASE_URL}/api/admin/users/${userId}/suspend`,
-        { suspend, reason: "Suspended by admin" },
+      await axios.delete(
+        `${API_BASE_URL}/api/admin/users/${userId}`,
         { headers: getAuthHeaders() },
       );
       fetchUsers();
     } catch (error) {
-      console.error("Failed to suspend user:", error);
-      alert(error.response?.data?.message || "Failed to suspend user");
+      console.error("Failed to delete user:", error);
+      alert(error.response?.data?.message || "Failed to delete user. Ensure you are a Super Admin.");
     }
   };
 
@@ -228,10 +226,7 @@ const Users = () => {
               <tr>
                 <Th>Name</Th>
                 <Th>Email</Th>
-                <Th>College</Th>
-                <Th>Year</Th>
                 <Th>Role</Th>
-                <Th>Events</Th>
                 <Th>Status</Th>
                 <Th>Actions</Th>
               </tr>
@@ -243,14 +238,11 @@ const Users = () => {
                     <UserName>{user.name}</UserName>
                   </Td>
                   <Td>{user.email}</Td>
-                  <Td>{user.college || "N/A"}</Td>
-                  <Td>{user.year || "N/A"}</Td>
                   <Td>
                     <RoleBadge $role={user.role}>
                       {user.role?.replace("_", " ")}
                     </RoleBadge>
                   </Td>
-                  <Td>{user.stats?.eventsRegistered || 0}</Td>
                   <Td>
                     <StatusBadge $suspended={user.suspended}>
                       {user.suspended ? "Suspended" : "Active"}
@@ -264,23 +256,12 @@ const Users = () => {
                       >
                         <Shield size={16} />
                       </IconButton>
-                      {user.suspended ? (
-                        <IconButton
-                          title="Unsuspend User"
-                          onClick={() => handleSuspendUser(user._id, false)}
-                        >
-                          <UserCheck size={16} />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          title="Suspend User"
-                          onClick={() => handleSuspendUser(user._id, true)}
-                        >
-                          <Ban size={16} />
-                        </IconButton>
-                      )}
-                      <IconButton title="More Actions">
-                        <MoreVertical size={16} />
+                      <IconButton
+                        title="Delete User"
+                        onClick={() => handleDeleteUser(user._id, user.name)}
+                        className="hover:!text-red-500"
+                      >
+                        <Trash2 size={16} />
                       </IconButton>
                     </ActionButtons>
                   </Td>
@@ -684,8 +665,8 @@ const Td = styled.td`
     background: #f8fafc;
   }
 
-  .dark & tr:hover & {
-    background: rgba(255, 255, 255, 0.02);
+  .dark ${Table} tr:hover & {
+    background: rgba(255, 255, 255, 0.05);
   }
 `;
 

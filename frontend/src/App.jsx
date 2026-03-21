@@ -40,7 +40,9 @@ const EventDetails = lazy(() => import("./pages/Admin/EventDetails"));
 const EditEvent = lazy(() => import("./pages/Admin/EditEvent"));
 const AdminRegistrations = lazy(() => import("./pages/Admin/Registrations"));
 const EmailCenter = lazy(() => import("./pages/Admin/EmailCenter"));
-const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin")); // Import
+const InductionManagement = lazy(() => import("./pages/Admin/InductionManagement"));
+const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin"));
+const EventManagerRegister = lazy(() => import("./pages/Admin/EventManagerRegister"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const FollowCursor = lazy(() => import("./components/FollowCursor"));
@@ -60,9 +62,9 @@ const ImmerseAnalytics = lazy(() => import("./pages/Immerse/ImmerseAnalytics"));
 const ImmerseSettings = lazy(() => import("./pages/Immerse/ImmerseSettings"));
 const ImmerseRegistrations = lazy(() => import("./pages/Immerse/ImmerseRegistrations"));
 
-// Immerse Public Pages
-const ImmerseLanding = lazy(() => import("./pages/Immerse/public/ImmerseLanding"));
-const ImmerseEventPage = lazy(() => import("./pages/Immerse/public/ImmerseEventPage"));
+// Induction Form & Results
+const InductionForm = lazy(() => import("./pages/InductionForm"));
+const InductionResults = lazy(() => import("./pages/InductionResults"));
 
 function App() {
   const { theme } = useTheme();
@@ -108,14 +110,17 @@ function App() {
               <Route path="profile" element={<Profile />} />
             </Route>
 
-            {/* Admin Login - Separate Portal */}
+            {/* Admin Login - Dedicated Portals */}
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/super-admin/login" element={<AdminLogin />} />
+            <Route path="/event-manager/login" element={<AdminLogin />} />
+            <Route path="/event-manager/register" element={<EventManagerRegister />} />
 
-            {/* Admin Routes */}
+            {/* Super Admin Routes */}
             <Route
-              path="/admin"
+              path="/super-admin"
               element={
-                <AdminRoute>
+                <AdminRoute allowedRoles={["super_admin"]}>
                   <AdminLayout />
                 </AdminRoute>
               }
@@ -126,6 +131,7 @@ function App() {
               <Route path="events/:id" element={<EventDetails />} />
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="registrations" element={<AdminRegistrations />} />
+              <Route path="induction" element={<InductionManagement />} />
               <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
               <Route path="teams" element={<TeamManagement />} />
@@ -143,12 +149,61 @@ function App() {
               />
             </Route>
 
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute allowedRoles={["admin"]}>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="events" element={<AdminEvents />} />
+              <Route path="events/:id" element={<EventDetails />} />
+              <Route path="events/:id/edit" element={<EditEvent />} />
+              <Route path="registrations" element={<AdminRegistrations />} />
+              <Route path="induction" element={<InductionManagement />} />
+              <Route path="emails" element={<EmailCenter />} />
+              <Route path="certificates" element={<CertificateManagement />} />
+              <Route path="teams" element={<TeamManagement />} />
+              <Route
+                path="analytics"
+                element={
+                  <div style={{ padding: "24px" }}>Analytics - Coming Soon</div>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <div style={{ padding: "24px" }}>Settings - Coming Soon</div>
+                }
+              />
+            </Route>
+
+            {/* Event Manager Routes */}
+            <Route
+              path="/event-manager"
+              element={
+                <AdminRoute allowedRoles={["event_manager"]}>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="events" element={<AdminEvents />} />
+              <Route path="events/:id" element={<EventDetails />} />
+              <Route path="events/:id/edit" element={<EditEvent />} />
+              <Route path="registrations" element={<AdminRegistrations />} />
+              <Route path="induction" element={<InductionManagement />} />
+            </Route>
+
             {/* Immerse Login - Separate Portal */}
             <Route path="/immerse/login" element={<ImmerseLogin />} />
 
-            {/* Immerse 2026 Public Pages */}
-            <Route path="/immerse-2026" element={<ImmerseLanding />} />
-            <Route path="/immerse-2026/:slug" element={<ImmerseEventPage />} />
+            {/* Induction Form & Results */}
+            <Route path="/induction" element={<InductionForm />} />
+            <Route path="/induction-results" element={<InductionResults />} />
 
             {/* Immerse Routes */}
             <Route path="/immerse" element={<ImmerseLayout />}>

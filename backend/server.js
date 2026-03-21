@@ -38,6 +38,8 @@ import coreTeamRoutes from "./routes/coreTeam.routes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import emailRoutes from "./routes/email.routes.js";
 import immerseRoutes from "./routes/immerse.routes.js";
+import inductionRoutes from "./routes/induction.routes.js";
+import inductionAuthRoutes from "./routes/inductionAuth.routes.js";
 
 // Initialize app
 const app = express();
@@ -131,6 +133,8 @@ app.use("/api/core-team", coreTeamRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/immerse", immerseRoutes);
+app.use("/api/induction", inductionRoutes);
+app.use("/api/induction", inductionAuthRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

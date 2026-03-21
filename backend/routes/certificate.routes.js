@@ -2,8 +2,36 @@ import express from "express";
 import Certificate from "../models/Certificate.js";
 import { protect, authorize } from "../middleware/auth.middleware.js";
 import upload from "../middleware/upload.middleware.js";
-import imageUpload from "../middleware/imageUpload.middleware.js";
+import multer from "multer";
 import * as XLSX from "xlsx";
+import cloudinary from "../config/cloudinary.js";
+
+// Memory storage for certificate images (uploaded to Cloudinary, not disk)
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type, only images and PDFs are allowed!"), false);
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
+// Helper: upload buffer to Cloudinary
+const uploadToCloudinary = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "gdg-certificates", resource_type: "auto", ...options },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
+};
 
 const router = express.Router();
 
@@ -94,6 +122,7 @@ router.post(
         recipientName,
         recipientEmail,
         certificateCode,
+        customEventName,
         issuedAt,
       } = req.body;
 
@@ -140,15 +169,14 @@ router.post(
 
       const certificate = await Certificate.create({
         user: userId || undefined,
-        event: eventId,
+        event: eventId || undefined,
+        customEventName: customEventName || undefined,
         recipientName,
         recipientEmail,
-        certificateUrl: certificateUrl.startsWith("/")
-          ? certificateUrl
-          : `/${certificateUrl}`,
+        certificateUrl: certificateUrl,
         certificateCode: finalCertificateCode,
         issuedAt: issuedAt ? new Date(issuedAt) : undefined,
-        isDynamic: false, // Ensure manual certificates are treated as static
+        isDynamic: false,
       });
 
       await certificate.populate("user event");
@@ -164,13 +192,13 @@ router.post(
 );
 
 // @route   POST /api/certificates/upload-template
-// @desc    Upload certificate background template
+// @desc    Upload certificate background template to Cloudinary
 // @access  Private (Admin only)
 router.post(
   "/upload-template",
   protect,
   authorize("admin", "event_manager", "super_admin"),
-  imageUpload.single("file"),
+  memoryUpload.single("file"),
   async (req, res, next) => {
     try {
       if (!req.file) {
@@ -179,14 +207,17 @@ router.post(
           .json({ success: false, message: "Please upload an image file" });
       }
 
-      // Construct URL
-      // Return Relative URL
-      const url = `/uploads/certificates/${req.file.filename}`;
+      // Upload to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer, {
+        public_id: `template-${Date.now()}`,
+      });
 
       res.json({
         success: true,
-        url,
-        filename: req.file.filename,
+        url: result.secure_url,
+        secure_url: result.secure_url,
+        public_id: result.public_id,
+        filename: req.file.originalname,
       });
     } catch (error) {
       next(error);
@@ -388,6 +419,74 @@ router.post(
     }
   },
 );
+// @route   PATCH /api/certificates/update-url
+// @desc    Update certificate URL by certificate code
+// @access  Private (Admin only)
+router.patch(
+  "/update-url",
+  protect,
+  authorize("admin", "super_admin"),
+  async (req, res, next) => {
+    try {
+      const { certificateCode, certificateUrl } = req.body;
+      if (!certificateCode || !certificateUrl) {
+        return res.status(400).json({
+          success: false,
+          message: "certificateCode and certificateUrl are required",
+        });
+      }
+
+      const cert = await Certificate.findOneAndUpdate(
+        { certificateCode },
+        { certificateUrl },
+        { new: true }
+      );
+
+      if (!cert) {
+        return res.status(404).json({
+          success: false,
+          message: `Certificate with code "${certificateCode}" not found`,
+        });
+      }
+
+      res.json({ success: true, certificate: cert });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// @route   PUT /api/certificates/:id
+// @desc    Update certificate details
+// @access  Private (Admin only)
+router.put(
+  "/:id",
+  protect,
+  authorize("admin", "super_admin"),
+  async (req, res, next) => {
+    try {
+      const { recipientName, recipientEmail, customEventName, certificateCode, certificateUrl, issuedAt } = req.body;
+
+      const update = {};
+      if (recipientName !== undefined) update.recipientName = recipientName;
+      if (recipientEmail !== undefined) update.recipientEmail = recipientEmail;
+      if (customEventName !== undefined) update.customEventName = customEventName;
+      if (certificateCode !== undefined) update.certificateCode = certificateCode;
+      if (certificateUrl !== undefined) update.certificateUrl = certificateUrl;
+      if (issuedAt !== undefined) update.issuedAt = new Date(issuedAt);
+
+      const cert = await Certificate.findByIdAndUpdate(req.params.id, update, { new: true });
+
+      if (!cert) {
+        return res.status(404).json({ success: false, message: "Certificate not found" });
+      }
+
+      res.json({ success: true, certificate: cert });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // @route   DELETE /api/certificates/:id
 // @desc    Delete/Revoke certificate
@@ -405,6 +504,20 @@ router.delete(
           success: false,
           message: "Certificate not found",
         });
+      }
+
+      // Delete from Cloudinary if it's a Cloudinary URL
+      if (certificate.certificateUrl && certificate.certificateUrl.includes("cloudinary.com")) {
+        try {
+          // Extract public_id from URL: .../gdg-certificates/cert-XXXX.jpg
+          const urlParts = certificate.certificateUrl.split("/");
+          const folder = urlParts[urlParts.length - 2];
+          const fileWithExt = urlParts[urlParts.length - 1];
+          const publicId = `${folder}/${fileWithExt.split(".")[0]}`;
+          await cloudinary.uploader.destroy(publicId);
+        } catch (cloudErr) {
+          console.error("Cloudinary delete error (non-blocking):", cloudErr.message);
+        }
       }
 
       await certificate.deleteOne();

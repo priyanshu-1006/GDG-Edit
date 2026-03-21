@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/useAuth';
@@ -8,7 +8,6 @@ import {
   FiAward,
   FiUsers,
   FiBookOpen,
-  FiCode,
   FiUser,
   FiLogOut,
   FiMenu,
@@ -99,22 +98,6 @@ const LogoImage = styled.img`
   @media (max-width: 768px) {
     width: 40px; /* increased size */
     height: 40px;
-  }
-`;
-
-const MobileText = styled.span`
-  display: none;
-  font-family: 'Google Sans', 'Product Sans', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-  
-  @media (max-width: 768px) {
-    display: inline-block; /* show "GDG" text on mobile */
-  }
-  
-  @media (min-width: 769px) {
-    display: none; /* hide "GDG" text on desktop */
   }
 `;
 

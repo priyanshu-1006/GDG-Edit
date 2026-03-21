@@ -45,7 +45,7 @@ ${showFooter ? `
 <tr>
 <td style="background-color:${GDG_LIGHT_GRAY};padding:32px 40px;border-radius:0 0 16px 16px;text-align:center;">
 <p style="margin:0 0 12px;font-size:14px;color:${GDG_GRAY};">Google Developers Group On Campus<br><strong>MMMUT Gorakhpur</strong></p>
-<p style="margin:0;font-size:13px;"><a href="https://gdg.mmmut.app" style="color:${GDG_BLUE};text-decoration:none;">Website</a> | <a href="https://instagram.com/gdsc.mmmut" style="color:${GDG_BLUE};text-decoration:none;">Instagram</a> | <a href="https://linkedin.com/company/gdsc-mmmut" style="color:${GDG_BLUE};text-decoration:none;">LinkedIn</a></p>
+<p style="margin:0;font-size:13px;"><a href="https://gdg.mmmut.app" style="color:${GDG_BLUE};text-decoration:none;">Website</a> | <a href="https://www.instagram.com/gdgmmmut" style="color:${GDG_BLUE};text-decoration:none;">Instagram</a> | <a href="https://www.linkedin.com/company/gdgoncampusmmmut/" style="color:${GDG_BLUE};text-decoration:none;">LinkedIn</a></p>
 <p style="margin:16px 0 0;font-size:12px;color:#9aa0a6;">You received this email because you're a member of GDG MMMUT community.</p>
 </td>
 </tr>
@@ -234,12 +234,43 @@ ${actionButton('Visit Our Website', 'https://gdg.mmmut.app')}`;
   return baseTemplate(content);
 };
 
+/**
+ * Induction Submission Confirmation Template
+ */
+const inductionSubmissionTemplate = (userName, formData) => {
+  const content = `
+<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
+<tr>
+<td style="background-color:#e6f4ea;padding:12px 24px;border-radius:50px;">
+<span style="color:${GDG_GREEN};font-weight:600;font-size:14px;">✓ Application Received</span>
+</td>
+</tr>
+</table>
+<h1 style="margin:0 0 8px;font-size:24px;font-weight:600;color:${GDG_DARK};text-align:center;">Application Received! 🚀</h1>
+<p style="margin:0 0 32px;font-size:16px;color:${GDG_GRAY};text-align:center;">Hi ${userName}, we've successfully received your induction application.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:2px solid #e8eaed;border-radius:16px;margin:24px 0;">
+<tr>
+<td style="padding:24px;">
+<h2 style="margin:0 0 16px;font-size:18px;color:${GDG_DARK};border-bottom:2px solid ${GDG_BLUE};padding-bottom:12px;">Your Application Summary</h2>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Name</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.firstName} ${formData.lastName}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Roll Number</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.rollNumber}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Branch & Section</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.branch} - ${formData.section}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Domains Interested</span><br><strong style="color:${GDG_DARK};font-size:14px;">${(formData.domains || []).join(', ') || 'None'}</strong></p>
+</td>
+</tr>
+</table>
+<p style="margin:24px 0 0;font-size:14px;color:${GDG_GRAY};text-align:center;">Our core team is currently reviewing applications. Keep an eye on your inbox for updates regarding the next rounds!</p>`;
+
+  return baseTemplate(content);
+};
+
 export {
   welcomeTemplate,
   registrationTemplate,
   qualificationTemplate,
   notificationTemplate,
   newsletterTemplate,
+  inductionSubmissionTemplate,
   baseTemplate,
   actionButton,
   GDG_BLUE,

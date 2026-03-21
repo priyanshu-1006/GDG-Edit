@@ -1,5 +1,5 @@
 import express from "express";
-import nodemailer from "nodemailer";
+import { sendGlobalEmail } from "../utils/unifiedEmail.js";
 
 const router = express.Router();
 
@@ -11,20 +11,10 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
 
     // 1️⃣ Email to GDG Admin (you)
     const adminMailOptions = {
-      from: `"GDG MMMUT Contact Form" <${process.env.SMTP_USER}>`,
-      to: process.env.MAIL_TO,
+      to: process.env.MAIL_TO || "gdgtechmmmut@gmail.com",
       subject: `[GDG Contact] ${subject}`,
       text: `
 📩 New message from GDG MMMUT Contact Form
@@ -40,7 +30,6 @@ ${message}
 
     // 2️⃣ Auto-reply to the user
     const userMailOptions = {
-      from: `"GDG MMMUT" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "We received your message – GDG MMMUT",
       text: `
@@ -60,8 +49,8 @@ GDG On Campus MMMUT Team
     };
 
     // Send both emails
-    await transporter.sendMail(adminMailOptions);
-    await transporter.sendMail(userMailOptions);
+    await sendGlobalEmail(adminMailOptions);
+    await sendGlobalEmail(userMailOptions);
 
     console.log(`✅ Contact email sent by ${name} (${email})`);
     res.status(200).json({ message: "Emails sent successfully!" });

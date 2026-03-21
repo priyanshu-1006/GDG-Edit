@@ -1,15 +1,4 @@
-import nodemailer from "nodemailer";
-
-// Create a transporter for SMTP
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  auth: {
-    user: process.env.SMTP_USERNAME,
-    pass: process.env.SMTP_PASSWORD
-  }
-});
-
+import { sendGlobalEmail } from "./unifiedEmail.js";
 
 const sendMail = async (receiver, status) => {
   let mailSubject = "";
@@ -68,20 +57,18 @@ const sendMail = async (receiver, status) => {
 
   try {
     console.log(receiver);
-      const info = await transporter.sendMail({
-        from: '"Google Developer Group" <gdgdeveloper2025@gmail.com>', // sender address
-        to: receiver.formData.email, // list of receivers
-        subject: mailSubject, // Subject line
-        text: mailText, // plain text body
-        html: mailHTML, // html body
-      });
+    const success = await sendGlobalEmail({
+      to: receiver.formData.email,
+      subject: mailSubject,
+      text: mailText,
+      html: mailHTML,
+    });
 
-      console.log("Message sent: %s", info.messageId);
-      return info.messageId;
-    } catch (err) {
-      console.error("Error while sending mail", err);
-      return null;
-    }
+    return success ? "sent" : null;
+  } catch (err) {
+    console.error("Error while sending mail", err);
+    return null;
+  }
 }
 
 export default sendMail;

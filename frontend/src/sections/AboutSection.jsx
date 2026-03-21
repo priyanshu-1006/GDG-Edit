@@ -47,7 +47,7 @@ const SectionTitle = styled.h2`
   }
 `;
 
-const AboutText = styled.p`
+const AboutText = styled.div`
   font-size: 1.125rem;
   line-height: 1.7;
   color: ${({ theme }) => theme.colors.text.secondary};
@@ -118,9 +118,10 @@ const AboutSection = () => {
   const illustrationRef = useRef(null);
   
   useEffect(() => {
-    if (illustrationRef.current) {
+    const illustration = illustrationRef.current;
+    if (illustration) {
       gsap.fromTo(
-        illustrationRef.current,
+        illustration,
         { 
           y: 20,
           opacity: 0.8
@@ -137,8 +138,8 @@ const AboutSection = () => {
     }
     
     return () => {
-      if (illustrationRef.current) {
-        gsap.killTweensOf(illustrationRef.current);
+      if (illustration) {
+        gsap.killTweensOf(illustration);
       }
     };
   }, []);

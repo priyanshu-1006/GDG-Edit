@@ -226,9 +226,9 @@ const Header = () => {
       <Nav $isOpen={menuOpen}>
         <NavLink href="/" onClick={closeMenu}>Home</NavLink>
         <NavLink href="/events" onClick={closeMenu}>Events</NavLink>
-        <ImmerseNavLink to="/immerse-2026" onClick={closeMenu}>
+        <ImmerseNavLink to="/induction" onClick={closeMenu}>
           <Rocket size={16} />
-          IMMERSE 2026
+          Join GDG
         </ImmerseNavLink>
         <NavLink href="/team" onClick={closeMenu}>Team</NavLink>
         <NavLink href="/#sponsors" onClick={closeMenu}>Sponsor</NavLink>
