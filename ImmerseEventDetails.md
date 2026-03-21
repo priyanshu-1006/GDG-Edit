@@ -249,4 +249,4 @@ Each event symbolizes a component of the INTERSTELLAR journey:
 ✔ Mission → Learning & systems
 ✔ Orbit → Innovation & startups
 ✔ Synthetic → Creativity & AI
-✔ Horizon → Cyber & challenges
+✔ Horizon → Cyber & challenge
