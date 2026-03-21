@@ -82,6 +82,21 @@ const Users = () => {
     }
   };
 
+  const handleToggleApproval = async (userId, isApproved) => {
+    try {
+      if (!window.confirm(`Are you sure you want to ${isApproved ? 'approve' : 'revoke'} this Event Manager?`)) return;
+      await axios.patch(
+        `${API_BASE_URL}/api/admin/users/${userId}/approve`,
+        { isApproved },
+        { headers: getAuthHeaders() }
+      );
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to toggle approval:", error);
+      alert(error.response?.data?.message || "Failed to set approval");
+    }
+  };
+
   const handleOpenRoleChange = (user) => {
     console.log("handleOpenRoleChange called", user);
     setRoleChangeModal({ open: true, user, newRole: user.role });
@@ -244,12 +259,25 @@ const Users = () => {
                     </RoleBadge>
                   </Td>
                   <Td>
-                    <StatusBadge $suspended={user.suspended}>
-                      {user.suspended ? "Suspended" : "Active"}
-                    </StatusBadge>
+                    {user.suspended ? (
+                      <StatusBadge $suspended={true}>Suspended</StatusBadge>
+                    ) : user.role === 'event_manager' && !user.isApproved ? (
+                      <span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', backgroundColor: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04', border: '1px solid currentColor' }}>Pending</span>
+                    ) : (
+                      <StatusBadge $suspended={false}>Active</StatusBadge>
+                    )}
                   </Td>
                   <Td>
                     <ActionButtons>
+                      {user.role === 'event_manager' && !user.isApproved && (
+                        <IconButton
+                          title="Approve Manager"
+                          onClick={() => handleToggleApproval(user._id, true)}
+                          style={{ color: '#0f9d58' }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </IconButton>
+                      )}
                       <IconButton
                         title="Change Role"
                         onClick={() => handleOpenRoleChange(user)}
@@ -474,6 +502,13 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const Title = styled.h1.attrs({
@@ -487,6 +522,11 @@ const Title = styled.h1.attrs({
 const HeaderActions = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    width: 100%;
+  }
 `;
 
 const ExportButton = styled.button`
@@ -541,7 +581,7 @@ const FilterBar = styled.div`
 
 const SearchBox = styled.div`
   flex: 1;
-  min-width: 300px;
+  min-width: 200px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -783,6 +823,12 @@ const Pagination = styled.div`
   background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
 
   .dark & {
     background: #1e293b;

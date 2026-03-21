@@ -426,7 +426,7 @@ const FilterBar = styled.div`
 
 const SearchBox = styled.div`
   flex: 1;
-  min-width: 300px;
+  min-width: 200px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -772,6 +772,12 @@ const Pagination = styled.div`
   background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
 
   .dark & {
     background: #1e293b;

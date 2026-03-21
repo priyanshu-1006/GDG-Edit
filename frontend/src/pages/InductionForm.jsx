@@ -269,6 +269,10 @@ const CheckboxGrid = styled.div`
   @media (max-width: 560px) {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const CheckboxLabel = styled.label`

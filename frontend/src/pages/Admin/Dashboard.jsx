@@ -178,6 +178,13 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
 `;
 
 const Title = styled.h1.attrs({
@@ -187,6 +194,10 @@ const Title = styled.h1.attrs({
   font-weight: 800;
   letter-spacing: -1px;
   margin-bottom: 8px;
+
+  @media (max-width: 480px) {
+    font-size: 24px;
+  }
 `;
 
 const Subtitle = styled.p.attrs({
@@ -212,6 +223,12 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const StatsCard = styled.div.attrs({

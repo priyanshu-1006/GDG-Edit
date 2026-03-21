@@ -602,6 +602,12 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 28px;
+  
+  @media (max-width: 650px) {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
 `;
 
 const Title = styled.h1.attrs({
@@ -898,6 +904,11 @@ const Pagination = styled.div`
   border-radius: 14px;
   border: 1px solid #e2e8f0;
 
+  @media (max-width: 500px) {
+    flex-direction: column;
+    gap: 12px;
+  }
+
   .dark & {
     background: #0f172a;
     border-color: #1e293b;
@@ -1156,6 +1167,17 @@ const BulkActionsPanel = styled.div`
   span {
     color: #4285f4;
     font-weight: 600;
+  }
+  
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    
+    > div {
+      flex-direction: column;
+      width: 100%;
+    }
   }
 `;
 

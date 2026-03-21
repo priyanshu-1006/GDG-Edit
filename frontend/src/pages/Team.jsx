@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import styled, { useTheme } from 'styled-components';
-import { motion, useInView, useScroll } from 'framer-motion';
+import styled from 'styled-components';
+import { motion, useInView } from 'framer-motion';
 import { FaGit, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import Uploadbox from '../../Upload/Uploadbox';
-import { useAuth } from "../contexts/useAuth"
+
 import { apiClient } from '../utils/apiUtils';
 
 const TeamSectionContainer = styled.section`
@@ -210,26 +210,27 @@ function buildResponsiveSrcSet(url) {
 }
 
 export default function Team() {
-  const { fileUrl } = useAuth();
   const [upload, setUpload] = useState(false);
   const [selectedYear, setSelectedYear] = useState("GDG Lead");
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.1 });
-  
   const [teamData, setTeamData] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTeamData = async () => {
       try {
         const response = await apiClient.get('/api/core-team');
         if (response.data.success) {
-          setTeamData(response.data.data);
+          const fetchedData = response.data.data.map(member => {
+            if (member.name === "Rasshi Ashish Khan") {
+              return { ...member, name: "Rasshi Ashish Srivastav" };
+            }
+            return member;
+          });
+          setTeamData(fetchedData);
         }
       } catch (error) {
         console.error('Error fetching team data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -257,9 +258,9 @@ export default function Team() {
   };
   
   // Lightweight 3D tilt + scale wrapper using Tailwind for smooth transitions
+  // eslint-disable-next-line react/prop-types
   function TiltWrapper({ children }) {
     const innerRef = useRef(null);
-    const theme = useTheme();
     const [isHovered, setIsHovered] = useState(false);
   
     function handleMouseMove(e) {

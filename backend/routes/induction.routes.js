@@ -5,7 +5,7 @@ import cloudinary from '../config/cloudinary.js';
 import Induction from '../models/Induction.js';
 import Settings from '../models/Settings.js';
 import jwt from 'jsonwebtoken';
-import { PDFParse } from 'pdf-parse';
+import PDFParser from 'pdf2json';
 import https from 'https';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 import { sendInductionRoundEmail } from '../utils/sendInductionEmail.js';
@@ -278,10 +278,18 @@ router.post('/parse-resume', verifyInductionToken, upload.single('resume'), asyn
     // 2. Parse PDF text
     let parsedText = '';
     if (req.file.mimetype === 'application/pdf') {
-      const parser = new PDFParse({ data: req.file.buffer });
-      const pdfData = await parser.getText();
-      parsedText = pdfData.text;
-      await parser.destroy();
+      try {
+        parsedText = await new Promise((resolve, reject) => {
+          const pdfParser = new PDFParser(this, 1);
+          pdfParser.on("pdfParser_dataError", errData => reject(errData.parserError));
+          pdfParser.on("pdfParser_dataReady", () => {
+            resolve(pdfParser.getRawTextContent());
+          });
+          pdfParser.parseBuffer(req.file.buffer);
+        });
+      } catch (pdfErr) {
+        console.warn("PDF parsing failed (often due to Vercel worker missing), gracefully continuing:", pdfErr.message || pdfErr);
+      }
     } else {
       // If it's docx or something else, we might just skip text extraction for now
       // since pdf-parse only handles PDFs, but the UI generally expects PDF.
@@ -294,12 +302,12 @@ router.post('/parse-resume', verifyInductionToken, upload.single('resume'), asyn
     }
 
     // 3. Extract info using Groq
-    if (!groq) {
+    if (!groq || !parsedText.trim()) {
       return res.json({ 
         success: true, 
         resumeUrl: finalResumeUrl,
         parsedData: null,
-        message: 'Resume saved, but AI parsing is unavailable.'
+        message: !groq ? 'Resume saved, but AI parsing is unavailable.' : 'Resume saved, but PDF text could not be extracted. Please enter manually.'
       });
     }
 

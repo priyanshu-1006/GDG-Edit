@@ -140,17 +140,6 @@ const HomePage = () => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll();
   const [showPromo, setShowPromo] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
-  
-  useEffect(() => {
-    const checkOpenStatus = () => {
-      const targetDate = new Date("2026-03-22T00:00:00+05:30").getTime();
-      setIsOpen(Date.now() >= targetDate);
-    };
-    checkOpenStatus();
-    const interval = setInterval(checkOpenStatus, 60000);
-    return () => clearInterval(interval);
-  }, []);
   
   // Use Framer Motion to create a smooth opacity transition based on scroll position
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -216,27 +205,12 @@ const HomePage = () => {
                   GDG MMMUT Induction <Sparkles size={14} />
                 </PromoTitle>
                 <PromoSubtitle>
-                  {isOpen 
-                    ? "Applications are now open! Join our community of developers and innovators."
-                    : "Applications open tomorrow! Get ready to join our community."}
+                  Applications are now open! Join our community of developers and innovators.
                 </PromoSubtitle>
-                {isOpen ? (
-                  <PromoButton to="/induction">
-                    Apply Now
-                    <Sparkles size={14} />
-                  </PromoButton>
-                ) : (
-                  <PromoButton
-                    as="div"
-                    style={{
-                      background: "rgba(255, 255, 255, 0.1)",
-                      color: "rgba(255, 255, 255, 0.6)",
-                      cursor: "not-allowed"
-                    }}
-                  >
-                    Opens Tomorrow
-                  </PromoButton>
-                )}
+                <PromoButton to="/induction">
+                  Apply Now
+                  <Sparkles size={14} />
+                </PromoButton>
               </PromoText>
             </PromoContent>
           </PromoModal>

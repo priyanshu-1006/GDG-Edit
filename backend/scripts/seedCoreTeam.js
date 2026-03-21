@@ -514,7 +514,7 @@ const teamData = [
     "category": "core"
   },
   {
-    "name": "Rasshi Ashish Khan",
+    "name": "Rasshi Ashish Srivastav",
     "role": "DSA/CP Team",
     "badge": "Competitive Programmer",
     "year": "2025",

@@ -398,6 +398,7 @@ router.post('/event-manager/register', async (req, res) => {
         user.name = name;
         user.password = password; // Will be hashed by the pre-save hook
         user.emailVerified = true;
+        user.isApproved = false; // Make them pending approval
         await user.save();
       } else {
         return res.status(400).json({
@@ -414,13 +415,17 @@ router.post('/event-manager/register', async (req, res) => {
         role: 'event_manager',
         oauthProvider: 'email',
         emailVerified: true,
+        isApproved: false, // Flag as pending super_admin approval
       });
     }
 
-    console.log(`🎉 New event manager registered: ${email}`);
+    console.log(`🎉 New event manager registered and awaiting approval: ${email}`);
 
-    // Auto-login: send token response
-    sendTokenResponse(user, 201, res);
+    // Return success message without token since they need manual approval
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is currently pending Super Admin approval. You will be able to log in once your account is verified.'
+    });
   } catch (error) {
     console.error('Event manager register error:', error);
     res.status(500).json({ success: false, message: 'Server error. Please try again.' });
