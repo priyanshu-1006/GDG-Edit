@@ -19,7 +19,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 // Middleware to verify induction JWT
 const verifyInductionToken = (req, res, next) => {
@@ -293,7 +294,7 @@ router.post('/parse-resume', verifyInductionToken, upload.single('resume'), asyn
     }
 
     // 3. Extract info using Groq
-    if (!process.env.GROQ_API_KEY) {
+    if (!groq) {
       return res.json({ 
         success: true, 
         resumeUrl: finalResumeUrl,
