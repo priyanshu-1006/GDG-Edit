@@ -11,7 +11,7 @@ const GDG_GRAY = '#5f6368';
 const GDG_LIGHT_GRAY = '#f8f9fa';
 
 // Logo URL - using the deployed frontend URL
-const GDG_LOGO = 'https://gdg.mmmut.app/gdg_logo.png';
+const GDG_LOGO = 'https://gdg.mmmut.app/gdg_logo.svg';
 
 /**
  * Base email wrapper with GDG branding

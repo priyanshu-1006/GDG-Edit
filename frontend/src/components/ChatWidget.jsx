@@ -5,7 +5,8 @@ import { apiClient } from "../utils/apiUtils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTheme } from "../contexts/ThemeContext";
-import PropTypes from "prop-types";
+
+const CHAT_LOGO_SRC = "/google-icon-logo.svg";
 
 // ============================================
 // GOOGLE COLORS
@@ -15,109 +16,6 @@ const GOOGLE_COLORS = {
   red: "#EA4335",
   yellow: "#FBBC05",
   green: "#34A853",
-};
-
-// ============================================
-// CUSTOM GDG CHATBOT ICON COMPONENT
-// ============================================
-// Google "G" Logo for Header
-const GoogleGIcon = ({ size = 28 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M24 9.5C19.2 9.5 14.9 11.7 12 15.1L16.7 18.9C17.9 16.3 20.7 14.5 24 14.5C26.2 14.5 28.2 15.3 29.7 16.7L33.9 12.5C31.3 10.4 27.8 9.5 24 9.5Z"
-      fill={GOOGLE_COLORS.red}
-    />
-    <path
-      d="M12 15.1C10.2 17.5 9.5 20.6 9.5 24C9.5 27.4 10.2 30.5 12 32.9L16.7 29.1C15.9 27.6 15.5 25.9 15.5 24C15.5 22.1 15.9 20.4 16.7 18.9L12 15.1Z"
-      fill={GOOGLE_COLORS.yellow}
-    />
-    <path
-      d="M24 38.5C20.7 38.5 17.9 36.7 16.7 34.1L12 37.9C14.9 41.3 19.2 43.5 24 43.5C27.8 43.5 31.3 42.6 33.9 40.5L29.9 36.8C28.4 37.8 26.3 38.5 24 38.5Z"
-      fill={GOOGLE_COLORS.green}
-    />
-    <path
-      d="M38.5 24C38.5 22.8 38.4 21.7 38.2 20.5H24V28H32.3C31.6 30.3 30.1 32.2 29.9 36.8L33.9 40.5C36.9 37.7 38.5 33.5 38.5 24Z"
-      fill={GOOGLE_COLORS.blue}
-    />
-  </svg>
-);
-
-GoogleGIcon.propTypes = {
-  size: PropTypes.number,
-};
-
-const GDGChatIcon = ({ size = 28 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* Google "G" with chat bubble background */}
-    <circle cx="24" cy="24" r="20" fill="white" />
-    {/* Google G Logo */}
-    <path
-      d="M24 13C18.5 13 13.8 16.2 11.5 20.8L17.3 25.5C18.8 21.8 21.2 19 24 19C26.6 19 28.9 20.2 30.8 22L36 16.8C32.8 14.2 28.6 13 24 13Z"
-      fill={GOOGLE_COLORS.red}
-    />
-    <path
-      d="M11.5 20.8C10.2 22.8 9.5 25.3 9.5 28C9.5 30.7 10.2 33.2 11.5 35.2L17.3 30.5C16.5 28.8 16 26.9 16 25C16 23.1 16.5 21.2 17.3 19.5L11.5 20.8Z"
-      fill={GOOGLE_COLORS.yellow}
-    />
-    <path
-      d="M24 41C21.2 41 18.8 39.2 17.3 36.5L11.5 41.2C13.8 45.8 18.5 49 24 49C28.6 49 32.8 47.8 36 45.2L31.2 40.4C29.3 41.2 27 41 24 41Z"
-      fill={GOOGLE_COLORS.green}
-    />
-    <path
-      d="M38.5 28C38.5 26.4 38.3 24.8 38 23.5H24V33H32.8C31.8 36.2 30.5 38.5 31.2 40.4L36 45.2C40.2 41.5 42.5 35.5 38.5 28Z"
-      fill={GOOGLE_COLORS.blue}
-    />
-  </svg>
-);
-
-GDGChatIcon.propTypes = {
-  size: PropTypes.number,
-};
-
-const GDGChatIconDark = ({ size = 28 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* Google "G" with dark background */}
-    <circle cx="24" cy="24" r="20" fill="#1e293b" />
-    {/* Google G Logo - brighter colors for dark theme */}
-    <path
-      d="M24 13C18.5 13 13.8 16.2 11.5 20.8L17.3 25.5C18.8 21.8 21.2 19 24 19C26.6 19 28.9 20.2 30.8 22L36 16.8C32.8 14.2 28.6 13 24 13Z"
-      fill="#F28B82"
-    />
-    <path
-      d="M11.5 20.8C10.2 22.8 9.5 25.3 9.5 28C9.5 30.7 10.2 33.2 11.5 35.2L17.3 30.5C16.5 28.8 16 26.9 16 25C16 23.1 16.5 21.2 17.3 19.5L11.5 20.8Z"
-      fill="#FDE293"
-    />
-    <path
-      d="M24 41C21.2 41 18.8 39.2 17.3 36.5L11.5 41.2C13.8 45.8 18.5 49 24 49C28.6 49 32.8 47.8 36 45.2L31.2 40.4C29.3 41.2 27 41 24 41Z"
-      fill="#81C995"
-    />
-    <path
-      d="M38.5 28C38.5 26.4 38.3 24.8 38 23.5H24V33H32.8C31.8 36.2 30.5 38.5 31.2 40.4L36 45.2C40.2 41.5 42.5 35.5 38.5 28Z"
-      fill="#8AB4F8"
-    />
-  </svg>
-);
-
-GDGChatIconDark.propTypes = {
-  size: PropTypes.number,
 };
 
 // ============================================
@@ -185,50 +83,21 @@ const pulseRing = keyframes`
   100% { transform: scale(1.4); opacity: 0; }
 `;
 
-const colorRotate = keyframes`
-  0% { box-shadow: 0 4px 20px rgba(66, 133, 244, 0.4); }
-  25% { box-shadow: 0 4px 20px rgba(234, 67, 53, 0.4); }
-  50% { box-shadow: 0 4px 20px rgba(251, 188, 5, 0.4); }
-  75% { box-shadow: 0 4px 20px rgba(52, 168, 83, 0.4); }
-  100% { box-shadow: 0 4px 20px rgba(66, 133, 244, 0.4); }
-`;
-
 const ToggleButton = styled.button`
-  width: 60px;
-  height: 60px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  background: ${(props) =>
-    props.$isDark
-      ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-      : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)"};
+  background: ${(props) => (props.$isDark ? "#0f172a" : "#ffffff")};
   color: white;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 1px solid
+    ${(props) => (props.$isDark ? "rgba(255, 255, 255, 0.18)" : "#d1d5db")};
   position: relative;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s ease;
   animation: ${floatAnimation} 3s ease-in-out infinite;
-
-  /* Google colors border gradient */
-  &::before {
-    content: "";
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    background: conic-gradient(
-      from 0deg,
-      ${GOOGLE_COLORS.blue},
-      ${GOOGLE_COLORS.red},
-      ${GOOGLE_COLORS.yellow},
-      ${GOOGLE_COLORS.green},
-      ${GOOGLE_COLORS.blue}
-    );
-    z-index: -1;
-    animation: ${colorRotate} 4s linear infinite;
-  }
 
   /* Pulse ring effect */
   &::after {
@@ -242,8 +111,9 @@ const ToggleButton = styled.button`
   }
 
   &:hover {
-    transform: scale(1.1);
+    transform: translateY(-2px);
     animation: none;
+    box-shadow: 0 10px 24px rgba(66, 133, 244, 0.28);
 
     &::after {
       animation: none;
@@ -264,15 +134,7 @@ const ToggleButton = styled.button`
     props.$isOpen &&
     css`
       animation: none;
-      background: linear-gradient(
-        135deg,
-        ${GOOGLE_COLORS.blue},
-        ${GOOGLE_COLORS.green}
-      );
-
-      &::before {
-        display: none;
-      }
+      box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
 
       &::after {
         display: none;
@@ -368,14 +230,24 @@ const HeaderContent = styled.div`
 `;
 
 const HeaderAvatar = styled.div`
-  width: 40px;
-  height: 40px;
+  width: 86px;
+  height: 86px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(10px);
+`;
+
+const ChatbotIconImage = styled.img`
+  width: ${(props) => props.$size || 46}px;
+  height: ${(props) => props.$size || 46}px;
+  object-fit: contain;
+  display: block;
+  border-radius: 50%;
+  background: ${(props) => (props.$isDark ? "rgb(255, 255, 255)" : "transparent")};
+  padding: 0;
 `;
 
 const HeaderInfo = styled.div`
@@ -996,7 +868,11 @@ const ChatWidget = () => {
           <Header>
             <HeaderContent>
               <HeaderAvatar>
-                <GoogleGIcon size={32} />
+                <ChatbotIconImage
+                  src={CHAT_LOGO_SRC}
+                  alt="Google icon"
+                  $size={38}
+                />
               </HeaderAvatar>
               <HeaderInfo>
                 <HeaderTitle>GDG Assistant</HeaderTitle>
@@ -1162,9 +1038,17 @@ const ChatWidget = () => {
         {isOpen ? (
           <X size={28} color="white" />
         ) : isDarkTheme ? (
-          <GDGChatIconDark size={40} />
+          <ChatbotIconImage
+            src={CHAT_LOGO_SRC}
+            alt="Google icon"
+            $size={52}
+          />
         ) : (
-          <GDGChatIcon size={40} />
+          <ChatbotIconImage
+            src={CHAT_LOGO_SRC}
+            alt="Google icon"
+            $size={52}
+          />
         )}
       </ToggleButton>
     </WidgetContainer>

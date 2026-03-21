@@ -24,6 +24,10 @@ const LogoImage = styled.img`
   height: 40px;
   width: auto;
   object-fit: contain;
+  border-radius: 8px;
+  background: ${({ theme }) =>
+    theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
+  padding: 4px;
   
   @media (max-width: 1024px) {
     height: 36px;
@@ -110,13 +114,14 @@ const SubText = styled.span`
 
 export default function Logo() {
   const { isDarkTheme } = useTheme();
-  const logoSrc = isDarkTheme ? '/gdg_logo.png' : '/gdg_logo2.png';
+  const logoSrc = '/gdg_logo.svg';
+  const logoAlt = isDarkTheme ? 'GDG Logo dark mode' : 'GDG Logo light mode';
 
   return (
     <LogoContainer href='/' className='logo'>
       <LogoImage 
         src={logoSrc}
-        alt="GDG Logo"
+        alt={logoAlt}
       />
       <LogoText>
         <MainText>Google Developers Group</MainText>

@@ -352,7 +352,7 @@ const DashboardLayout = () => {
       <Sidebar $isOpen={sidebarOpen}>
         <SidebarHeader>
           <Logo onClick={() => navigate('/')}> 
-            <LogoImage src="/gdg_logo.png" alt="GDG Logo" />
+            <LogoImage src="https://res.cloudinary.com/startup-grind/image/upload/c_fill,dpr_2.0,f_auto,g_center,h_900,q_auto:good,w_1200/v1/gcs/platform-data-goog/contentbuilder/GDG_Bevy_SocialSharingThumbnail_KFxxrrs.png" alt="GDG Logo" />
             <span>GDG MMMUT</span>
           </Logo>
           <CloseButton onClick={toggleSidebar}>

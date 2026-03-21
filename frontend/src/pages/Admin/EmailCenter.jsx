@@ -294,7 +294,7 @@ const EmailCenter = () => {
       <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
         <tr>
           <td style="background-color: #4285f4; padding: 32px 40px; border-radius: 16px 16px 0 0; text-align: center;">
-            <img src="/gdg_logo.png" alt="GDG MMMUT" style="max-width: 200px; height: auto;">
+            <img src="https://res.cloudinary.com/startup-grind/image/upload/c_fill,dpr_2.0,f_auto,g_center,h_900,q_auto:good,w_1200/v1/gcs/platform-data-goog/contentbuilder/GDG_Bevy_SocialSharingThumbnail_KFxxrrs.png" alt="GDG MMMUT" style="max-width: 200px; height: auto;">
           </td>
         </tr>
         <tr>
