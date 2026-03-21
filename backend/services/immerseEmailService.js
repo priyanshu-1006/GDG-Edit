@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import ImmerseEmailLog from '../models/ImmerseEmailLog.js';
 import ImmerseContact from '../models/ImmerseContact.js';
 import ImmerseEmailTemplate from '../models/ImmerseEmailTemplate.js';
+import { transporter } from '../utils/unifiedEmail.js';
 
 class ImmerseEmailService {
     constructor() {
@@ -72,13 +73,29 @@ class ImmerseEmailService {
                     subject,
                     html,
                 });
-                console.log(`✅ Immerse email sent to ${to}: ${data.data?.id}`);
+                
+                if (data.error) {
+                    throw new Error(data.error.message || 'Resend returned an error response');
+                }
+                
+                console.log(`✅ Immerse email sent via Resend to ${to}: ${data.data?.id}`);
                 messageId = data.data?.id;
             } catch (error) {
-                console.error(`❌ Error sending Immerse email to ${to}:`);
-                console.error('   Error:', error.message);
-                status = 'failed';
-                errorMsg = error.message;
+                console.warn(`⚠️ Resend failed for Immerse email to ${to}, falling back to Nodemailer:`, error.message);
+                try {
+                    const info = await transporter.sendMail({
+                        from: `${this.fromName} <${this.fromEmail}>`,
+                        to,
+                        subject,
+                        html,
+                    });
+                    console.log(`✅ Immerse email sent via Nodemailer to ${to}: ${info.messageId}`);
+                    messageId = info.messageId;
+                } catch (fallbackError) {
+                    console.error(`❌ Both Resend and Nodemailer failed for Immerse email to ${to}:`, fallbackError.message);
+                    status = 'failed';
+                    errorMsg = `Resend: ${error.message} | Nodemailer: ${fallbackError.message}`;
+                }
             }
         }
 

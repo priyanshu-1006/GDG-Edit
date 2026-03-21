@@ -18,12 +18,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export { transporter };
+
 export const sendGlobalEmail = async ({ 
   to, 
   subject, 
   html, 
   text, 
-  from = '"GDG MMMUT Gorakhpur" <gdgtechmmmut@gmail.com>' 
+  from = '"IMMERSE 2026 - MMMUT" <team@immerse.mmmut.app>' 
 }) => {
   try {
     // Attempt 1: Resend
