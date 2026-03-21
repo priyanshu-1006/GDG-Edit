@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { Html5Qrcode } from "html5-qrcode";
@@ -22,11 +22,20 @@ const Verify = styled.div`
 
   input {
     height: 48px;
-    padding: 0.5rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    border: 1px solid ${({ theme }) => theme.colors?.border || "#e0e0e0"};
+    border-radius: 6px;
     font-size: 1rem;
+    background-color: ${({ theme }) => theme.colors?.background?.secondary || "#fff"};
     color: ${({ theme }) => theme.colors?.text?.primary || "#000"};
+    width: 100%;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
   }
 
   button {
@@ -58,7 +67,7 @@ const Verify = styled.div`
 const VerificationPage = () => {
   const [serial, setSerial] = useState("");
   const [showQRReader, setShowQRReader] = useState(false);
-  const [hasScanned, setHasScanned] = useState(false);
+  const hasScannedRef = useRef(false);
   const navigate = useNavigate();
   const qrRef = useRef(null);
   const html5QrCodeRef = useRef(null);
@@ -71,13 +80,13 @@ const VerificationPage = () => {
     navigate(`/verification/${serial.trim()}`);
   };
 
-  const handleQRScanSuccess = (decodedText, decodedResult) => {
-    if (!hasScanned) {
-      setHasScanned(true);
+  const handleQRScanSuccess = useCallback((decodedText) => {
+    if (!hasScannedRef.current) {
+      hasScannedRef.current = true;
       setSerial(decodedText.trim());
       navigate(`/verification/${decodedText.trim()}`);
     }
-  };
+  }, [navigate]);
 
   const handleQRScanError = (error) => {
     console.warn("QR Scan Error", error);
@@ -121,7 +130,7 @@ const VerificationPage = () => {
         });
       }
     };
-  }, [showQRReader]);
+  }, [showQRReader, handleQRScanSuccess]);
 
   return (
     <Verify>
@@ -149,7 +158,7 @@ const VerificationPage = () => {
 
       <button
         onClick={() => {
-          setHasScanned(false);
+          hasScannedRef.current = false;
           setShowQRReader((prev) => !prev);
         }}
       >
