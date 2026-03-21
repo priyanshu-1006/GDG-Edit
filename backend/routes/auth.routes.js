@@ -279,6 +279,7 @@ router.post('/event-manager/send-otp', async (req, res) => {
     // Send OTP email
     const emailSent = await sendGlobalEmail({
       to: email,
+      from: '"GDG MMMUT" <team@gdg.mmmut.app>',
       subject: 'Your GDG MMMUT Event Manager Verification Code',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
