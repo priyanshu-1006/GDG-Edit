@@ -4,8 +4,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Initialize Resend conditionally to prevent crash if API key is missing
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Initialize Resend conditionally to prevent crash if API key is missing. Trim to prevent accidental whitespace in Vercel Dashboard.
+const resendApiKey = process.env.RESEND_API_KEY?.trim();
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 // Fallback SMTP Transporter
 const transporter = nodemailer.createTransport({
@@ -29,7 +30,7 @@ export const sendGlobalEmail = async ({
 }) => {
   try {
     // Attempt 1: Resend
-    if (process.env.RESEND_API_KEY) {
+    if (resendApiKey) {
       try {
         const { data, error } = await resend.emails.send({
           from,

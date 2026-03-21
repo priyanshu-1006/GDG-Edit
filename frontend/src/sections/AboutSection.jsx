@@ -108,8 +108,32 @@ const IllustrationContainer = styled.div`
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 2rem;
+`;
+
+const LearnMoreButton = styled(motion.button)`
+  padding: 1rem 2rem;
+  background-color: ${({ theme }) => theme.googleColors.blue.primary || '#4285F4'};
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  
+  &:hover {
+    background-color: ${({ theme }) => theme.googleColors.blue.dark || '#3367d6'};
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    margin-top: 1rem;
+  }
 `;
 
 const AboutSection = () => {
@@ -172,7 +196,7 @@ const AboutSection = () => {
             community. Through workshops, hackathons, and expert sessions, we cover a diverse range
             of domains, including:
             </p>
-            <div className='flex flex-col items-start flex-1/6 justify-center'>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
               <p>💻 Web Development</p>
               <p>📱 Android Development</p>
               <p>🤖 Artificial Intelligence & Machine Learning</p>
@@ -267,11 +291,13 @@ const AboutSection = () => {
             alt="GDG Illustration"
             style={{ width: '80%', maxWidth: '400px' }}
           />
+          <LearnMoreButton 
+            onClick={() => { window.location.href = 'https://gdg.community.dev/events/details/google-gdg-on-campus-madan-mohan-malaviya-university-of-technology-gorakhpur-india-presents-techsprint-hackathon-info-session/';}}
+          >
+            Learn more about Us
+          </LearnMoreButton>
         </IllustrationContainer>
       </AboutWrapper>
-      <IllustrationContainer>
-        <motion.button ref={illustrationRef} style={{position:"absolute", left:"65%",  padding:"1rem", backgroundColor:"#4285F4", color:"#fff", border:"none", borderRadius:"5px", cursor:"pointer"  }} onClick={() => { window.location.href = 'https://gdg.community.dev/events/details/google-gdg-on-campus-madan-mohan-malaviya-university-of-technology-gorakhpur-india-presents-techsprint-hackathon-info-session/';}}>Learn more about Us</motion.button>
-      </IllustrationContainer>
    
     </AboutSectionContainer>
   );
