@@ -130,6 +130,11 @@ const Tab = styled.button`
     width: 18px;
     height: 18px;
   }
+
+  @media (max-width: 400px) {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
 `;
 
 const ResultsGrid = styled(motion.div)`
