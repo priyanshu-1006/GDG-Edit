@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Eye, FileSpreadsheet, Download, Edit2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Eye, FileSpreadsheet, Download, AlertCircle } from "lucide-react";
 import { apiClient } from "../../utils/apiUtils";
 import IssueCertificateModal from "./components/IssueCertificateModal";
 import BulkIssueModal from "./components/BulkIssueModal";
@@ -13,8 +13,10 @@ const Container = styled.div`
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
 `;
 
 const Title = styled.h1`
@@ -32,6 +34,8 @@ const ButtonGroup = styled.div`
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
+  flex: 1;
 `;
 
 const EventSelect = styled.select`
@@ -264,6 +268,7 @@ export default function CertificateManagement() {
 
   useEffect(() => {
     fetchCerts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const eventOptions = [...new Map(
@@ -287,7 +292,7 @@ export default function CertificateManagement() {
 
       const disposition = response.headers["content-disposition"];
       let fileName = "event-certificates.zip";
-      const match = disposition?.match(/filename=\"?([^\"]+)\"?/i);
+      const match = disposition?.match(/filename="?([^"]+)"?/i);
       if (match && match[1]) {
         fileName = match[1];
       }
@@ -329,11 +334,15 @@ export default function CertificateManagement() {
     setSelectedCerts(newSelected);
   };
 
+  const filteredCerts = selectedEventId 
+    ? certs.filter(cert => cert.event?._id === selectedEventId)
+    : certs;
+
   const handleSelectAll = () => {
-    if (selectedCerts.size === certs.length) {
+    if (selectedCerts.size === filteredCerts.length && filteredCerts.length > 0) {
       setSelectedCerts(new Set());
     } else {
-      setSelectedCerts(new Set(certs.map((c) => c._id)));
+      setSelectedCerts(new Set(filteredCerts.map((c) => c._id)));
     }
   };
 
@@ -416,7 +425,7 @@ export default function CertificateManagement() {
             <Th style={{ width: "40px" }}>
               <Checkbox
                 type="checkbox"
-                checked={selectedCerts.size === certs.length && certs.length > 0}
+                checked={selectedCerts.size === filteredCerts.length && filteredCerts.length > 0}
                 onChange={handleSelectAll}
               />
             </Th>
@@ -428,14 +437,14 @@ export default function CertificateManagement() {
           </tr>
         </thead>
         <tbody>
-          {certs.length === 0 ? (
+          {filteredCerts.length === 0 ? (
             <tr>
               <Td colSpan="6" style={{ textAlign: "center" }}>
                 No certificates found
               </Td>
             </tr>
           ) : (
-            certs.map((cert) => (
+            filteredCerts.map((cert) => (
               <tr key={cert._id}>
                 <Td style={{ width: "40px" }}>
                   <Checkbox
