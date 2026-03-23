@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { apiClient } from '../../utils/apiUtils';
+import { immersePublicApi } from '../../utils/immerseApi';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -163,22 +163,71 @@ const FooterText = styled.p`
 
 const ImmerseLogin = () => {
   const navigate = useNavigate();
+  const [step, setStep] = useState('credentials'); // 'credentials' or 'otp'
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [otpTimer, setOtpTimer] = useState(120); // 2 minutes
+  const [canResendOtp, setCanResendOtp] = useState(false);
+
+  // Handle OTP timer
+  React.useEffect(() => {
+    if (step === 'otp' && otpTimer > 0) {
+      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (otpTimer === 0 && step === 'otp') {
+      setCanResendOtp(true);
+    }
+  }, [otpTimer, step]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleOtpChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setOtp(value);
+    setError('');
+  };
+
+  const handleInitiateLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const response = await apiClient.post('/api/immerse/auth/login', formData);
+      const response = await immersePublicApi.post('/auth/initiate-login', formData);
+      
+      if (response.data.success) {
+        setStep('otp');
+        setOtpTimer(120);
+        setCanResendOtp(false);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to initiate login. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    
+    if (otp.length !== 6) {
+      setError('Please enter a 6-digit OTP');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await immersePublicApi.post('/auth/verify-otp', {
+        email: formData.email,
+        otp
+      });
       
       if (response.data.success) {
         localStorage.setItem('immerseToken', response.data.token);
@@ -186,10 +235,35 @@ const ImmerseLogin = () => {
         navigate('/immerse/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendOtp = async () => {
+    setCanResendOtp(false);
+    setOtpTimer(120);
+    setOtp('');
+    setError('');
+    
+    try {
+      const response = await immersePublicApi.post('/auth/initiate-login', formData);
+      if (response.data.success) {
+        // OTP resent successfully
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP');
+      setCanResendOtp(true);
+    }
+  };
+
+  const handleBackToCredentials = () => {
+    setStep('credentials');
+    setOtp('');
+    setError('');
+    setOtpTimer(120);
+    setCanResendOtp(false);
   };
 
   return (
@@ -207,9 +281,9 @@ const ImmerseLogin = () => {
           <LogoSubtext>Administration Portal</LogoSubtext>
         </Logo>
         
-        <Title>Welcome Back</Title>
+        <Title>{step === 'credentials' ? 'Welcome Back' : 'Verify OTP'}</Title>
         
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={step === 'credentials' ? handleInitiateLogin : handleVerifyOtp}>
           {error && (
             <ErrorMessage
               initial={{ opacity: 0, y: -10 }}
@@ -219,36 +293,106 @@ const ImmerseLogin = () => {
             </ErrorMessage>
           )}
           
-          <InputGroup>
-            <InputLabel>Email Address</InputLabel>
-            <Input
-              type="email"
-              name="email"
-              placeholder="admin@immerse.mmmut.app"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </InputGroup>
-          
-          <InputGroup>
-            <InputLabel>Password</InputLabel>
-            <Input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </InputGroup>
+          {step === 'credentials' ? (
+            <>
+              <InputGroup>
+                <InputLabel>Email Address</InputLabel>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="priyanshudlw1@gmail.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </InputGroup>
+              
+              <InputGroup>
+                <InputLabel>Password</InputLabel>
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </InputGroup>
+            </>
+          ) : (
+            <>
+              <InputGroup>
+                <InputLabel>One-Time Password (OTP)</InputLabel>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={handleOtpChange}
+                  maxLength="6"
+                  required
+                />
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.6)'
+                }}>
+                  <span>🔒 Expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}</span>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={!canResendOtp}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: canResendOtp ? '#4f46e5' : 'rgba(255, 255, 255, 0.3)',
+                      cursor: canResendOtp ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </InputGroup>
+
+              <button
+                type="button"
+                onClick={handleBackToCredentials}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  marginTop: '12px',
+                  transition: 'all 0.3s ease',
+                  marginBottom: '12px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                }}
+              >
+                ← Back to Login
+              </button>
+            </>
+          )}
           
           <SubmitButton
             type="submit"
-            disabled={loading}
+            disabled={loading || (step === 'otp' && otp.length !== 6)}
             whileTap={{ scale: 0.98 }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Processing...' : (step === 'credentials' ? 'Continue' : 'Verify OTP')}
           </SubmitButton>
         </Form>
         

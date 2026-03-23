@@ -5,6 +5,7 @@ import ImmerseEmailTemplate from '../models/ImmerseEmailTemplate.js';
 import ImmerseEmailLog from '../models/ImmerseEmailLog.js';
 import ImmerseEvent from '../models/ImmerseEvent.js';
 import ImmerseRegistration from '../models/ImmerseRegistration.js';
+import OTP from '../models/OTP.js';
 import immerseEmailService from '../services/immerseEmailService.js';
 import { protectImmerse, immerseSuperAdmin, generateImmerseToken } from '../middleware/immerseAuth.middleware.js';
 
@@ -13,11 +14,61 @@ const router = express.Router();
 // ==================== AUTH ROUTES ====================
 
 /**
- * @route   POST /api/immerse/auth/login
- * @desc    Login Immerse admin
+ * Generate a 6-digit OTP
+ */
+const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * OTP Email Template
+ */
+const getOTPEmailHTML = (otp, adminName) => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .otp-box { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+            .otp-code { font-size: 42px; font-weight: bold; letter-spacing: 10px; font-family: 'Courier New', monospace; }
+            .footer { background: #f5f5f5; padding: 20px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #eee; }
+            .warning { color: #e74c3c; font-size: 14px; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>IMMERSE 2026</h1>
+                <p>Login Verification</p>
+            </div>
+            <div class="content">
+                <p>Hi ${adminName},</p>
+                <p>You have requested to login to IMMERSE Admin Portal. Please use the following One-Time Password (OTP) to complete your login:</p>
+                <div class="otp-box">
+                    <div class="otp-code">${otp}</div>
+                </div>
+                <p><strong>This OTP will expire in 2 minutes.</strong></p>
+                <p class="warning">⚠️ If you did not request this OTP, please ignore this email. Your account remains secure.</p>
+            </div>
+            <div class="footer">
+                <p>IMMERSE 2026 - MMMUT Gorakhpur<br>© 2026 All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+};
+
+/**
+ * @route   POST /api/immerse/auth/initiate-login
+ * @desc    Initiate login - verify email/password and send OTP
  * @access  Public
  */
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/initiate-login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -53,14 +104,96 @@ router.post('/auth/login', async (req, res) => {
             });
         }
 
+        // Generate OTP
+        const otp = generateOTP();
+
+        // Save OTP to database
+        await OTP.findOneAndDelete({ email }); // Remove old OTP if exists
+        await OTP.create({
+            email,
+            otp
+        });
+
+        // Send OTP email
+        try {
+            await immerseEmailService.sendEmail({
+                to: email,
+                subject: 'Your IMMERSE Login OTP - Valid for 2 Minutes',
+                html: getOTPEmailHTML(otp, admin.name),
+                category: 'security',
+                recipientName: admin.name,
+                recipientType: 'admin',
+                metadata: { purpose: 'login_otp', adminId: admin._id }
+            });
+        } catch (emailError) {
+            console.error('Failed to send OTP email:', emailError);
+            // Continue anyway - OTP is still in database
+            console.log(`📧 [FALLBACK] OTP for ${email}: ${otp}`);
+        }
+
+        res.json({
+            success: true,
+            message: 'OTP sent to your email',
+            sessionId: Buffer.from(`${email}:${Date.now()}`).toString('base64')
+        });
+    } catch (error) {
+        console.error('Login initiation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+/**
+ * @route   POST /api/immerse/auth/verify-otp
+ * @desc    Verify OTP and login
+ * @access  Public
+ */
+router.post('/auth/verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide email and OTP'
+            });
+        }
+
+        // Check OTP
+        const otpRecord = await OTP.findOne({ email, otp });
+
+        if (!otpRecord) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired OTP'
+            });
+        }
+
+        // Delete used OTP
+        await OTP.deleteOne({ _id: otpRecord._id });
+
+        // Get admin
+        const admin = await ImmerseAdmin.findOne({ email });
+
+        if (!admin || !admin.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Admin not found or deactivated'
+            });
+        }
+
         // Update last login
         admin.lastLogin = new Date();
         await admin.save({ validateBeforeSave: false });
 
+        // Generate token
         const token = generateImmerseToken(admin);
 
         res.json({
             success: true,
+            message: 'Login successful',
             token,
             admin: {
                 id: admin._id,
@@ -70,12 +203,26 @@ router.post('/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('OTP verification error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
         });
     }
+});
+
+/**
+ * @route   POST /api/immerse/auth/login
+ * @desc    Legacy login endpoint (redirects to new OTP-based flow)
+ * @access  Public
+ * @deprecated Use /auth/initiate-login + /auth/verify-otp instead
+ */
+router.post('/auth/login', async (req, res) => {
+    res.status(403).json({
+        success: false,
+        message: 'OTP is now required for login. Please use the OTP-based login flow.',
+        hint: 'Use POST /api/immerse/auth/initiate-login to start login, then verify with /api/immerse/auth/verify-otp'
+    });
 });
 
 /**

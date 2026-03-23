@@ -11,6 +11,56 @@ import { sendGlobalEmail } from '../utils/unifiedEmail.js';
 
 const router = express.Router();
 
+/**
+ * Generate a 6-digit OTP
+ */
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * Admin OTP Email Template
+ */
+const getAdminOTPEmailHTML = (otp, adminName) => {
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+      <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+          .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #4285f4 0%, #1967d2 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .otp-box { background: linear-gradient(135deg, #4285f4 0%, #1967d2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+          .otp-code { font-size: 42px; font-weight: bold; letter-spacing: 10px; font-family: 'Courier New', monospace; }
+          .footer { background: #f5f5f5; padding: 20px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #eee; }
+          .warning { color: #d32f2f; font-size: 14px; margin-top: 20px; }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>GDG MMMUT</h1>
+              <p>Admin Portal Login Verification</p>
+          </div>
+          <div class="content">
+              <p>Hi ${adminName},</p>
+              <p>You have requested to login to GDG Admin Portal. Please use the following One-Time Password (OTP) to complete your login:</p>
+              <div class="otp-box">
+                  <div class="otp-code">${otp}</div>
+              </div>
+              <p><strong>This OTP will expire in 2 minutes.</strong></p>
+              <p class="warning">⚠️ If you did not request this OTP, please ignore this email. Your account remains secure.</p>
+          </div>
+          <div class="footer">
+              <p>Google Developers Group - MMMUT Gorakhpur<br>© 2026 All rights reserved.</p>
+          </div>
+      </div>
+  </body>
+  </html>
+  `;
+};
+
 const isGoogleConfigured =
   !!process.env.GOOGLE_CLIENT_ID &&
   !!process.env.GOOGLE_CLIENT_SECRET &&
@@ -81,6 +131,13 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Password login is not available for this account',
+      });
+    }
+
     // Check if password matches
     const isMatch = await user.comparePassword(password);
 
@@ -88,6 +145,161 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
+      });
+    }
+
+    // Update last login
+    user.lastLogin = Date.now();
+    await user.save({ validateBeforeSave: false });
+
+    // Send token response
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ==================== ADMIN OTP LOGIN FLOW ====================
+
+/**
+ * @route   POST /api/auth/admin/initiate-login
+ * @desc    Initiate admin login - verify email/password and send OTP
+ * @access  Public
+ */
+router.post('/admin/initiate-login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password'
+      });
+    }
+
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Password login is not available for this account'
+      });
+    }
+
+    // Check if user has admin/event_manager/super_admin role
+    if (!['admin', 'event_manager', 'super_admin'].includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have admin access'
+      });
+    }
+
+    if (user.suspended) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account has been suspended'
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+
+    // Save OTP to database
+    await OTP.findOneAndDelete({ email }); // Remove old OTP if exists
+    await OTP.create({
+      email,
+      otp
+    });
+
+    // Send OTP email
+    try {
+      await sendGlobalEmail({
+        to: email,
+        subject: 'Your GDG Admin Login OTP - Valid for 2 Minutes',
+        html: getAdminOTPEmailHTML(otp, user.name)
+      });
+    } catch (emailError) {
+      console.error('Failed to send OTP email:', emailError);
+      // Continue anyway - OTP is still in database
+      console.log(`📧 [FALLBACK] OTP for ${email}: ${otp}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'OTP sent to your email'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/admin/verify-otp
+ * @desc    Verify OTP and complete admin login
+ * @access  Public
+ */
+router.post('/admin/verify-otp', async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and OTP'
+      });
+    }
+
+    // Check OTP
+    const otpRecord = await OTP.findOne({ email, otp });
+
+    if (!otpRecord) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      });
+    }
+
+    // Delete used OTP
+    await OTP.deleteOne({ _id: otpRecord._id });
+
+    // Get user
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Double-check admin role
+    if (!['admin', 'event_manager', 'super_admin'].includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have admin access'
+      });
+    }
+
+    if (user.suspended) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account has been suspended'
       });
     }
 

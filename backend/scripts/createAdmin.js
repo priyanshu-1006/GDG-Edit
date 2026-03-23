@@ -44,15 +44,20 @@ const createAdminUser = async () => {
 
     if (existingUser) {
       console.log('\n⚠️  User with this email already exists!');
-      const update = await question('Do you want to update their role to ' + role + '? (yes/no): ');
+      const update = await question('Do you want to update their role and password to enable admin login? (yes/no): ');
 
       if (update.toLowerCase() === 'yes' || update.toLowerCase() === 'y') {
+        existingUser.name = name || existingUser.name;
         existingUser.role = role;
+        existingUser.password = password;
+        existingUser.oauthProvider = 'email';
+        existingUser.emailVerified = true;
         await existingUser.save();
-        console.log('\n✅ User role updated successfully!');
+        console.log('\n✅ User updated successfully!');
         console.log('📧 Email:', existingUser.email);
         console.log('👤 Name:', existingUser.name);
         console.log('🔑 Role:', existingUser.role);
+        console.log('🔐 Password login enabled');
       } else {
         console.log('\n❌ Operation cancelled');
       }

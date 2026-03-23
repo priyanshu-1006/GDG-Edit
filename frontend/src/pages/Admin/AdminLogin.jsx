@@ -9,8 +9,23 @@ const AdminLogin = () => {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [step, setStep] = useState('credentials'); // 'credentials' or 'otp'
+    const [otp, setOtp] = useState('');
+    const [otpTimer, setOtpTimer] = useState(120); // 2 minutes
+    const [canResendOtp, setCanResendOtp] = useState(false);
+    const [error, setError] = useState("");
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    // Handle OTP timer
+    useEffect(() => {
+        if (step === 'otp' && otpTimer > 0) {
+            const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (otpTimer === 0 && step === 'otp') {
+            setCanResendOtp(true);
+        }
+    }, [otpTimer, step]);
 
     useEffect(() => {
         if (user && ["admin", "super_admin", "event_manager"].includes(user.role)) {
@@ -29,57 +44,94 @@ const AdminLogin = () => {
         }
     }, [user, navigate]);
 
-    const handleLogin = async (e) => {
+    const handleInitiateLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError("");
 
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
-                email,
-                password
-            });
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/auth/admin/initiate-login`,
+                { email, password }
+            );
 
-            const { token, user } = response.data;
-
-            // Determine which portal the user is trying to access
-            const currentPath = window.location.pathname;
-            let allowedRoles = [];
-            let portalLabel = "";
-
-            if (currentPath.includes("super-admin")) {
-                allowedRoles = ["super_admin"];
-                portalLabel = "Super Admin Portal";
-            } else if (currentPath.includes("event-manager")) {
-                allowedRoles = ["event_manager"];
-                portalLabel = "Event Manager Portal";
-            } else {
-                // /admin portal — admins and super_admins can access
-                allowedRoles = ["admin", "super_admin"];
-                portalLabel = "Admin Portal";
+            if (response.data.success) {
+                setStep('otp');
+                setOtpTimer(120);
+                setCanResendOtp(false);
+                setOtp('');
             }
-
-            if (!allowedRoles.includes(user.role)) {
-                alert(`Access Denied: Your account does not have ${portalLabel} privileges.`);
-                setLoading(false);
-                return;
-            }
-
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
-
-            if (user.role === 'super_admin') {
-                window.location.href = "/super-admin";
-            } else if (user.role === 'event_manager') {
-                window.location.href = "/event-manager";
-            } else {
-                window.location.href = "/admin";
-            }
-        } catch (error) {
-            console.error("Login failed", error);
-            alert(error.response?.data?.message || "Login failed");
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to initiate login. Please try again.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleVerifyOtp = async (e) => {
+        e.preventDefault();
+
+        if (otp.length !== 6) {
+            setError('Please enter a 6-digit OTP');
+            return;
+        }
+
+        setLoading(true);
+        setError("");
+
+        try {
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/auth/admin/verify-otp`,
+                { email, otp }
+            );
+
+            if (response.data.success) {
+                const { token, user } = response.data;
+
+                localStorage.setItem("token", token);
+                localStorage.setItem("user", JSON.stringify(user));
+
+                if (user.role === 'super_admin') {
+                    window.location.href = "/super-admin";
+                } else if (user.role === 'event_manager') {
+                    window.location.href = "/event-manager";
+                } else {
+                    window.location.href = "/admin";
+                }
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        setCanResendOtp(false);
+        setOtpTimer(120);
+        setOtp('');
+        setError('');
+
+        try {
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/auth/admin/initiate-login`,
+                { email, password }
+            );
+            if (response.data.success) {
+                // OTP resent successfully
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to resend OTP');
+            setCanResendOtp(true);
+        }
+    };
+
+    const handleBackToCredentials = () => {
+        setStep('credentials');
+        setOtp('');
+        setError('');
+        setOtpTimer(120);
+        setCanResendOtp(false);
     };
 
     const path = window.location.pathname;
@@ -96,37 +148,82 @@ const AdminLogin = () => {
                     <Subtitle>Secure access for GDG MMMUT Organizers</Subtitle>
                 </Header>
 
-                <Form onSubmit={handleLogin}>
-                    <InputGroup>
-                        <Label>Email Address</Label>
-                        <InputWrapper>
-                            <Mail size={18} />
-                            <Input
-                                type="email"
-                                placeholder="admin@gdg.mmmut.app"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                required
-                            />
-                        </InputWrapper>
-                    </InputGroup>
+                <Form onSubmit={step === 'credentials' ? handleInitiateLogin : handleVerifyOtp}>
+                    {error && (
+                        <ErrorAlert>
+                            <AlertIcon>⚠️</AlertIcon>
+                            {error}
+                        </ErrorAlert>
+                    )}
 
-                    <InputGroup>
-                        <Label>Password</Label>
-                        <InputWrapper>
-                            <Lock size={18} />
-                            <Input
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                required
-                            />
-                        </InputWrapper>
-                    </InputGroup>
+                    {step === 'credentials' ? (
+                        <>
+                            <InputGroup>
+                                <Label>Email Address</Label>
+                                <InputWrapper>
+                                    <Mail size={18} />
+                                    <Input
+                                        type="email"
+                                        placeholder="admin@gdg.mmmut.app"
+                                        value={email}
+                                        onChange={e => { setEmail(e.target.value); setError(""); }}
+                                        required
+                                    />
+                                </InputWrapper>
+                            </InputGroup>
 
-                    <SubmitButton type="submit" disabled={loading}>
-                        {loading ? "Verifying..." : "Access Dashboard"}
+                            <InputGroup>
+                                <Label>Password</Label>
+                                <InputWrapper>
+                                    <Lock size={18} />
+                                    <Input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={e => { setPassword(e.target.value); setError(""); }}
+                                        required
+                                    />
+                                </InputWrapper>
+                            </InputGroup>
+                        </>
+                    ) : (
+                        <>
+                            <InputGroup>
+                                <Label>Enter OTP</Label>
+                                <InputWrapper>
+                                    <Lock size={18} />
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="000000"
+                                        value={otp}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                            setOtp(val);
+                                            setError("");
+                                        }}
+                                        maxLength="6"
+                                        required
+                                    />
+                                </InputWrapper>
+                                <OtpHint>
+                                    🔒 Expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}
+                                    {canResendOtp && (
+                                        <ResendButton onClick={handleResendOtp} type="button">
+                                            Resend OTP
+                                        </ResendButton>
+                                    )}
+                                </OtpHint>
+                            </InputGroup>
+
+                            <BackButton onClick={handleBackToCredentials} type="button">
+                                ← Back to Login
+                            </BackButton>
+                        </>
+                    )}
+
+                    <SubmitButton type="submit" disabled={loading || (step === 'otp' && otp.length !== 6)}>
+                        {loading ? "Processing..." : (step === 'credentials' ? "Continue" : "Verify OTP")}
                         {!loading && <ArrowRight size={18} />}
                     </SubmitButton>
                 </Form>
@@ -296,6 +393,93 @@ const BackLink = styled(Link)`
   &:hover {
     color: #4285f4;
     text-decoration: underline;
+  }
+`;
+
+const ErrorAlert = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 500;
+
+  .dark & {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.3);
+    color: #fca5a5;
+  }
+`;
+
+const AlertIcon = styled.span`
+  font-size: 16px;
+  flex-shrink: 0;
+`;
+
+const OtpHint = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+
+  .dark & {
+    color: #94a3b8;
+  }
+`;
+
+const ResendButton = styled.button`
+  background: none;
+  border: none;
+  color: #4285f4;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #1a73e8;
+  }
+
+  &:disabled {
+    color: #94a3b8;
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+`;
+
+const BackButton = styled.button`
+  width: 100%;
+  padding: 12px;
+  background: rgba(66, 133, 244, 0.1);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #4285f4;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  .dark & {
+    background: rgba(66, 133, 244, 0.15);
+    border-color: #334155;
+    color: #60a5fa;
+  }
+
+  &:hover {
+    background: rgba(66, 133, 244, 0.15);
+    border-color: #4285f4;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 `;
 

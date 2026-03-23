@@ -111,6 +111,7 @@ function App() {
             </Route>
 
             {/* Admin Login - Dedicated Portals */}
+            <Route path="/admin-access/login" element={<AdminLogin />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/super-admin/login" element={<AdminLogin />} />
             <Route path="/event-manager/login" element={<AdminLogin />} />

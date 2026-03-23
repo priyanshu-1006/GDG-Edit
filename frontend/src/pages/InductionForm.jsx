@@ -30,7 +30,9 @@ const pulse = keyframes`
 // Styled Components
 const PageWrapper = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%);
+  background: ${p => p.theme.name === 'dark'
+    ? 'linear-gradient(135deg, #05070f 0%, #0c1730 50%, #05070f 100%)'
+    : 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 45%, #f7faff 100%)'};
   position: relative;
   overflow: hidden;
 `;
@@ -78,13 +80,13 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255,255,255,0.5);
+  color: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.58)' : 'rgba(0,0,0,0.58)'};
   font-size: 0.9rem;
   text-decoration: none;
   margin-bottom: 2rem;
   transition: color 0.2s;
   
-  &:hover { color: #4285f4; }
+  &:hover { color: ${p => p.theme.colors.primary}; }
 `;
 
 const Header = styled(motion.div)`
@@ -129,7 +131,7 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: rgba(255,255,255,0.6);
+  color: ${p => p.theme.colors.text.secondary};
   font-size: 1.05rem;
   line-height: 1.6;
   max-width: 600px;
@@ -137,17 +139,18 @@ const Subtitle = styled.p`
 `;
 
 const FormCard = styled(motion.form)`
-  background: rgba(255,255,255,0.04);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.92)'};
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(32,33,36,0.12)'};
   border-radius: 20px;
   padding: 2.5rem;
+  box-shadow: ${p => p.theme.colors.shadows?.medium || '0 8px 24px rgba(0,0,0,0.12)'};
   
   @media (max-width: 480px) { padding: 1.5rem; }
 `;
 
 const SectionTitle = styled.h3`
-  color: #fff;
+  color: ${p => p.theme.colors.text.primary};
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
@@ -176,7 +179,7 @@ const FieldGroup = styled.div`
 
 const Label = styled.label`
   display: block;
-  color: rgba(255,255,255,0.75);
+  color: ${p => p.theme.colors.text.secondary};
   font-size: 0.85rem;
   font-weight: 500;
   margin-bottom: 6px;
@@ -192,7 +195,7 @@ const InputWrapper = styled.div`
     left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: rgba(255,255,255,0.3);
+    color: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'};
     width: 18px;
     height: 18px;
     pointer-events: none;
@@ -202,15 +205,15 @@ const InputWrapper = styled.div`
 const Input = styled.input`
   width: 100%;
   padding: 12px 14px 12px ${p => p.$hasIcon ? '44px' : '14px'};
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.85)'};
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(32,33,36,0.14)'};
   border-radius: 12px;
-  color: #fff;
+  color: ${p => p.theme.colors.text.primary};
   font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
   
-  &::placeholder { color: rgba(255,255,255,0.25); }
+  &::placeholder { color: ${p => p.theme.colors.text.tertiary}; }
   &:focus {
     outline: none;
     border-color: #4285f4;
@@ -222,17 +225,17 @@ const Input = styled.input`
 const TextArea = styled.textarea`
   width: 100%;
   padding: 12px 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.85)'};
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(32,33,36,0.14)'};
   border-radius: 12px;
-  color: #fff;
+  color: ${p => p.theme.colors.text.primary};
   font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
   resize: vertical;
   min-height: 100px;
   transition: all 0.2s;
   
-  &::placeholder { color: rgba(255,255,255,0.25); }
+  &::placeholder { color: ${p => p.theme.colors.text.tertiary}; }
   &:focus {
     outline: none;
     border-color: #4285f4;
@@ -244,16 +247,19 @@ const TextArea = styled.textarea`
 const Select = styled.select`
   width: 100%;
   padding: 12px 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.85)'};
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(32,33,36,0.14)'};
   border-radius: 12px;
-  color: #fff;
+  color: ${p => p.theme.colors.text.primary};
   font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
   cursor: pointer;
   
-  option { background: #1f2937; color: #fff; }
+  option {
+    background: ${p => p.theme.name === 'dark' ? '#1f2937' : '#ffffff'};
+    color: ${p => p.theme.name === 'dark' ? '#ffffff' : '#202124'};
+  }
   &:focus {
     outline: none;
     border-color: #4285f4;
@@ -280,10 +286,14 @@ const CheckboxLabel = styled.label`
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: ${p => p.$checked ? 'rgba(66,133,244,0.15)' : 'rgba(255,255,255,0.04)'};
-  border: 1px solid ${p => p.$checked ? 'rgba(66,133,244,0.4)' : 'rgba(255,255,255,0.08)'};
+  background: ${p => p.$checked
+    ? 'rgba(66,133,244,0.15)'
+    : (p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')};
+  border: 1px solid ${p => p.$checked
+    ? 'rgba(66,133,244,0.4)'
+    : (p.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(32,33,36,0.1)')};
   border-radius: 10px;
-  color: ${p => p.$checked ? '#8ab4f8' : 'rgba(255,255,255,0.6)'};
+  color: ${p => p.$checked ? '#8ab4f8' : p.theme.colors.text.secondary};
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -300,7 +310,7 @@ const CheckboxLabel = styled.label`
 
 const Divider = styled.div`
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(to right, transparent, ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(32,33,36,0.14)'}, transparent);
   margin: 2rem 0;
 `;
 
@@ -408,14 +418,96 @@ const mapDepartmentToBranch = (department) => {
 };
 // Auth styled components
 const LoginCard = styled(motion.div)`
-  text-align: center;
+  text-align: left;
   padding: 3rem 2.5rem;
-  background: rgba(255,255,255,0.04);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.92)'};
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(32,33,36,0.12)'};
   border-radius: 20px;
   max-width: 480px;
   margin: 0 auto;
+`;
+
+const InfoCard = styled(motion.div)`
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.94)'};
+  backdrop-filter: blur(16px);
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(32,33,36,0.12)'};
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+`;
+
+const InfoHeading = styled.h2`
+  color: ${p => p.theme.colors.text.primary};
+  font-size: 1.45rem;
+  margin: 0 0 0.4rem 0;
+`;
+
+const InfoQuote = styled.p`
+  color: ${p => p.theme.colors.text.secondary};
+  font-style: italic;
+  margin: 0 0 1.2rem 0;
+  line-height: 1.6;
+`;
+
+const InfoBody = styled.div`
+  color: ${p => p.theme.colors.text.secondary};
+  line-height: 1.7;
+  font-size: 0.95rem;
+
+  p {
+    margin: 0 0 0.9rem 0;
+  }
+`;
+
+const RoundList = styled.ul`
+  margin: 0.7rem 0 1rem 1.1rem;
+  padding: 0;
+  color: ${p => p.theme.colors.text.secondary};
+
+  li { margin-bottom: 0.6rem; }
+`;
+
+const HighlightNotice = styled.div`
+  background: ${p => p.theme.name === 'dark' ? 'rgba(251, 188, 4, 0.12)' : 'rgba(251, 188, 4, 0.2)'};
+  border: 1px solid rgba(251, 188, 4, 0.35);
+  color: ${p => p.theme.name === 'dark' ? '#fdd663' : '#7c4a00'};
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+`;
+
+const LoginTitle = styled.h2`
+  color: ${p => p.theme.colors.text.primary};
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem 0;
+`;
+
+const LoginText = styled.p`
+  color: ${p => p.theme.colors.text.secondary};
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+`;
+
+const NoteBox = styled.div`
+  background: ${p => p.theme.name === 'dark' ? 'rgba(234, 67, 53, 0.1)' : 'rgba(234, 67, 53, 0.12)'};
+  border: 1px solid rgba(234, 67, 53, 0.26);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+`;
+
+const NoteText = styled.p`
+  color: ${p => p.theme.name === 'dark' ? '#f28b82' : '#b3261e'};
+  font-size: 0.9rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const GoogleButton = styled(motion.button)`
@@ -423,7 +515,7 @@ const GoogleButton = styled(motion.button)`
   align-items: center;
   gap: 12px;
   padding: 14px 32px;
-  background: #fff;
+  background: ${p => p.theme.name === 'dark' ? '#fff' : '#ffffff'};
   border: none;
   border-radius: 12px;
   color: #3c4043;
@@ -433,7 +525,7 @@ const GoogleButton = styled(motion.button)`
   cursor: pointer;
   margin-top: 1.5rem;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: ${p => p.theme.name === 'dark' ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 12px rgba(0,0,0,0.12)'};
   
   &:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -841,37 +933,74 @@ const InductionForm = () => {
             </LogoRow>
             <Title>GDG MMMUT Induction</Title>
             <Subtitle>
-              Sign in with your MMMUT college email to apply.
+              INDUCTION 2026
             </Subtitle>
           </Header>
+
+          <InfoCard
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.1 }}
+          >
+            <InfoHeading>INDUCTION 2026</InfoHeading>
+            <InfoQuote>
+              &quot;Every new beginning is an opportunity to build something greater than before.&quot; — Immanuel Kant
+            </InfoQuote>
+
+            <InfoBody>
+              <p>
+                Hey Tech Enthusiasts! Step into a community where innovation meets collaboration.
+                GDG On Campus MMMUT invites passionate individuals to be a part of a vibrant tech ecosystem.
+                Whether you love coding, designing, problem-solving, or exploring new technologies,
+                this is your chance to learn, grow, and create meaningful impact alongside like-minded peers.
+              </p>
+              <p><strong>Induction Process:</strong></p>
+              <RoundList>
+                <li><strong>Round 1 – Registration &amp; Shortlisting:</strong> Registrations open from <strong>24th March to 30th March 2026</strong>. Applicants are shortlisted based on form responses.</li>
+                <li><strong>Round 2 – Online Personal Interview:</strong> Shortlisted candidates are evaluated on technical understanding and overall approach.</li>
+                <li><strong>Round 3 – Offline Personal Interview:</strong> Final shortlisted candidates appear for an offline interview with the GDG team.</li>
+              </RoundList>
+              <p><strong>Registration:</strong> Fill the form on this page during the registration window.</p>
+            </InfoBody>
+
+            <HighlightNotice>
+              <strong>Important:</strong> For registration, you need to use your college mail (@mmmut.ac.in) first,
+              then click <strong>Continue with Google</strong>.
+            </HighlightNotice>
+          </InfoCard>
 
           <LoginCard
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Shield size={48} style={{ color: '#4285f4', marginBottom: '1rem' }} />
-            <h2 style={{ color: '#fff', fontSize: '1.4rem', marginBottom: '0.5rem' }}>Login to Continue</h2>
-            
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', lineHeight: 1.5, marginBottom: '1rem' }}>
-              Click the button below to sign in with Google.
-            </p>
-
-            <div style={{ background: 'rgba(234, 67, 53, 0.1)', border: '1px solid rgba(234, 67, 53, 0.2)', padding: '12px', borderRadius: '8px', marginBottom: '2rem' }}>
-              <p style={{ color: '#f28b82', fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <AlertCircle size={16} /> 
-                <strong>Note:</strong> Login can be done only through college email (@mmmut.ac.in)
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <Shield size={48} style={{ color: '#4285f4', marginBottom: '1rem' }} />
             </div>
 
-            <GoogleButton
-              onClick={handleGoogleLogin}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-              Sign in with Google
-            </GoogleButton>
+            <LoginTitle>Login to Continue</LoginTitle>
+
+            <LoginText>
+              Use your college email first, then continue with Google.
+            </LoginText>
+
+            <NoteBox>
+              <NoteText>
+                <AlertCircle size={16} />
+                <strong>Note:</strong> Login can be done only through college email (@mmmut.ac.in)
+              </NoteText>
+            </NoteBox>
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <GoogleButton
+                onClick={handleGoogleLogin}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+                Sign in with Google
+              </GoogleButton>
+            </div>
 
             {authError && (
               <StatusMessage

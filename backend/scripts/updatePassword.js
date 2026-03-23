@@ -10,8 +10,10 @@ const updateAdminPassword = async () => {
     await connectDB();
     console.log('✅ Connected to database\n');
 
-    const email = 'admin@gdg.com';
-    const newPassword = 'admin@123';
+    const [, , emailArg, passwordArg, roleArg] = process.argv;
+    const email = emailArg || 'admin@gdg.mmmut.app';
+    const newPassword = passwordArg || 'GDGAdmin@2026';
+    const role = roleArg || 'admin';
 
     let user = await User.findOne({ email }).select('+password');
     
@@ -20,7 +22,7 @@ const updateAdminPassword = async () => {
       user = new User({
         name: 'Admin User',
         email,
-        role: 'admin',
+        role,
         oauthProvider: 'email',
         emailVerified: true
       });
@@ -28,11 +30,15 @@ const updateAdminPassword = async () => {
 
     // Set the password directly - the pre-save hook will hash it
     user.password = newPassword;
+    user.oauthProvider = 'email';
+    user.emailVerified = true;
+    if (role) user.role = role;
     await user.save();
 
     console.log('✅ Password updated successfully!');
     console.log('📧 Email:', email);
     console.log('🔐 New Password:', newPassword);
+    console.log('🔑 Role:', user.role);
     
     // Test the password immediately
     const testMatch = await user.comparePassword(newPassword);

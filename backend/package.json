@@ -13,7 +13,10 @@
     "seed-events-clear": "node seedEvents.js 1",
     "seed-events-update": "node seedEvents.js 3",
     "create-admin": "node scripts/createAdmin.js",
-    "quick-admin": "node scripts/quickAdmin.js"
+    "quick-admin": "node scripts/quickAdmin.js",
+    "fix-admin-password": "node scripts/updatePassword.js",
+    "seed-super-admin": "node scripts/seedSuperAdmin.js",
+    "seed-admins": "node scripts/seedAdmins.js"
   },
   "keywords": [
     "gdg",

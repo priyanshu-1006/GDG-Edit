@@ -42,8 +42,11 @@ const createQuickAdmin = async () => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      console.log('⚠️  User already exists. Updating role...\n');
+      console.log('⚠️  User already exists. Updating role and password...\n');
+      existingUser.name = name || existingUser.name;
       existingUser.role = role;
+      existingUser.password = password;
+      existingUser.oauthProvider = 'email';
       existingUser.emailVerified = true;
       await existingUser.save();
 
