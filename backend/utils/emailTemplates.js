@@ -32,7 +32,7 @@ const baseTemplate = (content, options = {}) => {
 <td align="center" style="padding:40px 20px;">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;">
 <tr>
-<td style="background-color:${GDG_BLUE};padding:32px 40px;border-radius:16px 16px 0 0;text-align:center;">
+<td style="background-color:#ffffff;padding:32px 40px;border-radius:16px 16px 0 0;text-align:center;border-bottom:1px solid #e8eaed;">
 <img src="${GDG_LOGO}" alt="GDG MMMUT" width="200" style="max-width:200px;height:auto;">
 </td>
 </tr>
@@ -256,6 +256,26 @@ const inductionSubmissionTemplate = (userName, formData) => {
 <p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Roll Number</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.rollNumber}</strong></p>
 <p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Branch & Section</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.branch} - ${formData.section}</strong></p>
 <p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Domains Interested</span><br><strong style="color:${GDG_DARK};font-size:14px;">${(formData.domains || []).join(', ') || 'None'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Phone</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.phone || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Residence</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.residenceType || '—'}</strong></p>
+
+<h2 style="margin:24px 0 16px;font-size:18px;color:${GDG_DARK};border-bottom:2px solid ${GDG_BLUE};padding-bottom:12px;">Skills & Interests</h2>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Tech Skills</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.techStack || formData.techSkills || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Soft Skills</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.softSkills || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Projects</span><br><strong style="color:${GDG_DARK};font-size:14px;">${formData.projects || '—'}</strong></p>
+
+<h2 style="margin:24px 0 16px;font-size:18px;color:${GDG_DARK};border-bottom:2px solid ${GDG_BLUE};padding-bottom:12px;">Online Profiles</h2>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">GitHub:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.githubId || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">LinkedIn:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.linkedinUrl || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Codeforces:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.codeforcesId || '—'}</strong> | <span style="color:${GDG_GRAY};font-size:13px;">CodeChef:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.codechefId || '—'}</strong></p>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">HackerRank:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.hackerrankId || '—'}</strong> | <span style="color:${GDG_GRAY};font-size:13px;">LeetCode:</span> <strong style="color:${GDG_DARK};font-size:14px;">${formData.leetcodeId || '—'}</strong></p>
+
+<h2 style="margin:24px 0 16px;font-size:18px;color:${GDG_DARK};border-bottom:2px solid ${GDG_BLUE};padding-bottom:12px;">Responses</h2>
+<p style="margin:8px 0;"><span style="color:${GDG_GRAY};font-size:13px;">Why join GDG?</span><br><span style="color:${GDG_DARK};font-size:14px;display:block;margin-top:4px;">${formData.whyJoin || '—'}</span></p>
+<p style="margin:16px 0 8px;"><span style="color:${GDG_GRAY};font-size:13px;">Interesting Fact</span><br><span style="color:${GDG_DARK};font-size:14px;display:block;margin-top:4px;">${formData.interestingFact || '—'}</span></p>
+<p style="margin:16px 0 8px;"><span style="color:${GDG_GRAY};font-size:13px;">Other Clubs</span><br><span style="color:${GDG_DARK};font-size:14px;display:block;margin-top:4px;">${formData.otherClubs || '—'}</span></p>
+<p style="margin:16px 0 8px;"><span style="color:${GDG_GRAY};font-size:13px;">Strengths</span><br><span style="color:${GDG_DARK};font-size:14px;display:block;margin-top:4px;">${formData.strengths || '—'}</span></p>
+<p style="margin:16px 0 8px;"><span style="color:${GDG_GRAY};font-size:13px;">Weaknesses</span><br><span style="color:${GDG_DARK};font-size:14px;display:block;margin-top:4px;">${formData.weaknesses || '—'}</span></p>
 </td>
 </tr>
 </table>
