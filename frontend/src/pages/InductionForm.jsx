@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, useTheme } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Hash, Code, Layers, 
@@ -657,6 +657,7 @@ const InductionForm = () => {
   
   // Resume Parsing state
   const [resumeChoice, setResumeChoice] = useState(null); // 'with' or 'without'
+  const theme = useTheme();
   const [resumeUploading, setResumeUploading] = useState(false);
 
   // Check auth on mount
@@ -1065,13 +1066,13 @@ const InductionForm = () => {
               {resumeUploading ? (
                 <>
                   <LoadingDots><span></span><span></span><span></span><span></span></LoadingDots>
-                  <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: '1rem' }}>Reading resume and extracting skills using AI...</p>
+                  <p style={{ color: theme.colors.text.secondary, marginTop: '1rem' }}>Reading resume and extracting skills using AI...</p>
                 </>
               ) : (
                 <>
                   <FileText size={48} color="#fbbc04" style={{ marginBottom: '1rem', opacity: 0.8 }} />
-                  <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '1rem' }}>Upload your Resume (Optional)</h3>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', marginBottom: '2rem' }}>
+                  <h3 style={{ color: theme.colors.text.primary, fontSize: '1.25rem', marginBottom: '1rem' }}>Upload your Resume (Optional)</h3>
+                  <p style={{ color: theme.colors.text.secondary, lineHeight: '1.6', marginBottom: '2rem' }}>
                     We can automatically extract your <strong>Programming Languages</strong>, <strong>Projects</strong>, <strong>GitHub</strong>, and <strong>LinkedIn</strong> links.
                   </p>
                   
@@ -1084,7 +1085,7 @@ const InductionForm = () => {
                     <GoogleButton 
                       onClick={(e) => { e.preventDefault(); setResumeChoice('without'); }} 
                       type="button"
-                      style={{ width: '100%', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: 'white', margin: 0 }}
+                      style={{ width: '100%', justifyContent: 'center', background: theme.name === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)', color: theme.colors.text.primary, margin: 0 }}
                     >
                       Skip Resume
                     </GoogleButton>
@@ -1393,7 +1394,7 @@ const InductionForm = () => {
               <Label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34a853', margin: 0 }}>
                 <CheckCircle size={16} /> Resume Uploaded & Parsed Successfully
               </Label>
-              <a href="#" onClick={handleDownloadResume} style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '0.75rem', transition: 'color 0.2s', cursor: 'pointer' }} onMouseOver={e => e.target.style.color = '#fff'} onMouseOut={e => e.target.style.color = 'rgba(255,255,255,0.8)'}>
+              <a href="#" onClick={handleDownloadResume} style={{ color: theme.colors.text.secondary, fontSize: '0.9rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '0.75rem', transition: 'color 0.2s', cursor: 'pointer' }} onMouseOver={e => e.target.style.color = theme.colors.text.primary} onMouseOut={e => e.target.style.color = theme.colors.text.secondary}>
                 <FileText size={16} /> Click here to view uploaded PDF
               </a>
             </FieldGroup>
