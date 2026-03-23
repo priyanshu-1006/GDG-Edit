@@ -175,15 +175,20 @@ const InductionManagement = () => {
       "Section",
       "Domains",
       "Tech Stack",
+      "Tech Skills",
+      "Soft Skills",
       "Projects",
       "GitHub",
       "LinkedIn",
       "Codeforces",
       "CodeChef",
       "HackerRank",
+      "LeetCode",
       "Why Join",
       "Interesting Fact",
       "Other Clubs",
+      "Strengths",
+      "Weaknesses",
       "Residence",
       "Resume",
       "Status",
@@ -199,17 +204,23 @@ const InductionManagement = () => {
       s.section || "",
       (s.domains || []).join("; "),
       s.techStack || "",
+      (s.techSkills || "").replace(/"/g, '""'),
+      (s.softSkills || "").replace(/"/g, '""'),
       s.projects || "",
       s.githubId || "",
       s.linkedinUrl || "",
       s.codeforcesId || "",
       s.codechefId || "",
       s.hackerrankId || "",
+      s.leetcodeId || "",
       (s.whyJoin || "").replace(/"/g, '""'),
       (s.interestingFact || "").replace(/"/g, '""'),
       (s.otherClubs || "").replace(/"/g, '""'),
+      (s.strengths || "").replace(/"/g, '""'),
+      (s.weaknesses || "").replace(/"/g, '""'),
       s.residenceType || "",
       s.resumeUrl || "",
+      s.status || "",
       s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "",
     ]);
 
@@ -471,9 +482,15 @@ const InductionManagement = () => {
                   </DomainTags>
                 </DetailItem>
                 <DetailItem $full>
-                  <DetailLabel>Tech Stack</DetailLabel>
+                  <DetailLabel>Tech Stack / Tech Skills</DetailLabel>
                   <DetailValue>
-                    {selectedStudent.techStack || "—"}
+                    {selectedStudent.techStack || selectedStudent.techSkills || "—"}
+                  </DetailValue>
+                </DetailItem>
+                <DetailItem $full>
+                  <DetailLabel>Soft Skills</DetailLabel>
+                  <DetailValue>
+                    {selectedStudent.softSkills || "—"}
                   </DetailValue>
                 </DetailItem>
                 <DetailItem $full>
@@ -540,6 +557,12 @@ const InductionManagement = () => {
                   </DetailValue>
                 </DetailItem>
                 <DetailItem>
+                  <DetailLabel>LeetCode</DetailLabel>
+                  <DetailValue>
+                    {selectedStudent.leetcodeId || "—"}
+                  </DetailValue>
+                </DetailItem>
+                <DetailItem>
                   <DetailLabel>Resume</DetailLabel>
                   <DetailValue>
                     {selectedStudent.resumeUrl ? (
@@ -574,6 +597,14 @@ const InductionManagement = () => {
                 <DetailItem $full>
                   <DetailLabel>Other Clubs</DetailLabel>
                   <DetailText>{selectedStudent.otherClubs || "—"}</DetailText>
+                </DetailItem>
+                <DetailItem $full>
+                  <DetailLabel>Strengths</DetailLabel>
+                  <DetailText>{selectedStudent.strengths || "—"}</DetailText>
+                </DetailItem>
+                <DetailItem $full>
+                  <DetailLabel>Weaknesses</DetailLabel>
+                  <DetailText>{selectedStudent.weaknesses || "—"}</DetailText>
                 </DetailItem>
               </DetailGrid>
 
