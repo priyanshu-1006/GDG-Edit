@@ -104,7 +104,9 @@ router.post('/', async (req, res) => {
       firstName, lastName, email, phone, branch, section, rollNumber,
       techStack, domains, projects, githubId, linkedinUrl,
       whyJoin, interestingFact, otherClubs, residenceType,
-      codeforcesId, codechefId, hackerrankId, resumeUrl
+      codeforcesId, codechefId, hackerrankId, resumeUrl,
+      strengths, weaknesses, techSkills, softSkills,
+      leetcodeId
     } = req.body;
 
     // Check if already submitted (Temporarily Disabled by Admin)
@@ -122,7 +124,9 @@ router.post('/', async (req, res) => {
       firstName, lastName, email, phone, branch, section, rollNumber,
       techStack, domains, projects, githubId, linkedinUrl,
       whyJoin, interestingFact, otherClubs, residenceType,
-      codeforcesId, codechefId, hackerrankId, resumeUrl
+      codeforcesId, codechefId, hackerrankId, resumeUrl,
+      strengths, weaknesses, techSkills, softSkills,
+      leetcodeId
     });
 
     await induction.save();

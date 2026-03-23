@@ -100,6 +100,26 @@ const inductionSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  strengths: {
+    type: String,
+    trim: true
+  },
+  weaknesses: {
+    type: String,
+    trim: true
+  },
+  techSkills: {
+    type: String,
+    trim: true
+  },
+  softSkills: {
+    type: String,
+    trim: true
+  },
+  leetcodeId: {
+    type: String,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['applied', 'shortlisted_online', 'shortlisted_offline', 'selected', 'rejected'],

@@ -585,7 +585,7 @@ const Avatar = styled.img`
 `;
 
 const UserEmail = styled.span`
-  color: rgba(255,255,255,0.8);
+  color: ${p => p.theme.colors.text.primary};
   font-size: 0.9rem;
   font-weight: 500;
 `;
@@ -595,10 +595,10 @@ const LogoutButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'};
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
   border-radius: 8px;
-  color: rgba(255,255,255,0.6);
+  color: ${p => p.theme.colors.text.secondary};
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -638,7 +638,9 @@ const InductionForm = () => {
     firstName: '', lastName: '', email: '', phone: '', branch: '', section: '', rollNumber: '',
     techStack: '', domains: [], projects: '', githubId: '', linkedinUrl: '',
     whyJoin: '', interestingFact: '', otherClubs: '', residenceType: '',
-    codeforcesId: '', codechefId: '', hackerrankId: '', resumeUrl: ''
+    codeforcesId: '', codechefId: '', hackerrankId: '', resumeUrl: '',
+    strengths: '', weaknesses: '', techSkills: '', softSkills: '',
+    leetcodeId: ''
   });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
@@ -1291,15 +1293,20 @@ const InductionForm = () => {
 
           <Divider />
 
-          {/* Technical Info */}
-          <SectionTitle $mt><Code size={20} /> Technical Background</SectionTitle>
+          {/* Skills & Interests */}
+          <SectionTitle $mt><Code size={20} /> Skills & Interests</SectionTitle>
 
           <FieldGroup>
-            <Label>Known Programming Languages</Label>
+            <Label>Tech Skills <span>*</span></Label>
             <InputWrapper>
               <Code />
-              <Input $hasIcon name="techStack" value={formData.techStack} onChange={handleChange} placeholder="C, C++, Java, Python, JavaScript, etc." />
+              <Input $hasIcon name="techStack" value={formData.techStack} onChange={handleChange} placeholder="C, C++, Java, Python, JavaScript, etc." required />
             </InputWrapper>
+          </FieldGroup>
+
+          <FieldGroup>
+            <Label>Soft Skills <span>*</span></Label>
+            <TextArea name="softSkills" value={formData.softSkills} onChange={handleChange} placeholder="e.g., Communication, Leadership, Time management" rows={3} required />
           </FieldGroup>
 
           <FieldGroup>
@@ -1358,13 +1365,22 @@ const InductionForm = () => {
             </FieldGroup>
           </FieldRow>
 
-          <FieldGroup>
-            <Label>HackerRank ID (optional)</Label>
-            <InputWrapper>
-              <Trophy />
-              <Input $hasIcon name="hackerrankId" value={formData.hackerrankId} onChange={handleChange} placeholder="hackerrank_handle" />
-            </InputWrapper>
-          </FieldGroup>
+          <FieldRow>
+            <FieldGroup>
+              <Label>HackerRank ID (optional)</Label>
+              <InputWrapper>
+                <Trophy />
+                <Input $hasIcon name="hackerrankId" value={formData.hackerrankId} onChange={handleChange} placeholder="hackerrank_handle" />
+              </InputWrapper>
+            </FieldGroup>
+            <FieldGroup>
+              <Label>LeetCode ID (optional)</Label>
+              <InputWrapper>
+                <Trophy />
+                <Input $hasIcon name="leetcodeId" value={formData.leetcodeId} onChange={handleChange} placeholder="leetcode_username" />
+              </InputWrapper>
+            </FieldGroup>
+          </FieldRow>
 
           <Divider />
 
@@ -1388,6 +1404,17 @@ const InductionForm = () => {
               <Input $hasIcon name="otherClubs" value={formData.otherClubs} onChange={handleChange} placeholder="e.g., Coding Club, Robotics Club" required />
             </InputWrapper>
           </FieldGroup>
+
+          <FieldRow>
+            <FieldGroup>
+              <Label>Mention your 2 Strengths <span>*</span></Label>
+              <TextArea name="strengths" value={formData.strengths} onChange={handleChange} placeholder="e.g., Problem solving, Team collaboration" rows={3} required />
+            </FieldGroup>
+            <FieldGroup>
+              <Label>Mention your 2 Weaknesses <span>*</span></Label>
+              <TextArea name="weaknesses" value={formData.weaknesses} onChange={handleChange} placeholder="e.g., Overthinking, Public speaking" rows={3} required />
+            </FieldGroup>
+          </FieldRow>
 
           {resumeChoice === 'with' && formData.resumeUrl && (
             <FieldGroup style={{ background: 'rgba(52, 168, 83, 0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(52, 168, 83, 0.2)' }}>
