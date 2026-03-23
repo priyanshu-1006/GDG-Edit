@@ -416,18 +416,6 @@ const mapDepartmentToBranch = (department) => {
   if (reverseMatch) return reverseMatch;
   return department;
 };
-// Auth styled components
-const LoginCard = styled(motion.div)`
-  text-align: left;
-  padding: 3rem 2.5rem;
-  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.92)'};
-  backdrop-filter: blur(16px);
-  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(32,33,36,0.12)'};
-  border-radius: 20px;
-  max-width: 480px;
-  margin: 0 auto;
-`;
-
 const InfoCard = styled(motion.div)`
   background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.94)'};
   backdrop-filter: blur(16px);
@@ -436,6 +424,11 @@ const InfoCard = styled(motion.div)`
   padding: 2rem;
   margin-bottom: 1.5rem;
   text-align: left;
+
+  @media (max-width: 768px) {
+    padding: 1.35rem;
+    border-radius: 16px;
+  }
 `;
 
 const InfoHeading = styled.h2`
@@ -480,6 +473,29 @@ const HighlightNotice = styled.div`
   line-height: 1.5;
 `;
 
+const AuthDivider = styled.div`
+  height: 1px;
+  margin: 1.35rem 0 1.1rem;
+  background: linear-gradient(
+    to right,
+    transparent,
+    ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(32,33,36,0.18)'},
+    transparent
+  );
+`;
+
+const AuthActionWrap = styled.div`
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+`;
+
+const ShieldWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.8rem;
+`;
+
 const LoginTitle = styled.h2`
   color: ${p => p.theme.colors.text.primary};
   font-size: 1.4rem;
@@ -498,7 +514,7 @@ const NoteBox = styled.div`
   border: 1px solid rgba(234, 67, 53, 0.26);
   padding: 12px;
   border-radius: 8px;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 `;
 
 const NoteText = styled.p`
@@ -507,6 +523,7 @@ const NoteText = styled.p`
   margin: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 `;
 
@@ -533,6 +550,13 @@ const GoogleButton = styled(motion.button)`
   }
   
   img { width: 20px; height: 20px; }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.9rem;
+    padding: 13px 20px;
+  }
 `;
 
 const UserBar = styled.div`
@@ -967,31 +991,27 @@ const InductionForm = () => {
               <strong>Important:</strong> For registration, you need to use your college mail (@mmmut.ac.in) first,
               then click <strong>Continue with Google</strong>.
             </HighlightNotice>
-          </InfoCard>
 
-          <LoginCard
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Shield size={48} style={{ color: '#4285f4', marginBottom: '1rem' }} />
-            </div>
+            <AuthDivider />
 
-            <LoginTitle>Login to Continue</LoginTitle>
+            <AuthActionWrap>
+              <ShieldWrap>
+                <Shield size={44} style={{ color: '#4285f4' }} />
+              </ShieldWrap>
 
-            <LoginText>
-              Use your college email first, then continue with Google.
-            </LoginText>
+              <LoginTitle>Login to Continue</LoginTitle>
 
-            <NoteBox>
-              <NoteText>
-                <AlertCircle size={16} />
-                <strong>Note:</strong> Login can be done only through college email (@mmmut.ac.in)
-              </NoteText>
-            </NoteBox>
+              <LoginText>
+                Use your college email first, then continue with Google.
+              </LoginText>
 
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <NoteBox>
+                <NoteText>
+                  <AlertCircle size={16} />
+                  <strong>Note:</strong> Login can be done only through college email (@mmmut.ac.in)
+                </NoteText>
+              </NoteBox>
+
               <GoogleButton
                 onClick={handleGoogleLogin}
                 whileHover={{ scale: 1.02 }}
@@ -1000,20 +1020,20 @@ const InductionForm = () => {
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
                 Sign in with Google
               </GoogleButton>
-            </div>
 
-            {authError && (
-              <StatusMessage
-                $type="error"
-                style={{ marginTop: '1.5rem', justifyContent: 'center' }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <AlertCircle size={18} />
-                {authError}
-              </StatusMessage>
-            )}
-          </LoginCard>
+              {authError && (
+                <StatusMessage
+                  $type="error"
+                  style={{ marginTop: '1.1rem', justifyContent: 'center' }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <AlertCircle size={18} />
+                  {authError}
+                </StatusMessage>
+              )}
+            </AuthActionWrap>
+          </InfoCard>
         </Container>
       </PageWrapper>
     );
@@ -1305,17 +1325,17 @@ const InductionForm = () => {
           
           <FieldRow>
             <FieldGroup>
-              <Label>GitHub ID (optional)</Label>
+              <Label>GitHub ID <span>*</span></Label>
               <InputWrapper>
                 <Github />
-                <Input $hasIcon name="githubId" value={formData.githubId} onChange={handleChange} placeholder="username" />
+                <Input $hasIcon name="githubId" value={formData.githubId} onChange={handleChange} placeholder="username" required />
               </InputWrapper>
             </FieldGroup>
             <FieldGroup>
-              <Label>LinkedIn URL (optional)</Label>
+              <Label>LinkedIn URL <span>*</span></Label>
               <InputWrapper>
                 <Linkedin />
-                <Input $hasIcon name="linkedinUrl" value={formData.linkedinUrl} onChange={handleChange} placeholder="linkedin.com/in/username" />
+                <Input $hasIcon name="linkedinUrl" value={formData.linkedinUrl} onChange={handleChange} placeholder="linkedin.com/in/username" required />
               </InputWrapper>
             </FieldGroup>
           </FieldRow>
