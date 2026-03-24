@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Eye, FileSpreadsheet, Download, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Eye, FileSpreadsheet, Download, AlertCircle, Mail } from "lucide-react";
 import { apiClient } from "../../utils/apiUtils";
 import IssueCertificateModal from "./components/IssueCertificateModal";
 import BulkIssueModal from "./components/BulkIssueModal";
@@ -167,13 +167,18 @@ const ActionButton = styled.button`
   color: ${(props) => (props.$tone === "red" ? "#ef4444" : props.$tone === "blue" ? "#3b82f6" : "#10b981")};
   transition: all 0.2s;
 
-  &:hover {
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
     background: ${(props) =>
       props.$tone === "red" ? "#fef2f2" : props.$tone === "blue" ? "#eff6ff" : "#ecfdf5"};
   }
 
   .dark & {
-    &:hover {
+    &:hover:not(:disabled) {
       background: ${(props) =>
         props.$tone === "red" ? "#7f1d1d" : props.$tone === "blue" ? "#1e3a8a" : "#064e3b"};
     }
@@ -242,8 +247,11 @@ export default function CertificateManagement() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [isSendingEventEmails, setIsSendingEventEmails] = useState(false);
   const [selectedCerts, setSelectedCerts] = useState(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(new Set()); // Track which certs are sending email
+  const [isBulkSendingEmail, setIsBulkSendingEmail] = useState(false);
 
   const fetchCerts = async () => {
     try {
@@ -313,6 +321,39 @@ export default function CertificateManagement() {
     }
   };
 
+  const handleSendEventEmails = async () => {
+    if (!selectedEventId) {
+      alert("Please select an event first.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Send certificate emails to all recipients in the selected event?",
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsSendingEventEmails(true);
+      const response = await apiClient.post(
+        `/api/certificates/send-emails/event/${selectedEventId}`,
+      );
+
+      if (response.data.success) {
+        const { success, failed, total } = response.data.summary || {};
+        alert(
+          `Event emails processed: ${success ?? 0} sent, ${failed ?? 0} failed (total ${total ?? 0}).`,
+        );
+      } else {
+        alert(response.data.message || "Failed to send event emails.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Failed to send emails for selected event.");
+    } finally {
+      setIsSendingEventEmails(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     try {
@@ -321,6 +362,62 @@ export default function CertificateManagement() {
     } catch (err) {
       console.error(err);
       alert("Delete failed. " + (err.response?.data?.message || ""));
+    }
+  };
+
+  const handleSendEmail = async (id) => {
+    try {
+      setSendingEmail(new Set([...sendingEmail, id]));
+      const response = await apiClient.post(`/api/certificates/${id}/send-email`);
+      
+      if (response.data.success) {
+        alert("Certificate email sent successfully!");
+        fetchCerts();
+      } else {
+        alert("Failed to send email: " + (response.data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Send email failed. " + (err.response?.data?.message || err.message || ""));
+    } finally {
+      const updated = new Set(sendingEmail);
+      updated.delete(id);
+      setSendingEmail(updated);
+    }
+  };
+
+  const handleBulkSendEmails = async () => {
+    if (selectedCerts.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Send certificate email(s) to ${selectedCerts.size} recipient(s)?`
+    );
+    if (!confirmed) return;
+
+    setIsBulkSendingEmail(true);
+    try {
+      const response = await apiClient.post(
+        "/api/certificates/send-emails/bulk",
+        { certificateIds: Array.from(selectedCerts) }
+      );
+
+      if (response.data.success) {
+        const { success, failed } = response.data.summary;
+        alert(
+          `Emails sent: ${success} successful, ${failed} failed.\n${
+            failed > 0 ? "Check console for details." : ""
+          }`
+        );
+        setSelectedCerts(new Set());
+        fetchCerts();
+      } else {
+        alert("Failed to send emails: " + (response.data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Bulk send failed. " + (err.response?.data?.message || err.message || ""));
+    } finally {
+      setIsBulkSendingEmail(false);
     }
   };
 
@@ -385,13 +482,20 @@ export default function CertificateManagement() {
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
           >
-            <option value="">Select event for ZIP export</option>
+            <option value="">Select event</option>
             {eventOptions.map((event) => (
               <option key={event.id} value={event.id}>
                 {event.name}
               </option>
             ))}
           </EventSelect>
+          <SecondaryButton
+            onClick={handleSendEventEmails}
+            disabled={!selectedEventId || isSendingEventEmails}
+          >
+            <Mail size={18} />
+            {isSendingEventEmails ? "Sending Event Emails..." : "Send Event Emails"}
+          </SecondaryButton>
           <SecondaryButton
             onClick={handleDownloadZip}
             disabled={!selectedEventId || isDownloadingZip}
@@ -412,6 +516,14 @@ export default function CertificateManagement() {
         <SelectionInfo>
           <AlertCircle size={20} />
           <span>{selectedCerts.size} certificate(s) selected</span>
+          <SecondaryButton
+            onClick={handleBulkSendEmails}
+            disabled={isBulkSendingEmail}
+            style={{ marginLeft: "auto" }}
+          >
+            <Mail size={18} />
+            {isBulkSendingEmail ? "Sending..." : "Send Emails"}
+          </SecondaryButton>
           <DangerButton onClick={handleBulkDelete} disabled={isDeleting}>
             <Trash2 size={18} />
             {isDeleting ? "Deleting..." : "Delete Selected"}
@@ -468,6 +580,14 @@ export default function CertificateManagement() {
                     }
                   >
                     <Eye size={18} />
+                  </ActionButton>
+                  <ActionButton
+                    $tone="blue"
+                    onClick={() => handleSendEmail(cert._id)}
+                    disabled={sendingEmail.has(cert._id)}
+                    title={sendingEmail.has(cert._id) ? "Sending..." : "Send Certificate Email"}
+                  >
+                    <Mail size={18} />
                   </ActionButton>
                   <ActionButton
                     $tone="red"

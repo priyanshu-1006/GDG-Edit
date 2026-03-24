@@ -11,11 +11,14 @@ import axios from "axios";
 import archiver from "archiver";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { v2 as cloudinary } from "cloudinary";
+import emailService from "../services/emailService.js";
+import { certificateTemplate } from "../utils/emailTemplates.js";
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, "../public");
+const CERTIFICATE_EMAIL_BASE_URL = "https://gdg.mmmut.app";
 
 const isCloudinaryConfigured =
   !!process.env.CLOUDINARY_CLOUD_NAME &&
@@ -111,6 +114,65 @@ const parseBoxWidth = (width, imageWidth) => {
   }
 
   return imageWidth * 0.4;
+};
+
+const isValidEmail = (email) => {
+  const normalized = String(email || "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+};
+
+const isValidCertificateCode = (code) => {
+  const normalized = String(code || "").trim();
+  return normalized.length >= 6;
+};
+
+const isValidAbsoluteHttpUrl = (urlValue) => {
+  try {
+    const parsed = new URL(String(urlValue || ""));
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const buildCertificateEmailPayload = (certificate) => {
+  const recipientEmail = String(
+    certificate.recipientEmail || certificate.user?.email || "",
+  )
+    .trim()
+    .toLowerCase();
+
+  if (!isValidEmail(recipientEmail)) {
+    return { error: "Invalid recipient email" };
+  }
+
+  const certificateCode = String(certificate.certificateCode || "").trim();
+  if (!isValidCertificateCode(certificateCode)) {
+    return { error: "Invalid certificate ID" };
+  }
+
+  const recipientName = certificate.recipientName || certificate.user?.name || "Recipient";
+  const eventName = certificate.event?.name || certificate.customEventName || "GDG MMMUT Event";
+  const eventId = certificate.event?._id ? String(certificate.event._id) : "";
+
+  const certificateUrl = `${CERTIFICATE_EMAIL_BASE_URL}/verification/${encodeURIComponent(certificateCode)}`;
+  const eventUrl = eventId
+    ? `${CERTIFICATE_EMAIL_BASE_URL}/events/${eventId}`
+    : `${CERTIFICATE_EMAIL_BASE_URL}/events`;
+
+  if (!isValidAbsoluteHttpUrl(certificateUrl) || !isValidAbsoluteHttpUrl(eventUrl)) {
+    return { error: "Generated email links are invalid" };
+  }
+
+  return {
+    recipientEmail,
+    recipientName,
+    eventName,
+    eventId,
+    certificateCode,
+    certificateUrl,
+    eventUrl,
+  };
 };
 
 const resolveDynamicValue = (rawKey, certificate) => {
@@ -905,6 +967,245 @@ router.delete(
       });
     } catch (error) {
       next(error);
+    }
+  },
+);
+
+// @route   POST /api/certificates/:id/send-email
+// @desc    Send certificate to recipient email
+// @access  Private (Admin only)
+router.post(
+  "/:id/send-email",
+  protect,
+  authorize("admin", "event_manager", "super_admin"),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      
+      const certificate = await Certificate.findById(id)
+        .populate("user", "name email")
+        .populate("event", "name");
+
+      if (!certificate) {
+        return res.status(404).json({
+          success: false,
+          message: "Certificate not found",
+        });
+      }
+
+      const emailPayload = buildCertificateEmailPayload(certificate);
+      if (emailPayload.error) {
+        return res.status(400).json({
+          success: false,
+          message: emailPayload.error,
+        });
+      }
+
+      // Send email
+      try {
+        const html = certificateTemplate(
+          emailPayload.recipientName,
+          emailPayload.certificateCode,
+          emailPayload.eventName,
+          emailPayload.certificateUrl,
+          emailPayload.eventUrl,
+        );
+        await emailService._send({
+          to: emailPayload.recipientEmail,
+          subject: `🏆 Certificate Awarded: ${emailPayload.eventName}`,
+          html,
+          type: 'certificate',
+          metadata: {
+            certificateId: certificate._id?.toString(),
+            eventId: emailPayload.eventId,
+            certificateUrl: emailPayload.certificateUrl,
+            eventUrl: emailPayload.eventUrl,
+          }
+        });
+
+        res.json({
+          success: true,
+          message: `Certificate email sent successfully to ${emailPayload.recipientEmail}`,
+        });
+      } catch (emailError) {
+        console.error("Email sending error:", emailError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to send certificate email: " + emailError.message,
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// @route   POST /api/certificates/send-emails/bulk
+// @desc    Send certificates to multiple recipients
+// @access  Private (Admin only)
+router.post(
+  "/send-emails/bulk",
+  protect,
+  authorize("admin", "event_manager", "super_admin"),
+  async (req, res, next) => {
+    try {
+      const { certificateIds } = req.body;
+
+      if (!certificateIds || !Array.isArray(certificateIds) || certificateIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide an array of certificate IDs",
+        });
+      }
+
+      const certificates = await Certificate.find({ _id: { $in: certificateIds } })
+        .populate("user", "name email")
+        .populate("event", "name");
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      for (const certificate of certificates) {
+        try {
+          const emailPayload = buildCertificateEmailPayload(certificate);
+          if (emailPayload.error) {
+            results.failed++;
+            results.errors.push({
+              certificateId: certificate._id,
+              code: certificate.certificateCode,
+              error: emailPayload.error,
+            });
+            continue;
+          }
+
+          // Send email
+          const html = certificateTemplate(
+            emailPayload.recipientName,
+            emailPayload.certificateCode,
+            emailPayload.eventName,
+            emailPayload.certificateUrl,
+            emailPayload.eventUrl,
+          );
+          await emailService._send({
+            to: emailPayload.recipientEmail,
+            subject: `🏆 Certificate Awarded: ${emailPayload.eventName}`,
+            html,
+            type: 'certificate',
+            metadata: {
+              certificateId: certificate._id?.toString(),
+              eventId: emailPayload.eventId,
+              certificateUrl: emailPayload.certificateUrl,
+              eventUrl: emailPayload.eventUrl,
+            }
+          });
+
+          results.success++;
+          console.log(`✅ Certificate email sent to ${emailPayload.recipientEmail}`);
+        } catch (emailError) {
+          results.failed++;
+          results.errors.push({
+            certificateId: certificate._id,
+            code: certificate.certificateCode,
+            error: emailError.message,
+          });
+          console.error(`❌ Failed to send email to certificate ${certificate._id}:`, emailError);
+        }
+      }
+
+      res.json({
+        success: true,
+        summary: results,
+        message: `Sent ${results.success} certificate(s), ${results.failed} failed`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// @route   POST /api/certificates/send-emails/event/:eventId
+// @desc    Send certificates to all recipients of a specific event
+// @access  Private (Admin only)
+router.post(
+  "/send-emails/event/:eventId",
+  protect,
+  authorize("admin", "event_manager", "super_admin"),
+  async (req, res, next) => {
+    try {
+      const { eventId } = req.params;
+
+      const certificates = await Certificate.find({ event: eventId })
+        .populate("user", "name email")
+        .populate("event", "name");
+
+      if (!certificates.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No certificates found for this event",
+        });
+      }
+
+      const results = {
+        total: certificates.length,
+        success: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      for (const certificate of certificates) {
+        try {
+          const emailPayload = buildCertificateEmailPayload(certificate);
+          if (emailPayload.error) {
+            results.failed++;
+            results.errors.push({
+              certificateId: certificate._id,
+              code: certificate.certificateCode,
+              error: emailPayload.error,
+            });
+            continue;
+          }
+          const html = certificateTemplate(
+            emailPayload.recipientName,
+            emailPayload.certificateCode,
+            emailPayload.eventName,
+            emailPayload.certificateUrl,
+            emailPayload.eventUrl,
+          );
+
+          await emailService._send({
+            to: emailPayload.recipientEmail,
+            subject: `🏆 Certificate Awarded: ${emailPayload.eventName}`,
+            html,
+            type: "certificate",
+            metadata: {
+              certificateId: certificate._id?.toString(),
+              eventId: emailPayload.eventId,
+              certificateUrl: emailPayload.certificateUrl,
+              eventUrl: emailPayload.eventUrl,
+            },
+          });
+
+          results.success++;
+        } catch (emailError) {
+          results.failed++;
+          results.errors.push({
+            certificateId: certificate._id,
+            code: certificate.certificateCode,
+            error: emailError.message,
+          });
+        }
+      }
+
+      return res.json({
+        success: true,
+        summary: results,
+        message: `Event email send complete: ${results.success} sent, ${results.failed} failed`,
+      });
+    } catch (error) {
+      return next(error);
     }
   },
 );
