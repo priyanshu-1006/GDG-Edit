@@ -284,6 +284,51 @@ const inductionSubmissionTemplate = (userName, formData) => {
   return baseTemplate(content);
 };
 
+/**
+ * Certificate Issuance Email Template
+ */
+const certificateTemplate = (
+  recipientName,
+  certificateCode,
+  eventName,
+  certificateUrl,
+  eventUrl,
+) => {
+  const content = `
+<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
+<tr>
+<td style="background-color:${GDG_GREEN};padding:16px 32px;border-radius:50px;">
+<span style="color:white;font-weight:700;font-size:16px;">🏆 Certificate Awarded</span>
+</td>
+</tr>
+</table>
+<h1 style="margin:0 0 8px;font-size:26px;font-weight:700;color:${GDG_DARK};text-align:center;">Congratulations!</h1>
+<p style="margin:0 0 32px;font-size:16px;color:${GDG_GRAY};text-align:center;">Hi ${recipientName}, we're proud to award you this certificate!</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#e6f4ea;border:2px solid ${GDG_GREEN};border-radius:16px;margin:24px 0;">
+<tr>
+<td style="padding:24px;text-align:center;">
+<h2 style="margin:0 0 16px;font-size:22px;color:${GDG_DARK};">Certificate of Participation</h2>
+<p style="margin:0 0 12px;"><span style="color:${GDG_GRAY};font-size:13px;">Event</span><br><strong style="color:${GDG_DARK};font-size:16px;">${eventName}</strong></p>
+<p style="margin:0;"><span style="color:${GDG_GRAY};font-size:13px;">Certificate ID</span><br><strong style="color:${GDG_DARK};font-size:14px;font-family:monospace;letter-spacing:1px;">${certificateCode}</strong></p>
+</td>
+</tr>
+</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fef7e0;border-left:4px solid #f9ab00;border-radius:4px;margin:24px 0;">
+<tr>
+<td style="padding:16px;">
+<p style="margin:0;font-size:14px;color:${GDG_DARK};"><strong>💾 Save Your Certificate:</strong><br>Your certificate has been generated and is ready to download. Use the button below to access it.</p>
+</td>
+</tr>
+</table>
+${actionButton('View Certificate', certificateUrl || 'https://gdg.mmmut.app/verification', GDG_GREEN)}
+${actionButton('View Event', eventUrl || 'https://gdg.mmmut.app/events', GDG_BLUE)}
+<p style="margin:24px 0 0;font-size:14px;color:${GDG_GRAY};text-align:center;">Verification Link: <a href="${certificateUrl}" style="color:${GDG_BLUE};text-decoration:none;">${certificateUrl}</a></p>
+<p style="margin:8px 0 0;font-size:14px;color:${GDG_GRAY};text-align:center;">Event Link: <a href="${eventUrl}" style="color:${GDG_BLUE};text-decoration:none;">${eventUrl}</a></p>
+<p style="margin:8px 0 0;font-size:14px;color:${GDG_GRAY};text-align:center;">Thank you for being part of the GDG MMMUT community! 🚀</p>`;
+
+  return baseTemplate(content);
+};
+
 export {
   welcomeTemplate,
   registrationTemplate,
@@ -291,6 +336,7 @@ export {
   notificationTemplate,
   newsletterTemplate,
   inductionSubmissionTemplate,
+  certificateTemplate,
   baseTemplate,
   actionButton,
   GDG_BLUE,

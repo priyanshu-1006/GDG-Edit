@@ -23,7 +23,7 @@ const emailLogSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['welcome', 'registration', 'qualification', 'general', 'alert', 'other'],
+        enum: ['welcome', 'registration', 'qualification', 'general', 'alert', 'certificate', 'other'],
         default: 'other',
     },
     metadata: {
