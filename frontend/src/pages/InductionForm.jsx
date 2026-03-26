@@ -399,7 +399,8 @@ const BRANCH_OPTIONS = [
   'Electrical Engineering (EE)',
   'Mechanical Engineering (ME)',
   'Civil Engineering (CE)',
-  'Chemical Engineering (CHE)'
+  'Chemical Engineering (CHE)',
+  'Internet of Things (IoT)'
 ];
 
 // Map CSV department names to dropdown option values

@@ -33,7 +33,8 @@ const inductionSchema = new mongoose.Schema({
       'Electrical Engineering', 'Electrical Engineering (EE)', 'EE',
       'Mechanical Engineering', 'Mechanical Engineering (ME)', 'ME',
       'Civil Engineering', 'Civil Engineering (CE)', 'CE',
-      'Chemical Engineering', 'Chemical Engineering (CHE)', 'CHE'
+      'Chemical Engineering', 'Chemical Engineering (CHE)', 'CHE',
+      'Internet of Things', 'Internet of Things (IoT)', 'IoT'
     ],
   },
   section: {
