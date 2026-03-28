@@ -4,6 +4,23 @@ import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
+// Setup endpoints are high-risk and should never be publicly active in production
+// unless explicitly enabled by environment configuration.
+const setupRoutesEnabled =
+  process.env.ENABLE_SETUP_ROUTES === 'true' ||
+  process.env.NODE_ENV !== 'production';
+
+router.use((req, res, next) => {
+  if (!setupRoutesEnabled) {
+    return res.status(403).json({
+      success: false,
+      message:
+        'Setup routes are disabled. Enable with ENABLE_SETUP_ROUTES=true only during controlled setup.',
+    });
+  }
+  next();
+});
+
 /**
  * @desc    Create initial admin user (only works if no admin exists)
  * @route   POST /api/setup/create-admin
@@ -93,8 +110,15 @@ router.post('/promote-to-admin', async (req, res) => {
   try {
     const { email, role = 'admin', secretKey } = req.body;
 
-    // Check secret key (set this in your .env file)
-    const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || 'gdg-super-secret-2024';
+    // Require an explicit secret key from environment; never use a hardcoded fallback.
+    const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY;
+
+    if (!ADMIN_SECRET_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: 'ADMIN_SECRET_KEY is not configured',
+      });
+    }
     
     if (secretKey !== ADMIN_SECRET_KEY) {
       return res.status(403).json({

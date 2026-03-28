@@ -159,8 +159,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/induction — Get all submissions (admin)
-router.get('/', async (req, res) => {
+// GET /api/induction — Get all submissions (event_manager/admin/super_admin)
+router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
   try {
     const { status, branch, page = 1, limit = 50 } = req.query;
     const filter = {};
