@@ -13,7 +13,7 @@ import {
   Smartphone,
   MessageSquare,
 } from "lucide-react";
-import axios from "axios";
+import { apiClient } from "../../utils/apiUtils";
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -45,23 +45,12 @@ const Notifications = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/email/logs`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response = await apiClient.get('/api/email/logs');
       // Map API response to UI model if needed
       setNotifications(response.data.logs);
 
       // Also fetch stats
-      const statsResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/email/stats`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      const statsResponse = await apiClient.get('/api/email/stats');
       setStats({
         totalSent: statsResponse.data.stats.find(s => s._id === 'sent')?.count || 0,
         failed: statsResponse.data.stats.find(s => s._id === 'failed')?.count || 0,
@@ -80,14 +69,9 @@ const Notifications = () => {
 
   const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/admin/events`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limit: 100 },
-        },
-      );
+      const response = await apiClient.get('/api/admin/events', {
+        params: { limit: 100 },
+      });
       setEvents(response.data.events);
     } catch (error) {
       console.error("Failed to fetch events:", error);
@@ -96,8 +80,6 @@ const Notifications = () => {
 
   const handleCreate = async () => {
     try {
-      const token = localStorage.getItem("token");
-
       // Map form data to API structure
       const apiData = {
         title: formData.title,
@@ -121,11 +103,7 @@ const Notifications = () => {
         apiData.recipients = emails.map(email => ({ email, name: 'User' }));
       }
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/email/bulk`,
-        apiData,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await apiClient.post('/api/email/bulk', apiData);
       setShowCreateModal(false);
       resetForm();
       fetchNotifications(); // Refresh logs
@@ -137,12 +115,7 @@ const Notifications = () => {
 
   const handleSend = async (id) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `http://localhost:5000/api/admin/notifications/${id}/send`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await apiClient.post(`/api/admin/notifications/${id}/send`, {});
       fetchNotifications();
       alert("Notification sent successfully!");
     } catch (error) {
@@ -158,12 +131,9 @@ const Notifications = () => {
     if (!dateString) return;
 
     try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `http://localhost:5000/api/admin/notifications/${id}/schedule`,
-        { scheduledFor: new Date(dateString) },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await apiClient.patch(`/api/admin/notifications/${id}/schedule`, {
+        scheduledFor: new Date(dateString),
+      });
       fetchNotifications();
       alert("Notification scheduled successfully!");
     } catch (error) {
@@ -176,13 +146,7 @@ const Notifications = () => {
     if (!confirm("Are you sure you want to delete this notification?")) return;
 
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(
-        `http://localhost:5000/api/admin/notifications/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      await apiClient.delete(`/api/admin/notifications/${id}`);
       fetchNotifications();
     } catch (error) {
       console.error("Failed to delete notification:", error);

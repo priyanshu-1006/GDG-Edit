@@ -11,9 +11,15 @@ const updateAdminPassword = async () => {
     console.log('✅ Connected to database\n');
 
     const [, , emailArg, passwordArg, roleArg] = process.argv;
-    const email = emailArg || 'admin@gdg.mmmut.app';
-    const newPassword = passwordArg || 'GDGAdmin@2026';
+    const email = emailArg || process.env.ADMIN_EMAIL_TO_UPDATE;
+    const newPassword = passwordArg || process.env.ADMIN_NEW_PASSWORD;
     const role = roleArg || 'admin';
+
+    if (!email || !newPassword) {
+      console.log('Usage: node scripts/updatePassword.js <email> <newPassword> [role]');
+      console.log('Or set env vars: ADMIN_EMAIL_TO_UPDATE, ADMIN_NEW_PASSWORD');
+      process.exit(1);
+    }
 
     let user = await User.findOne({ email }).select('+password');
     
@@ -37,7 +43,7 @@ const updateAdminPassword = async () => {
 
     console.log('✅ Password updated successfully!');
     console.log('📧 Email:', email);
-    console.log('🔐 New Password:', newPassword);
+    console.log('🔐 New Password: [hidden]');
     console.log('🔑 Role:', user.role);
     
     // Test the password immediately

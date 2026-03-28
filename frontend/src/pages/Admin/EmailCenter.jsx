@@ -15,9 +15,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { apiClient } from "../../utils/apiUtils";
 
 // Email Templates
 const EMAIL_TEMPLATES = {
@@ -81,10 +79,7 @@ const EmailCenter = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/email/logs?limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/api/email/logs?limit=50');
       setLogs(response.data.logs || []);
     } catch (error) {
       console.error("Failed to fetch logs:", error);
@@ -95,10 +90,7 @@ const EmailCenter = () => {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/email/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/api/email/stats');
       const sentCount = response.data.stats?.find(s => s._id === 'sent')?.count || 0;
       const failedCount = response.data.stats?.find(s => s._id === 'failed')?.count || 0;
       setStats({ sent: sentCount, failed: failedCount });
@@ -109,10 +101,7 @@ const EmailCenter = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/admin/users?limit=500`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/api/admin/users?limit=500');
       setUsers(response.data.users || []);
     } catch (error) {
       console.error("Failed to fetch users:", error);
@@ -121,10 +110,7 @@ const EmailCenter = () => {
 
   const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/admin/events?limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/api/admin/events?limit=50');
       setEvents(response.data.events || []);
     } catch (error) {
       console.error("Failed to fetch events:", error);
@@ -186,7 +172,6 @@ const EmailCenter = () => {
 
     setSending(true);
     try {
-      const token = localStorage.getItem("token");
       const payload = {
         title: formData.subject,
         message: formData.message,
@@ -202,9 +187,7 @@ const EmailCenter = () => {
         payload.filters = { eventId: formData.targetEvent };
       }
 
-      await axios.post(`${API_URL}/api/email/bulk`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.post('/api/email/bulk', payload);
 
       alert("Emails sent successfully! 🎉");
       setShowPreview(false);
@@ -223,10 +206,7 @@ const EmailCenter = () => {
   const handleDeleteLog = async (id) => {
     if (!confirm("Delete this log entry?")) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${API_URL}/api/email/logs/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.delete(`/api/email/logs/${id}`);
       fetchLogs();
       fetchStats();
     } catch (error) {

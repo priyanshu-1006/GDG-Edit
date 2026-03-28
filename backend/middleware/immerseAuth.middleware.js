@@ -1,6 +1,14 @@
 import jwt from 'jsonwebtoken';
 import ImmerseAdmin from '../models/ImmerseAdmin.js';
 
+const getImmerseJwtSecret = () => {
+    const secret = process.env.IMMERSE_JWT_SECRET;
+    if (!secret) {
+        throw new Error('IMMERSE_JWT_SECRET is not configured');
+    }
+    return secret;
+};
+
 /**
  * Protect Immerse admin routes
  */
@@ -19,8 +27,10 @@ export const protectImmerse = async (req, res, next) => {
     }
 
     try {
+        const immerseSecret = getImmerseJwtSecret();
+
         // Verify token with Immerse-specific secret
-        const decoded = jwt.verify(token, process.env.IMMERSE_JWT_SECRET || process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, immerseSecret);
 
         // Check if it's an Immerse admin token
         if (!decoded.isImmerseAdmin) {
@@ -74,13 +84,15 @@ export const immerseSuperAdmin = (req, res, next) => {
  * Generate Immerse admin token
  */
 export const generateImmerseToken = (admin) => {
+    const immerseSecret = getImmerseJwtSecret();
+
     return jwt.sign(
         { 
             id: admin._id,
             isImmerseAdmin: true,
             role: admin.role
         },
-        process.env.IMMERSE_JWT_SECRET || process.env.JWT_SECRET,
+        immerseSecret,
         { expiresIn: '7d' }
     );
 };

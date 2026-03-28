@@ -14,11 +14,6 @@ const connectDB = async (retries = 3) => {
 
       console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
       console.log(`📊 Database: ${conn.connection.name}`);
-      
-      try {
-        await conn.connection.collection('inductions').dropIndex('email_1');
-        console.log(`🗑️ Successfully dropped email_1 index! Duplicates are now allowed.`);
-      } catch(e) { /* Ignore if it doesn't exist */ }
 
       return;
     } catch (error) {

@@ -1,16 +1,16 @@
 /**
  * Seed Immerse Super Admin with credentials
  * Run: node scripts/seedSuperAdmin.js
- * 
- * Super Admin:
- * - Email: priyanshudlw1@gmail.com
- * - Password: priyanshu
- * - Role: immerse_super_admin
- * - OTP Required: YES
+ *
+ * Required env vars:
+ * - IMMERSE_SUPER_ADMIN_EMAIL
+ * - IMMERSE_SUPER_ADMIN_PASSWORD
+ *
+ * Optional env var:
+ * - IMMERSE_SUPER_ADMIN_NAME
  */
 
 import 'dotenv/config';
-import mongoose from 'mongoose';
 import ImmerseAdmin from '../models/ImmerseAdmin.js';
 import connectDB from '../config/database.js';
 
@@ -20,9 +20,15 @@ const seedSuperAdmin = async () => {
         
         await connectDB();
 
-        const superAdminEmail = 'priyanshudlw1@gmail.com';
-        const superAdminPassword = 'priyanshu';
-        const superAdminName = 'Super Admin';
+        const superAdminEmail = process.env.IMMERSE_SUPER_ADMIN_EMAIL;
+        const superAdminPassword = process.env.IMMERSE_SUPER_ADMIN_PASSWORD;
+        const superAdminName = process.env.IMMERSE_SUPER_ADMIN_NAME || 'Super Admin';
+
+        if (!superAdminEmail || !superAdminPassword) {
+            console.error('❌ Missing required environment variables.');
+            console.error('   Required: IMMERSE_SUPER_ADMIN_EMAIL, IMMERSE_SUPER_ADMIN_PASSWORD');
+            process.exit(1);
+        }
 
         // Check if super admin already exists
         const existingAdmin = await ImmerseAdmin.findOne({ 
@@ -51,7 +57,7 @@ const seedSuperAdmin = async () => {
         console.log('✅ Super Admin created successfully!\n');
         console.log('📝 Credentials:');
         console.log(`   Email: ${admin.email}`);
-        console.log(`   Password: ${superAdminPassword}`);
+        console.log('   Password: configured via IMMERSE_SUPER_ADMIN_PASSWORD');
         console.log(`   Role: ${admin.role}`);
         console.log(`   Active: ${admin.isActive}`);
         console.log('\n🔐 Login Details:');

@@ -22,6 +22,9 @@ const upload = multer({
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
+const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const exactTrimmedRegex = (value = '') => new RegExp(`^\\s*${escapeRegex(String(value).trim())}\\s*$`, 'i');
+
 // Middleware to verify induction JWT
 const verifyInductionToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -109,19 +112,28 @@ router.post('/', async (req, res) => {
       leetcodeId
     } = req.body;
 
-    // Check if already submitted (Temporarily Disabled by Admin)
-    /*
-    const existing = await Induction.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const normalizedRollNumber = String(rollNumber || '').trim();
+
+    // Enforce one active induction application per candidate identity.
+    const candidateConditions = [];
+    if (normalizedEmail) candidateConditions.push({ email: exactTrimmedRegex(normalizedEmail) });
+    if (normalizedRollNumber) candidateConditions.push({ rollNumber: exactTrimmedRegex(normalizedRollNumber) });
+
+    const existing =
+      candidateConditions.length > 0
+        ? await Induction.findOne({ $or: candidateConditions })
+        : null;
+
     if (existing) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: 'You have already submitted an induction form with this email.'
+        message: 'You have already submitted an induction form. Please contact admin if you need to resubmit.'
       });
     }
-    */
 
     const induction = new Induction({
-      firstName, lastName, email, phone, branch, section, rollNumber,
+      firstName, lastName, email: normalizedEmail, phone, branch, section, rollNumber: normalizedRollNumber,
       techStack, domains, projects, githubId, linkedinUrl,
       whyJoin, interestingFact, otherClubs, residenceType,
       codeforcesId, codechefId, hackerrankId, resumeUrl,
@@ -156,6 +168,48 @@ router.post('/', async (req, res) => {
       success: false,
       message: 'Server error. Please try again later.'
     });
+  }
+});
+
+// GET /api/induction/my-submission-status — Get current applicant submission status
+router.get('/my-submission-status', verifyInductionToken, async (req, res) => {
+  try {
+    const email = String(req.user?.email || '').toLowerCase().trim();
+    const rollNo = String(req.user?.rollNo || '').trim();
+
+    const matchConditions = [];
+    if (email) matchConditions.push({ email: exactTrimmedRegex(email) });
+    if (rollNo) matchConditions.push({ rollNumber: exactTrimmedRegex(rollNo) });
+
+    if (matchConditions.length === 0) {
+      return res.json({ success: true, hasSubmitted: false });
+    }
+
+    const existingSubmission = await Induction.findOne({
+      $or: matchConditions
+    })
+      .sort({ createdAt: -1 })
+      .select('_id status createdAt updatedAt rollNumber email');
+
+    if (!existingSubmission) {
+      return res.json({ success: true, hasSubmitted: false });
+    }
+
+    res.json({
+      success: true,
+      hasSubmitted: true,
+      submission: {
+        id: existingSubmission._id,
+        status: existingSubmission.status,
+        rollNumber: existingSubmission.rollNumber,
+        email: existingSubmission.email,
+        createdAt: existingSubmission.createdAt,
+        updatedAt: existingSubmission.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Fetch my submission status error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -241,13 +295,31 @@ router.patch('/bulk-advance', protect, authorize('super_admin'), async (req, res
 // DELETE /api/induction/:id — Delete submission (super_admin)
 router.delete('/:id', protect, authorize('super_admin'), async (req, res) => {
   try {
-    const submission = await Induction.findByIdAndDelete(req.params.id);
+    const submission = await Induction.findById(req.params.id);
 
     if (!submission) {
       return res.status(404).json({ success: false, message: 'Submission not found' });
     }
 
-    res.json({ success: true, message: 'Submission deleted successfully' });
+    const email = String(submission.email || '').toLowerCase().trim();
+    const rollNumber = String(submission.rollNumber || '').trim();
+
+    const deleteConditions = [];
+    if (email) deleteConditions.push({ email: exactTrimmedRegex(email) });
+    if (rollNumber) deleteConditions.push({ rollNumber: exactTrimmedRegex(rollNumber) });
+
+    const deleteQuery =
+      deleteConditions.length > 0
+        ? { $or: deleteConditions }
+        : { _id: submission._id };
+
+    const deleteResult = await Induction.deleteMany(deleteQuery);
+
+    res.json({
+      success: true,
+      message: 'Submission deleted successfully',
+      deletedCount: deleteResult.deletedCount,
+    });
   } catch (error) {
     console.error('Delete submission error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

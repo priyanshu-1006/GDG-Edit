@@ -1,7 +1,7 @@
 # IMMERSE Super-Admin OTP Implementation Guide
 
 ## Overview
-This document explains the OTP-based login system implemented for IMMERSE Admin Portal. The super-admin user `priyanshudlw1@gmail.com` requires OTP verification for every login.
+This document explains the OTP-based login system implemented for IMMERSE Admin Portal. Super-admin users require OTP verification for every login.
 
 ---
 
@@ -20,8 +20,8 @@ npm run seed-super-admin
 ✅ Super Admin created successfully!
 
 📝 Credentials:
-   Email: priyanshudlw1@gmail.com
-   Password: priyanshu
+  Email: <configured via IMMERSE_SUPER_ADMIN_EMAIL>
+  Password: <configured via IMMERSE_SUPER_ADMIN_PASSWORD>
    Role: immerse_super_admin
    Active: true
 
@@ -43,8 +43,8 @@ npm run seed-super-admin
 
 ### Step 1: Enter Credentials
 1. Navigate to `/immerse/login`
-2. Enter email: `priyanshudlw1@gmail.com`
-3. Enter password: `priyanshu`
+2. Enter email: `<your-admin-email>`
+3. Enter password: `<your-admin-password>`
 4. Click "Continue"
 
 ### Step 2: Verify OTP
@@ -67,8 +67,8 @@ After successful OTP verification, you'll be redirected to the IMMERSE Dashboard
 **Request Body:**
 ```json
 {
-  "email": "priyanshudlw1@gmail.com",
-  "password": "priyanshu"
+  "email": "admin@example.com",
+  "password": "your-password"
 }
 ```
 
@@ -94,7 +94,7 @@ After successful OTP verification, you'll be redirected to the IMMERSE Dashboard
 **Request Body:**
 ```json
 {
-  "email": "priyanshudlw1@gmail.com",
+  "email": "admin@example.com",
   "otp": "123456"
 }
 ```
@@ -108,7 +108,7 @@ After successful OTP verification, you'll be redirected to the IMMERSE Dashboard
   "admin": {
     "id": "507f1f77bcf86cd799439011",
     "name": "Super Admin",
-    "email": "priyanshudlw1@gmail.com",
+    "email": "admin@example.com",
     "role": "immerse_super_admin"
   }
 }
@@ -194,8 +194,8 @@ The OTP email is sent via:
 
 ### Environment Variables
 ```env
-RESEND_API_KEY=re_FX9mgwFA_E3bk9sCP3cmgX81YbBzaNgXe
-IMMERSE_RESEND_API_KEY=re_XL7ug13L_MYvpE4rk1YWP4o7RUxKx71Je
+RESEND_API_KEY=your-resend-api-key
+IMMERSE_RESEND_API_KEY=your-resend-api-key
 ```
 
 ---
@@ -242,8 +242,8 @@ IMMERSE_RESEND_API_KEY=re_XL7ug13L_MYvpE4rk1YWP4o7RUxKx71Je
 
 ### Issue: "Invalid Credentials"
 **Solution:**
-1. Verify email: `priyanshudlw1@gmail.com`
-2. Verify password: `priyanshu`
+1. Verify email: `<your-admin-email>`
+2. Verify password: `<your-admin-password>`
 3. Check if admin account is active (isActive: true)
 4. Check if admin exists in database
 
@@ -319,8 +319,8 @@ npm run dev
 # http://localhost:5173/immerse/login
 
 # 8. Login with:
-# Email: priyanshudlw1@gmail.com
-# Password: priyanshu
+# Email: <your-admin-email>
+# Password: <your-admin-password>
 # OTP: Check your email
 ```
 
@@ -355,7 +355,7 @@ curl -X PUT http://localhost:5000/api/immerse/auth/change-password \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "currentPassword": "priyanshu",
+    "currentPassword": "your-current-password",
     "newPassword": "new_secure_password"
   }'
 ```

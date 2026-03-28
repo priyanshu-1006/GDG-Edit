@@ -52,6 +52,31 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// @route   GET /api/events/category/:category
+// @desc    Get events by category (study-jam, immerse, hackblitz)
+// @access  Public
+router.get('/category/:category', async (req, res, next) => {
+  try {
+    const { category } = req.params;
+
+    const events = await Event.find({
+      eventCategory: category,
+      published: true,
+      draft: false,
+    })
+      .populate('createdBy', 'name email')
+      .sort({ date: 1 });
+
+    res.json({
+      success: true,
+      count: events.length,
+      events,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // @route   GET /api/events/:id
 // @desc    Get single event
 // @access  Public
@@ -145,31 +170,6 @@ router.delete('/:id', protect, authorize('admin', 'super_admin'), async (req, re
     res.json({
       success: true,
       message: 'Event deleted successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   GET /api/events/category/:category
-// @desc    Get events by category (study-jam, immerse, hackblitz)
-// @access  Public
-router.get('/category/:category', async (req, res, next) => {
-  try {
-    const { category } = req.params;
-
-    const events = await Event.find({
-      eventCategory: category,
-      published: true,
-      draft: false,
-    })
-      .populate('createdBy', 'name email')
-      .sort({ date: 1 });
-
-    res.json({
-      success: true,
-      count: events.length,
-      events,
     });
   } catch (error) {
     next(error);

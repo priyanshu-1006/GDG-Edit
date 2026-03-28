@@ -4,11 +4,9 @@
  */
 
 import axios from 'axios';
+import { API_BASE_URL, FRONTEND_URL } from '../config/api.js';
 
-// Get API Base URL from environment variable
-// Automatically uses production URL when deployed, localhost for development
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
+export { API_BASE_URL, FRONTEND_URL };
 
 // Create axios instance with default configuration
 export const apiClient = axios.create({

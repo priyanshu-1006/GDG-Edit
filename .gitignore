@@ -1,2 +1,16 @@
 RAG_System
 students_2026-03-19.csv
+
+# Local environment files
+.env
+.env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Common local artifacts
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/useAuth';
 import { FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX } from 'react-icons/fi';
 import CodingProfiles from '../../components/CodingProfiles';
 import AddProfileModal from '../../components/AddProfileModal';
+import { API_BASE_URL } from '../../config/api';
 
 const Container = styled.div`
   animation: fadeIn 0.5s ease;
@@ -315,7 +316,6 @@ const Profile = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       await axios.put(
         `${API_BASE_URL}/api/users/profile`,

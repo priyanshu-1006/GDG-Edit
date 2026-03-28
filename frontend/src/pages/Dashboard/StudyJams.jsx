@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { FiBook, FiCheckCircle, FiClock, FiTrendingUp, FiPlay } from 'react-icons/fi';
+import { API_BASE_URL } from '../../config/api';
 
 const Container = styled.div`
   animation: fadeIn 0.5s ease;
@@ -306,7 +307,6 @@ const StudyJams = () => {
   const fetchStudyJamsData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       const response = await axios.get(
         `${API_BASE_URL}/api/studyjams/progress`,

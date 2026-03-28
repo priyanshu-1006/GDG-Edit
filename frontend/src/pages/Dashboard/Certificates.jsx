@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { FiDownload, FiAward, FiCalendar, FiShare2 } from 'react-icons/fi';
+import { API_BASE_URL } from '../../config/api';
 
 const Container = styled.div`
   animation: fadeIn 0.5s ease;
@@ -237,7 +238,6 @@ const Certificates = () => {
   const fetchCertificates = async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       const response = await axios.get(
         `${API_BASE_URL}/api/certificates/user`,
@@ -285,7 +285,6 @@ const Certificates = () => {
   const handleDownload = async (certificateId) => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       const response = await axios.get(
         `${API_BASE_URL}/api/certificates/${certificateId}/download`,

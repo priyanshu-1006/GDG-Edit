@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "../../utils/apiUtils";
 import { Lock, Mail, ArrowRight, Shield } from "lucide-react";
 import { useAuth } from "../../contexts/useAuth";
 
@@ -50,10 +50,7 @@ const AdminLogin = () => {
         setError("");
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/auth/admin/initiate-login`,
-                { email, password }
-            );
+          const response = await apiClient.post('/api/auth/admin/initiate-login', { email, password });
 
             if (response.data.success) {
                 setStep('otp');
@@ -80,10 +77,7 @@ const AdminLogin = () => {
         setError("");
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/auth/admin/verify-otp`,
-                { email, otp }
-            );
+          const response = await apiClient.post('/api/auth/admin/verify-otp', { email, otp });
 
             if (response.data.success) {
                 const { token, user } = response.data;
@@ -113,10 +107,7 @@ const AdminLogin = () => {
         setError('');
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/auth/admin/initiate-login`,
-                { email, password }
-            );
+          const response = await apiClient.post('/api/auth/admin/initiate-login', { email, password });
             if (response.data.success) {
                 // OTP resent successfully
             }

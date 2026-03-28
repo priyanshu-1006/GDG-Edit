@@ -3,8 +3,9 @@ import styled, { keyframes } from "styled-components";
 import { Mail, Shield, Lock, ArrowRight, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 
-const API = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
+const API = `${API_BASE_URL}/api`;
 
 const EventManagerRegister = () => {
   const [step, setStep] = useState(1); // 1=Email, 2=OTP, 3=Password

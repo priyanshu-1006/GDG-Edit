@@ -11,6 +11,7 @@ import registrationsController from '../controllers/admin/registrationsControlle
 import notificationsController from '../controllers/admin/notificationsController.js';
 
 const router = express.Router();
+const notificationsModuleEnabled = process.env.ENABLE_NOTIFICATIONS_MODULE === 'true';
 
 // All admin portal routes require authentication and at least event_manager role
 router.use(protect);
@@ -18,7 +19,18 @@ router.use(requireEventManager);
 
 // Strictly lock User Management and Notifications behind full Admin role
 router.use('/users', requireAdmin);
-router.use('/notifications', requireAdmin);
+
+if (notificationsModuleEnabled) {
+	router.use('/notifications', requireAdmin);
+} else {
+	router.all('/notifications*', requireAdmin, (req, res) => {
+		return res.status(503).json({
+			success: false,
+			message: 'Notifications module is currently disabled',
+			feature: 'notifications',
+		});
+	});
+}
 
 // ============================================
 // DASHBOARD ROUTES
@@ -66,12 +78,14 @@ router.post('/registrations/scan-qr', requireEventManager, logActivity('scan_qr'
 // ============================================
 // NOTIFICATION ROUTES
 // ============================================
-router.get('/notifications', notificationsController.getAllNotifications);
-router.get('/notifications/stats', notificationsController.getNotificationStats);
-router.get('/notifications/:id', notificationsController.getNotificationDetails);
-router.post('/notifications', logActivity('create', 'notification'), notificationsController.createNotification);
-router.post('/notifications/:id/send', logActivity('send', 'notification'), notificationsController.sendNotification);
-router.patch('/notifications/:id/schedule', logActivity('schedule', 'notification'), notificationsController.scheduleNotification);
-router.delete('/notifications/:id', logActivity('delete', 'notification'), notificationsController.deleteNotification);
+if (notificationsModuleEnabled) {
+	router.get('/notifications', notificationsController.getAllNotifications);
+	router.get('/notifications/stats', notificationsController.getNotificationStats);
+	router.get('/notifications/:id', notificationsController.getNotificationDetails);
+	router.post('/notifications', logActivity('create', 'notification'), notificationsController.createNotification);
+	router.post('/notifications/:id/send', logActivity('send', 'notification'), notificationsController.sendNotification);
+	router.patch('/notifications/:id/schedule', logActivity('schedule', 'notification'), notificationsController.scheduleNotification);
+	router.delete('/notifications/:id', logActivity('delete', 'notification'), notificationsController.deleteNotification);
+}
 
 export default router;

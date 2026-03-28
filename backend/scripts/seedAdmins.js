@@ -6,6 +6,11 @@
  * - super_admin: Full system access
  * - admin: User management + everything except super admin functions
  * - event_manager: Event and registration management
+ *
+ * Preset mode requires these env vars:
+ * - GDG_PRESET_SUPER_ADMIN_PASSWORD
+ * - GDG_PRESET_ADMIN_PASSWORD
+ * - GDG_PRESET_EVENT_MANAGER_PASSWORD
  */
 
 import 'dotenv/config';
@@ -20,6 +25,14 @@ const rl = readline.createInterface({
 });
 
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
+
+const getRequiredEnv = (name) => {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+};
 
 const seedAdmins = async () => {
   try {
@@ -47,23 +60,43 @@ const seedAdmins = async () => {
 };
 
 const seedPresetAdmins = async () => {
+  let superAdminPassword;
+  let adminPassword;
+  let eventManagerPassword;
+
+  try {
+    superAdminPassword = getRequiredEnv('GDG_PRESET_SUPER_ADMIN_PASSWORD');
+    adminPassword = getRequiredEnv('GDG_PRESET_ADMIN_PASSWORD');
+    eventManagerPassword = getRequiredEnv('GDG_PRESET_EVENT_MANAGER_PASSWORD');
+  } catch (error) {
+    console.error('❌ Preset admin seeding aborted:', error.message);
+    console.log('\nSet required env vars and rerun:');
+    console.log('  GDG_PRESET_SUPER_ADMIN_PASSWORD');
+    console.log('  GDG_PRESET_ADMIN_PASSWORD');
+    console.log('  GDG_PRESET_EVENT_MANAGER_PASSWORD\n');
+    throw error;
+  }
+
   const presetAdmins = [
     {
       name: 'GDG Super Admin',
       email: 'superadmin@gdg.mmmut.app',
-      password: 'GDGSuperAdmin@2026',
+      password: superAdminPassword,
+      passwordEnvVar: 'GDG_PRESET_SUPER_ADMIN_PASSWORD',
       role: 'super_admin'
     },
     {
       name: 'GDG Admin',
       email: 'admin@gdg.mmmut.app',
-      password: 'GDGAdmin@2026',
+      password: adminPassword,
+      passwordEnvVar: 'GDG_PRESET_ADMIN_PASSWORD',
       role: 'admin'
     },
     {
       name: 'Event Manager',
       email: 'eventmanager@gdg.mmmut.app',
-      password: 'EventManager@2026',
+      password: eventManagerPassword,
+      passwordEnvVar: 'GDG_PRESET_EVENT_MANAGER_PASSWORD',
       role: 'event_manager'
     }
   ];
@@ -96,7 +129,7 @@ const seedPresetAdmins = async () => {
 
       console.log(`✅ ${adminData.role.toUpperCase()} created`);
       console.log(`   Email: ${admin.email}`);
-      console.log(`   Password: ${adminData.password}\n`);
+      console.log(`   Password: configured via ${adminData.passwordEnvVar}\n`);
     } catch (error) {
       console.error(`❌ Error creating ${adminData.role}:`, error.message);
     }
@@ -106,15 +139,15 @@ const seedPresetAdmins = async () => {
   console.log('════════════════════════════════════════');
   console.log('🏆 Super Admin Portal (/super-admin)');
   console.log('   Email: superadmin@gdg.mmmut.app');
-  console.log('   Password: GDGSuperAdmin@2026');
+  console.log('   Password: configured via GDG_PRESET_SUPER_ADMIN_PASSWORD');
   console.log('   Roles: Users, Events, Registrations, Emails, Certificates, Teams, Analytics, Settings');
   console.log('\n👨‍💼 Admin Portal (/admin)');
   console.log('   Email: admin@gdg.mmmut.app');
-  console.log('   Password: GDGAdmin@2026');
+  console.log('   Password: configured via GDG_PRESET_ADMIN_PASSWORD');
   console.log('   Roles: Events, Registrations, Emails, Certificates, Teams, Analytics, Settings');
   console.log('\n📅 Event Manager Portal (/event-manager)');
   console.log('   Email: eventmanager@gdg.mmmut.app');
-  console.log('   Password: EventManager@2026');
+  console.log('   Password: configured via GDG_PRESET_EVENT_MANAGER_PASSWORD');
   console.log('   Roles: Events, Registrations');
   console.log('════════════════════════════════════════\n');
 
@@ -189,7 +222,7 @@ const seedCustomAdmin = async () => {
     console.log('\n🔐 Login Instructions:');
     console.log(`1. Go to: /admin/login`);
     console.log(`2. Enter email: ${admin.email}`);
-    console.log(`3. Enter password: ${password}`);
+    console.log('3. Enter the password you provided during setup');
     console.log('4. Enter OTP from your email');
     console.log('5. Access admin dashboard\n');
   } catch (error) {

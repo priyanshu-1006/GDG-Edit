@@ -49,6 +49,38 @@ router.get('/', protect, authorize('admin', 'super_admin'), async (req, res, nex
   }
 });
 
+// @route   GET /api/users/stats/overview
+// @desc    Get user statistics
+// @access  Private (Admin)
+router.get('/stats/overview', protect, authorize('admin', 'super_admin'), async (req, res, next) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const totalAdmins = await User.countDocuments({ 
+      role: { $in: ['admin', 'event_manager', 'super_admin'] } 
+    });
+
+    // Users registered in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentUsers = await User.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalStudents,
+        totalAdmins,
+        recentUsers,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // @route   GET /api/users/:id
 // @desc    Get user by ID
 // @access  Private (Admin)
@@ -109,38 +141,6 @@ router.put('/:id/role', protect, authorize('super_admin'), async (req, res, next
     res.json({
       success: true,
       user: user.toPublicJSON(),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   GET /api/users/stats/overview
-// @desc    Get user statistics
-// @access  Private (Admin)
-router.get('/stats/overview', protect, authorize('admin', 'super_admin'), async (req, res, next) => {
-  try {
-    const totalUsers = await User.countDocuments();
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalAdmins = await User.countDocuments({ 
-      role: { $in: ['admin', 'event_manager', 'super_admin'] } 
-    });
-
-    // Users registered in last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentUsers = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo },
-    });
-
-    res.json({
-      success: true,
-      stats: {
-        totalUsers,
-        totalStudents,
-        totalAdmins,
-        recentUsers,
-      },
     });
   } catch (error) {
     next(error);

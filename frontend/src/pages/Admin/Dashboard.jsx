@@ -57,6 +57,14 @@ const AdminDashboard = () => {
     );
   }
 
+  const path = window.location.pathname;
+  const adminPortalBase = path.startsWith("/super-admin")
+    ? "/super-admin"
+    : path.startsWith("/event-manager")
+      ? "/event-manager"
+      : "/admin";
+  const canAccessEmailCenter = adminPortalBase !== "/event-manager";
+
   const statsObj = stats?.stats || {};
 
   const statsCards = [
@@ -151,15 +159,15 @@ const AdminDashboard = () => {
           >
             Create New Event
           </ActionButton>
+          {canAccessEmailCenter && (
+            <ActionButton
+              onClick={() => (window.location.href = `${adminPortalBase}/emails`)}
+            >
+              Open Email Center
+            </ActionButton>
+          )}
           <ActionButton
-            onClick={() => (window.location.href = "/admin/notifications")}
-          >
-            Send Notification
-          </ActionButton>
-          <ActionButton
-            onClick={() =>
-              (window.location.href = "/admin/registrations?status=pending")
-            }
+            onClick={() => (window.location.href = `${adminPortalBase}/registrations?status=pending`)}
           >
             Review Registrations
           </ActionButton>

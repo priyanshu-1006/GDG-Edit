@@ -139,18 +139,15 @@ export const approveRegistration = async (req, res) => {
       });
     }
 
-    const mailSent = sendMail(registration, "approved");
-    if(!mailSent){
-      return res.status(503).json({
-        success: false,
-        message: 'Failed to send mail.'
-      });
-    }
+    const mailSent = await sendMail(registration, "approved");
 
     res.json({
       success: true,
-      message: 'Registration approved successfully',
-      registration
+      message: mailSent
+        ? 'Registration approved successfully'
+        : 'Registration approved, but confirmation email could not be sent',
+      registration,
+      emailSent: mailSent
     });
   } catch (error) {
     console.error('Approve registration error:', error);
@@ -189,18 +186,15 @@ export const rejectRegistration = async (req, res) => {
       });
     }
 
-    const mailSent = sendMail("a@gmail.com", "rejected");
-    if(!mailSent){
-      return res.status(503).json({
-        success: false,
-        message: 'Failed to send mail.'
-      });
-    }
+    const mailSent = await sendMail(registration, "rejected");
 
     res.json({
       success: true,
-      message: 'Registration rejected successfully',
-      registration
+      message: mailSent
+        ? 'Registration rejected successfully'
+        : 'Registration rejected, but notification email could not be sent',
+      registration,
+      emailSent: mailSent
     });
   } catch (error) {
     console.error('Reject registration error:', error);

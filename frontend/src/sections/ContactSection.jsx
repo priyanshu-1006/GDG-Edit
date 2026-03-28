@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Mail, MapPin, Users } from 'lucide-react';
 import './ContactSection.css';
 import styled from 'styled-components';
+import { API_BASE_URL } from '../config/api';
 
 const Contact = styled.div`
   background-color: ${({ theme }) => theme.colors.background.secondary};
@@ -9,7 +10,7 @@ const Contact = styled.div`
 `;
 
 const Container = styled.div`
-  width: fit-content;
+  width: min(1280px, calc(100% - 2rem));
   margin: 0 auto var(--spacing-lg);
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: var(--font-size-lg);
@@ -30,12 +31,12 @@ const Container = styled.div`
 const ContactGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1.5fr;
-  gap: var(--spacing-md);
+  gap: 1.5rem;
+  align-items: stretch;
 
   @media (max-width: 768px) {
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    padding: 0.25rem;
   }
 `;
 
@@ -56,13 +57,23 @@ const Info = styled.div`
 
 const ContactContainer = styled.div`
   background-color: ${({ theme }) => theme.colors.background.primary};
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: 0 4px 20px var(--shadow-color);
+  border: 1px solid ${({ theme }) => theme.colors.border || 'rgba(0, 0, 0, 0.08)'};
+  height: fit-content;
+
   h3 {
     color: ${({ theme }) => theme.colors.text.primary};
+    margin-bottom: var(--spacing-md);
   }
 `;
 
 const ContactForm = styled.form`
   background-color: ${({ theme }) => theme.colors.background.primary};
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 
   label {
     display: block;
@@ -97,17 +108,40 @@ const ContactForm = styled.form`
   }
 `;
 
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const StatusMessage = styled.div`
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  border: 1px solid
+    ${({ $error }) => ($error ? 'rgba(234, 67, 53, 0.35)' : 'rgba(15, 157, 88, 0.35)')};
+  background: ${({ $error }) => ($error ? 'rgba(234, 67, 53, 0.08)' : 'rgba(15, 157, 88, 0.08)')};
+  color: ${({ $error }) => ($error ? '#ea4335' : '#0f9d58')};
+`;
+
 const ContactSection = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: '',
+    website: '',
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [submittedAt, setSubmittedAt] = useState(Date.now());
+
+  useEffect(() => {
+    setSubmittedAt(Date.now());
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
@@ -135,10 +169,10 @@ const ContactSection = () => {
     setStatusMessage('Sending...');
 
     try {
-      const response = await fetch('http://localhost:5000/api/contact', {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, submittedAt }),
       });
 
       const data = await response.json();
@@ -146,7 +180,8 @@ const ContactSection = () => {
       if (!response.ok) throw new Error(data.error || 'Something went wrong');
 
       setStatusMessage('✅ Your message has been sent successfully!');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setFormData({ name: '', email: '', subject: '', message: '', website: '' });
+      setSubmittedAt(Date.now());
     } catch (err) {
       console.error('Error submitting form:', err.message);
       setStatusMessage('❌ Failed to send message. Please try again later.');
@@ -197,7 +232,7 @@ const ContactSection = () => {
               <div className="contact-details">
                 <h4>Join Community</h4>
                 <a
-                  href="https://gdg.community.dev/gdg-on-campus-madan-mohanmalaviya-university-of-technology-gorakhpur-india/"
+                  href="https://gdg.community.dev/gdg-on-campus-madan-mohan-malaviya-university-of-technology-gorakhpur-india/"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -218,13 +253,31 @@ const ContactSection = () => {
           </Info>
 
           {/* Right side */}
-          <ContactContainer>
+          <ContactContainer className="contact-form-container">
             <h3>We’d Love to Hear from You</h3>
 
-            {statusMessage && <div className="status-message">{statusMessage}</div>}
+            {statusMessage && (
+              <StatusMessage $error={statusMessage.startsWith('❌')}>
+                {statusMessage}
+              </StatusMessage>
+            )}
 
-            <ContactForm onSubmit={handleSubmit}>
-              <div>
+            <ContactForm onSubmit={handleSubmit} className="contact-form">
+              <label htmlFor="website" style={{ position: 'absolute', left: '-9999px' }}>
+                Website
+              </label>
+              <input
+                id="website"
+                name="website"
+                type="text"
+                value={formData.website}
+                onChange={handleChange}
+                autoComplete="off"
+                tabIndex={-1}
+                style={{ position: 'absolute', left: '-9999px' }}
+              />
+
+              <FormGroup className="form-group">
                 <label htmlFor="name">Your Name</label>
                 <input
                   type="text"
@@ -233,12 +286,12 @@ const ContactSection = () => {
                   value={formData.name}
                   onChange={handleChange}
                   className={errors.name ? 'error' : ''}
-                  placeholder="John Doe"
+                  placeholder="Enter your full name"
                 />
                 {errors.name && <span className="error-message">{errors.name}</span>}
-              </div>
+              </FormGroup>
 
-              <div>
+              <FormGroup className="form-group">
                 <label htmlFor="email">Your Email</label>
                 <input
                   type="email"
@@ -247,12 +300,12 @@ const ContactSection = () => {
                   value={formData.email}
                   onChange={handleChange}
                   className={errors.email ? 'error' : ''}
-                  placeholder="john@example.com"
+                  placeholder="you@mmmut.ac.in"
                 />
                 {errors.email && <span className="error-message">{errors.email}</span>}
-              </div>
+              </FormGroup>
 
-              <div>
+              <FormGroup className="form-group">
                 <label htmlFor="subject">Subject</label>
                 <input
                   type="text"
@@ -264,9 +317,9 @@ const ContactSection = () => {
                   placeholder="Your Subject"
                 />
                 {errors.subject && <span className="error-message">{errors.subject}</span>}
-              </div>
+              </FormGroup>
 
-              <div>
+              <FormGroup className="form-group">
                 <label htmlFor="message">Your Message</label>
                 <textarea
                   id="message"
@@ -278,7 +331,7 @@ const ContactSection = () => {
                   placeholder="Write your message here..."
                 ></textarea>
                 {errors.message && <span className="error-message">{errors.message}</span>}
-              </div>
+              </FormGroup>
 
               <button
                 type="submit"

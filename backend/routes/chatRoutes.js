@@ -38,7 +38,7 @@ router.post(
  * GET /api/chat/history/:sessionId
  * Get chat history for a session
  */
-router.get("/history/:sessionId", getChatHistory);
+router.get("/history/:sessionId", optionalAuth, getChatHistory);
 
 /**
  * POST /api/chat/feedback

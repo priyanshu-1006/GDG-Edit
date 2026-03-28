@@ -128,7 +128,7 @@ router.post('/auth/initiate-login', async (req, res) => {
         } catch (emailError) {
             console.error('Failed to send OTP email:', emailError);
             // Continue anyway - OTP is still in database
-            console.log(`📧 [FALLBACK] OTP for ${email}: ${otp}`);
+            console.warn(`📧 [FALLBACK] OTP generated for ${email} but email delivery failed`);
         }
 
         res.json({

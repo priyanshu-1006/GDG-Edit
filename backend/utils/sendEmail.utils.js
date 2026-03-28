@@ -1,74 +1,77 @@
 import { sendGlobalEmail } from "./unifiedEmail.js";
 
-const sendMail = async (receiver, status) => {
-  let mailSubject = "";
-  let mailText = "";
-  let mailHTML = "";
+const formatEventDate = (value) => {
+  if (!value) return "To be announced";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "To be announced";
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
 
-  if(status === "approved"){
-    mailSubject = "🎉 Your Event Registration Has Been Approved!";
-    mailText = `Hi${receiver.formData.fullName}`;
-    mailHTML = `<div class="email-container">
-    <div class="header">
-      <h1>🎉 Registration Approved!</h1>
-    </div>
-    <div class="content">
-      <p>Hi <strong>${receiver.formData.fullName}</strong>,</p>
-      <p>Great news! Your registration for <strong>${receiver.event}</strong> has been successfully approved.</p>
+const sendMail = async (registration, status) => {
+  if (!registration || !["approved", "rejected"].includes(status)) {
+    return false;
+  }
 
-      <div class="details">
-        <p><strong>Event Name:</strong> ${receiver.event}</p>
-        <p><strong>Date/Time:</strong> ${receiver.attendanceTime}</p>
+  const recipientEmail = registration.user?.email || registration.formData?.email;
+  const fullName =
+    registration.user?.name || registration.formData?.fullName || "Participant";
+  const eventName = registration.event?.name || "GDG MMMUT Event";
+  const eventDate = formatEventDate(registration.event?.date);
+
+  if (!recipientEmail) {
+    console.error("Registration email skipped: recipient email missing");
+    return false;
+  }
+
+  let subject = "";
+  let text = "";
+  let html = "";
+
+  if (status === "approved") {
+    subject = "Your Event Registration Has Been Approved";
+    text = `Hi ${fullName},\n\nYour registration for ${eventName} has been approved.\nEvent Date/Time: ${eventDate}\n\nSee you there!\nGDG MMMUT Team`;
+    html = `
+      <div>
+        <h2>Registration Approved</h2>
+        <p>Hi <strong>${fullName}</strong>,</p>
+        <p>Your registration for <strong>${eventName}</strong> has been approved.</p>
+        <p><strong>Event Date/Time:</strong> ${eventDate}</p>
+        <p>We are excited to have you with us.</p>
+        <p>GDG MMMUT Team</p>
       </div>
-
-      <p>You’re all set to attend! We’re excited to have you join us for an amazing experience.</p>
-
-      <p>If you have any questions, feel free to reply to this email or contact us at <a href="mailto:gdgdeveloper2025@gmail.com">gdgdeveloper2025@gmail.com</a>.</p>
-
-      <p>See you soon! 👋</p>
-      <p>— The Google Developer Group</p>
-    </div>
-  </div>`;
-  } else if (status === "rejected") {
-    mailSubject = "⚠️ Registration Not Approved";
-    mailText = "";
-    mailHTML = `<div class="email-container">
-    <div class="header">
-      <h1>⚠️ Registration Not Approved</h1>
-    </div>
-    <div class="content">
-      <p>Hi <strong>${receiver.formData.fullName}</strong>,</p>
-      <p>We appreciate your interest in <strong>${receiver.event}</strong>. Unfortunately, your registration could not be approved at this time.</p>
-
-      <div class="details">
-        <p><strong>Event Name:</strong> ${receiver.event}</p>
+    `;
+  } else {
+    subject = "Update on Your Event Registration";
+    text = `Hi ${fullName},\n\nWe appreciate your interest in ${eventName}. Unfortunately, your registration could not be approved at this time.\n\nRegards,\nGDG MMMUT Team`;
+    html = `
+      <div>
+        <h2>Registration Update</h2>
+        <p>Hi <strong>${fullName}</strong>,</p>
+        <p>We appreciate your interest in <strong>${eventName}</strong>. Unfortunately, your registration could not be approved at this time.</p>
+        <p>Thank you for your understanding.</p>
+        <p>GDG MMMUT Team</p>
       </div>
-
-      <p>This may be due to limited capacity or not meeting certain participation criteria. Please don’t be discouraged — we’d love to have you join us for future events!</p>
-
-      <p>If you have any questions, feel free to reply to this email or contact us at <a href="mailto:gdgdeveloper2025@gmail.com">gdgdeveloper2025@gmail.com</a>.</p>
-
-      <p>Thank you for your understanding.</p>
-      <p>— The Google Developer Group</p>
-    </div>
-  </div>
-`;
+    `;
   }
 
   try {
-    console.log(receiver);
-    const success = await sendGlobalEmail({
-      to: receiver.formData.email,
-      subject: mailSubject,
-      text: mailText,
-      html: mailHTML,
+    return await sendGlobalEmail({
+      to: recipientEmail,
+      subject,
+      text,
+      html,
     });
-
-    return success ? "sent" : null;
   } catch (err) {
-    console.error("Error while sending mail", err);
-    return null;
+    console.error("Error while sending registration email", err);
+    return false;
   }
-}
+};
 
 export default sendMail;

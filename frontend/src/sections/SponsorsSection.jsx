@@ -2,6 +2,15 @@ import { useRef } from 'react';
 import styled from 'styled-components';
 import { motion, useInView } from 'framer-motion';
 
+const FALLBACK_SPONSOR_LOGO = '/gdg_logo.svg';
+
+const handleSponsorLogoError = (event) => {
+  const img = event.currentTarget;
+  if (img.dataset.fallbackApplied === 'true') return;
+  img.dataset.fallbackApplied = 'true';
+  img.src = FALLBACK_SPONSOR_LOGO;
+};
+
 const SponsorsSectionContainer = styled.section`
   padding: 6rem 2rem;
   background-color: ${({ theme }) => theme.colors.background.primary};
@@ -241,21 +250,21 @@ const sponsorsData = {
       id: 3,
       name: "Android",
       description: "Mobile operating system",
-      logo: "https://developer.android.com/static/images/brand/Android_Robot.png",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/d/d7/Android_robot.svg",
       website: "https://android.com"
     },
     {
       id: 4,
       name: "TensorFlow",
       description: "Machine learning framework",
-      logo: "",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg",
       website: "https://tensorflow.org"
     },
     {
       id: 5,
       name: "Chrome",
       description: "Web browser and platform",
-      logo: "https://www.google.com/chrome/static/images/chrome-logo.svg",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Chrome_icon_%282011%29.png",
       website: "https://www.google.com/chrome"
     }
   ],
@@ -278,7 +287,7 @@ const sponsorsData = {
       id: 8,
       name: "Google Maps Platform",
       description: "Location-based services",
-      logo: "https://developers.google.com/static/maps/images/maps-icon.svg",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg",
       website: "https://developers.google.com/maps"
     }
   ]
@@ -332,7 +341,13 @@ const SponsorsSection = () => {
                 {sponsorsData.platinum.map((sponsor) => (
                   <SponsorCard key={sponsor.id} variants={itemVariants}>
                     <SponsorLogo>
-                      <img src={sponsor.logo} alt={`${sponsor.name} logo`} />
+                      <img
+                        src={sponsor.logo || FALLBACK_SPONSOR_LOGO}
+                        alt={`${sponsor.name} logo`}
+                        loading="lazy"
+                        decoding="async"
+                        onError={handleSponsorLogoError}
+                      />
                     </SponsorLogo>
                     <SponsorContent>
                       <SponsorName>{sponsor.name}</SponsorName>
@@ -353,7 +368,13 @@ const SponsorsSection = () => {
                 {sponsorsData.gold.map((sponsor) => (
                   <SponsorCard key={sponsor.id} variants={itemVariants}>
                     <SponsorLogo>
-                      <img src={sponsor.logo} alt={`${sponsor.name} logo`} />
+                      <img
+                        src={sponsor.logo || FALLBACK_SPONSOR_LOGO}
+                        alt={`${sponsor.name} logo`}
+                        loading="lazy"
+                        decoding="async"
+                        onError={handleSponsorLogoError}
+                      />
                     </SponsorLogo>
                     <SponsorContent>
                       <SponsorName>{sponsor.name}</SponsorName>
@@ -374,7 +395,13 @@ const SponsorsSection = () => {
                 {sponsorsData.silver.map((sponsor) => (
                   <SponsorCard key={sponsor.id} variants={itemVariants}>
                     <SponsorLogo>
-                      <img src={sponsor.logo} alt={`${sponsor.name} logo`} />
+                      <img
+                        src={sponsor.logo || FALLBACK_SPONSOR_LOGO}
+                        alt={`${sponsor.name} logo`}
+                        loading="lazy"
+                        decoding="async"
+                        onError={handleSponsorLogoError}
+                      />
                     </SponsorLogo>
                     <SponsorContent>
                       <SponsorName>{sponsor.name}</SponsorName>

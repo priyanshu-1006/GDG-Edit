@@ -7,7 +7,7 @@ import {
   XCircle,
   UserCheck,
 } from "lucide-react";
-import axios from "axios";
+import { apiClient } from "../../utils/apiUtils";
 
 const Registrations = () => {
   const [registrations, setRegistrations] = useState([]);
@@ -29,13 +29,9 @@ const Registrations = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get(
-        `${window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://gdg-backend-ten.vercel.app"}/api/admin/events`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: { limit: 100 },
-        },
-      );
+      const response = await apiClient.get('/api/admin/events', {
+        params: { limit: 100 },
+      });
       setEvents(response.data.events);
     } catch (error) {
       console.error("Failed to fetch events:", error);
@@ -45,19 +41,15 @@ const Registrations = () => {
   const fetchRegistrations = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://gdg-backend-ten.vercel.app"}/api/admin/registrations`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: {
-            page: pagination.page,
-            limit: pagination.limit,
-            search: searchTerm,
-            status: filterStatus,
-            eventId: selectedEvent,
-          },
+      const response = await apiClient.get('/api/admin/registrations', {
+        params: {
+          page: pagination.page,
+          limit: pagination.limit,
+          search: searchTerm,
+          status: filterStatus,
+          eventId: selectedEvent,
         },
-      );
+      });
       setRegistrations(response.data.registrations);
       setPagination((prev) => ({
         ...prev,
@@ -82,16 +74,7 @@ const Registrations = () => {
 
   const handleApprove = async (registrationId) => {
     try {
-      const API_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:5000"
-        : "https://gdg-backend-ten.vercel.app";
-      await axios.patch(
-        `${API_URL}/api/admin/registrations/${registrationId}/approve`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
+      await apiClient.patch(`/api/admin/registrations/${registrationId}/approve`, {});
       fetchRegistrations();
     } catch (error) {
       console.error("Failed to approve registration:", error);
@@ -101,16 +84,7 @@ const Registrations = () => {
   const handleReject = async (registrationId) => {
     const reason = prompt("Enter rejection reason (optional):");
     try {
-      const API_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:5000"
-        : "https://gdg-backend-ten.vercel.app";
-      await axios.patch(
-        `${API_URL}/api/admin/registrations/${registrationId}/reject`,
-        { reason },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
+      await apiClient.patch(`/api/admin/registrations/${registrationId}/reject`, { reason });
       fetchRegistrations();
     } catch (error) {
       console.error("Failed to reject registration:", error);
@@ -124,16 +98,9 @@ const Registrations = () => {
     }
 
     try {
-      const API_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:5000"
-        : "https://gdg-backend-ten.vercel.app";
-      await axios.post(
-        `${API_URL}/api/admin/registrations/bulk-approve`,
-        { registrationIds: selectedRegistrations },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
+      await apiClient.post('/api/admin/registrations/bulk-approve', {
+        registrationIds: selectedRegistrations,
+      });
       setSelectedRegistrations([]);
       fetchRegistrations();
     } catch (error) {
@@ -143,16 +110,9 @@ const Registrations = () => {
 
   const handleMarkAttendance = async (registrationId, attended) => {
     try {
-      const API_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:5000"
-        : "https://gdg-backend-ten.vercel.app";
-      await axios.patch(
-        `${API_URL}/api/admin/registrations/${registrationId}/attendance`,
-        { attended },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
+      await apiClient.patch(`/api/admin/registrations/${registrationId}/attendance`, {
+        attended,
+      });
       fetchRegistrations();
     } catch (error) {
       console.error("Failed to mark attendance:", error);
@@ -161,17 +121,10 @@ const Registrations = () => {
 
   const handleExport = async () => {
     try {
-      const API_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:5000"
-        : "https://gdg-backend-ten.vercel.app";
-      const response = await axios.get(
-        `${API_URL}/api/admin/registrations/export`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: { eventId: selectedEvent },
-          responseType: "blob",
-        },
-      );
+      const response = await apiClient.get('/api/admin/registrations/export', {
+        params: { eventId: selectedEvent },
+        responseType: 'blob',
+      });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;

@@ -1,4 +1,4 @@
-np# Immerse Mail System Setup Guide
+# Immerse Mail System Setup Guide
 
 ## Overview
 
@@ -10,7 +10,7 @@ Add the following to your `.env` file:
 
 ```env
 # Immerse Mail System
-IMMERSE_RESEND_API_KEY=re_XL7ug13L_MYvpE4rk1YWP4o7RUxKx71Je
+IMMERSE_RESEND_API_KEY=your-resend-api-key
 IMMERSE_JWT_SECRET=your-super-secret-jwt-key-change-in-production
 ```
 
@@ -29,6 +29,14 @@ npm install resend
 
 ### 2. Create Initial Admin
 
+Set bootstrap credentials in environment variables:
+
+```env
+IMMERSE_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+IMMERSE_BOOTSTRAP_ADMIN_PASSWORD=change-this-password
+IMMERSE_BOOTSTRAP_ADMIN_NAME=Immerse Admin
+```
+
 Run the admin creation script:
 
 ```bash
@@ -36,11 +44,7 @@ cd backend
 node scripts/createImmerseAdmin.js
 ```
 
-This creates a super admin account:
-- **Email**: admin@immerse.mmmut.app
-- **Password**: Immerse@2026
-
-> ⚠️ **Change the password immediately after first login!**
+This creates a super admin account using the environment variable values.
 
 ### 3. Seed Default Templates
 

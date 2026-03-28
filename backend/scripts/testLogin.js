@@ -9,12 +9,19 @@ const testLogin = async () => {
     await connectDB();
     console.log('✅ Connected to database\n');
 
-    const email = 'admin@gdg.com';
-    const password = 'admin@123';
+    const [, , emailArg, passwordArg] = process.argv;
+    const email = emailArg || process.env.TEST_LOGIN_EMAIL;
+    const password = passwordArg || process.env.TEST_LOGIN_PASSWORD;
+
+    if (!email || !password) {
+      console.log('Usage: node scripts/testLogin.js <email> <password>');
+      console.log('Or set env vars: TEST_LOGIN_EMAIL, TEST_LOGIN_PASSWORD');
+      process.exit(1);
+    }
 
     console.log('🧪 Testing login credentials...');
     console.log('📧 Email:', email);
-    console.log('🔐 Password:', password);
+    console.log('🔐 Password: [hidden]');
     console.log('');
 
     // Find user
@@ -39,7 +46,7 @@ const testLogin = async () => {
       console.log('✅✅✅ PASSWORD CORRECT! ✅✅✅');
       console.log('\nYou can now login with:');
       console.log('Email:', email);
-      console.log('Password:', password);
+      console.log('Password: [the one you provided]');
     } else {
       console.log('❌❌❌ PASSWORD INCORRECT! ❌❌❌');
       console.log('\nTrying to reset password...');
@@ -55,7 +62,7 @@ const testLogin = async () => {
         console.log('✅ Password reset successful!');
         console.log('You can now login with:');
         console.log('Email:', email);
-        console.log('Password:', password);
+        console.log('Password: [the one you provided]');
       } else {
         console.log('❌ Password reset failed!');
       }

@@ -465,6 +465,31 @@ export const getChatHistory = async (req, res) => {
       });
     }
 
+    const isSuperAdmin = req.user?.role === "super_admin";
+
+    if (!isSuperAdmin) {
+      const hasBoundUser = !!session.userId;
+
+      if (hasBoundUser) {
+        if (!req.user || session.userId.toString() !== req.user._id.toString()) {
+          return res.status(403).json({
+            success: false,
+            message: "Not authorized to access this session",
+          });
+        }
+      } else {
+        const requestIp = req.ip || req.connection?.remoteAddress;
+        const sessionIp = session.metadata?.ip;
+
+        if (!sessionIp || !requestIp || sessionIp !== requestIp) {
+          return res.status(403).json({
+            success: false,
+            message: "Not authorized to access this anonymous session",
+          });
+        }
+      }
+    }
+
     res.json({
       success: true,
       messages: session.messages,

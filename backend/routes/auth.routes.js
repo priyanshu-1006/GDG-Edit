@@ -11,6 +11,9 @@ import { sendGlobalEmail } from '../utils/unifiedEmail.js';
 
 const router = express.Router();
 
+const requireResendForOtp =
+  process.env.NODE_ENV === 'production' || process.env.REQUIRE_RESEND_FOR_OTP === 'true';
+
 /**
  * Generate a 6-digit OTP
  */
@@ -228,16 +231,18 @@ router.post('/admin/initiate-login', async (req, res, next) => {
     });
 
     // Send OTP email
-    try {
-      await sendGlobalEmail({
-        to: email,
-        subject: 'Your GDG Admin Login OTP - Valid for 2 Minutes',
-        html: getAdminOTPEmailHTML(otp, user.name)
+    const emailSent = await sendGlobalEmail({
+      to: email,
+      subject: 'Your GDG Admin Login OTP - Valid for 2 Minutes',
+      html: getAdminOTPEmailHTML(otp, user.name),
+      requireResend: requireResendForOtp,
+    });
+
+    if (!emailSent) {
+      return res.status(503).json({
+        success: false,
+        message: 'Unable to deliver OTP email right now. Please try again in a moment.',
       });
-    } catch (emailError) {
-      console.error('Failed to send OTP email:', emailError);
-      // Continue anyway - OTP is still in database
-      console.log(`📧 [FALLBACK] OTP for ${email}: ${otp}`);
     }
 
     res.json({
@@ -493,6 +498,7 @@ router.post('/event-manager/send-otp', async (req, res) => {
       to: email,
       from: '"GDG MMMUT" <team@gdg.mmmut.app>',
       subject: 'Your GDG MMMUT Event Manager Verification Code',
+      requireResend: requireResendForOtp,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
           <div style="background:#4285f4;padding:30px 40px;text-align:center;">

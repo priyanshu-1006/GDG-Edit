@@ -1,8 +1,42 @@
-# React + Vite
+# GDG MMMUT Frontend Setup
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Prerequisites
 
-Currently, two official plugins are available:
+- Node.js 18+
+- Backend API running (default: `http://localhost:5000`)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Install
+
+```bash
+cd frontend
+npm install
+```
+
+## Environment Setup
+
+1. Copy env template:
+
+```bash
+copy .env.example .env
+```
+
+2. Configure values in `.env`:
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_FRONTEND_URL=http://localhost:5173
+```
+
+## Run
+
+```bash
+npm run dev
+```
+
+Default app URL: `http://localhost:5173`
+
+## Build
+
+```bash
+npm run build
+```

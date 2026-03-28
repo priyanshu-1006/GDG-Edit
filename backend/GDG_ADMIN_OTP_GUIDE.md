@@ -25,6 +25,10 @@ There are two ways to seed admin users:
 **Option A: Preset Admins (Recommended)**
 ```bash
 cd backend
+# Add these to backend/.env first:
+# GDG_PRESET_SUPER_ADMIN_PASSWORD=<strong-password>
+# GDG_PRESET_ADMIN_PASSWORD=<strong-password>
+# GDG_PRESET_EVENT_MANAGER_PASSWORD=<strong-password>
 npm run seed-admins
 # Select: "yes" for preset admins
 ```
@@ -33,17 +37,17 @@ npm run seed-admins
 ```
 🏆 Super Admin Portal
    Email: superadmin@gdg.mmmut.app
-   Password: GDGSuperAdmin@2026
+  Password: configured via GDG_PRESET_SUPER_ADMIN_PASSWORD
    Portal: /super-admin
 
 👨‍💼 Admin Portal
    Email: admin@gdg.mmmut.app
-   Password: GDGAdmin@2026
+  Password: configured via GDG_PRESET_ADMIN_PASSWORD
    Portal: /admin
 
 📅 Event Manager Portal
    Email: eventmanager@gdg.mmmut.app
-   Password: EventManager@2026
+  Password: configured via GDG_PRESET_EVENT_MANAGER_PASSWORD
    Portal: /event-manager
 ```
 
@@ -90,7 +94,7 @@ npm run dev
 ```json
 {
   "email": "superadmin@gdg.mmmut.app",
-  "password": "GDGSuperAdmin@2026"
+  "password": "<configured-password>"
 }
 ```
 
@@ -330,7 +334,7 @@ backend/
 ├── services/
 │   └── emailService.js                (Existing - used for OTP emails)
 ├── scripts/
-│   ├── seedSuperAdmin.js              (IMMERSE - for priyanshudlw1@gmail.com)
+│   ├── seedSuperAdmin.js              (IMMERSE - bootstrap via env-configured credentials)
 │   └── seedAdmins.js                  (NEW - for GDG admin users)
 └── OTP_IMPLEMENTATION.md              (IMMERSE guide)
 
@@ -499,7 +503,7 @@ npm run dev
 # Test login
 # Go to: http://localhost:5173/admin/login
 # Email: superadmin@gdg.mmmut.app
-# Password: GDGSuperAdmin@2026
+# Password: [use configured preset password]
 # OTP: Check your email
 ```
 

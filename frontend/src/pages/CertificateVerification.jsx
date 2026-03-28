@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ParticlesBackground from '../components/Particles';
+import { API_BASE_URL } from '../config/api';
 
 // Reusing container styles slightly modified
 const PageContainer = styled.div`
@@ -120,7 +121,7 @@ const CertificateVerification = () => {
     // For now, simpler redirect to the display page if that's how it works
     // Or we could fetch here to pre-validate
     try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/certificates/verify/${serial}`);
+      const response = await fetch(`${API_BASE_URL}/api/certificates/verify/${serial}`);
         const data = await response.json();
         
         if (response.ok) {

@@ -18,6 +18,19 @@ console.log(
 );
 console.log("MONGODB_URI:", process.env.MONGODB_URI ? "Loaded" : "NOT LOADED");
 
+if (!process.env.IMMERSE_JWT_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    console.error("❌ Missing required env var: IMMERSE_JWT_SECRET");
+    process.exit(1);
+  }
+
+  process.env.IMMERSE_JWT_SECRET =
+    process.env.JWT_SECRET || "dev-immerse-jwt-secret-change-me";
+  console.warn(
+    "⚠️ IMMERSE_JWT_SECRET not set. Using development fallback; set IMMERSE_JWT_SECRET in backend/.env.",
+  );
+}
+
 // Now import modules that need env vars
 import connectDB from "./config/database.js";
 import "./config/passport.js";

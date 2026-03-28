@@ -440,7 +440,7 @@ export default function Team() {
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 250px"
                       alt={member.name}
                       loading={(member.id || member._id) <= 104 ? 'eager' : 'lazy'}
-                      fetchPriority={(member.id || member._id) <= 104 ? 'high' : 'auto'}
+                      fetchpriority={(member.id || member._id) <= 104 ? 'high' : 'auto'}
                       referrerPolicy={!isCloudinaryUrl(member?.image) ? 'no-referrer' : undefined}
                       decoding="async"
                       style={{

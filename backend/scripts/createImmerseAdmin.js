@@ -4,13 +4,23 @@
  */
 
 import 'dotenv/config';
-import mongoose from 'mongoose';
 import ImmerseAdmin from '../models/ImmerseAdmin.js';
 import connectDB from '../config/database.js';
 
 const createImmerseAdmin = async () => {
     try {
         await connectDB();
+
+        const bootstrapEmail = process.env.IMMERSE_BOOTSTRAP_ADMIN_EMAIL;
+        const bootstrapPassword = process.env.IMMERSE_BOOTSTRAP_ADMIN_PASSWORD;
+        const bootstrapName = process.env.IMMERSE_BOOTSTRAP_ADMIN_NAME || 'Immerse Admin';
+
+        if (!bootstrapEmail || !bootstrapPassword) {
+            console.error('❌ Missing bootstrap admin credentials in environment variables.');
+            console.error('   Required: IMMERSE_BOOTSTRAP_ADMIN_EMAIL, IMMERSE_BOOTSTRAP_ADMIN_PASSWORD');
+            console.error('   Optional: IMMERSE_BOOTSTRAP_ADMIN_NAME');
+            process.exit(1);
+        }
 
         // Check if super admin already exists
         const existingAdmin = await ImmerseAdmin.findOne({ role: 'immerse_super_admin' });
@@ -23,16 +33,16 @@ const createImmerseAdmin = async () => {
 
         // Create super admin
         const admin = await ImmerseAdmin.create({
-            name: 'Immerse Admin',
-            email: 'admin@immerse.mmmut.app',
-            password: 'Immerse@2026', // Change this after first login!
+            name: bootstrapName,
+            email: bootstrapEmail,
+            password: bootstrapPassword,
             role: 'immerse_super_admin',
             isActive: true
         });
 
         console.log('✅ Immerse Super Admin created successfully!');
         console.log('   Email:', admin.email);
-        console.log('   Password: Immerse@2026 (Please change after first login!)');
+        console.log('   Password: configured via IMMERSE_BOOTSTRAP_ADMIN_PASSWORD');
         console.log('');
         console.log('🔐 Login at: /immerse/login');
         

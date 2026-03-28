@@ -16,7 +16,9 @@
     "quick-admin": "node scripts/quickAdmin.js",
     "fix-admin-password": "node scripts/updatePassword.js",
     "seed-super-admin": "node scripts/seedSuperAdmin.js",
-    "seed-admins": "node scripts/seedAdmins.js"
+    "seed-admins": "node scripts/seedAdmins.js",
+    "migrate-indexes": "node scripts/migrateIndexes.js",
+    "test:email": "node scripts/sendTestEmail.js"
   },
   "keywords": [
     "gdg",

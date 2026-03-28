@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useAuth } from '../../contexts/useAuth';
 import { FiCalendar, FiAward, FiUsers, FiTrendingUp, FiClock, FiMapPin } from 'react-icons/fi';
+import { API_BASE_URL } from '../../config/api';
 
 const OverviewContainer = styled.div`
   animation: fadeIn 0.5s ease;
@@ -303,7 +304,6 @@ const Overview = () => {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       // Fetch user registrations
       const registrationsRes = await axios.get(

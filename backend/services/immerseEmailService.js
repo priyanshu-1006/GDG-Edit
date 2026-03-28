@@ -6,9 +6,9 @@ import { transporter } from '../utils/unifiedEmail.js';
 
 class ImmerseEmailService {
     constructor() {
-        // Use the global Resend API key. Trim whitespace to prevent Vercel pasted errors.
-        this.apiKey = process.env.RESEND_API_KEY?.trim();
-        this.domain = 'gdg.mmmut.app';
+        // Prefer IMMERSE-specific key when provided, otherwise use the global key.
+        this.apiKey = process.env.IMMERSE_RESEND_API_KEY?.trim() || process.env.RESEND_API_KEY?.trim();
+        this.domain = process.env.IMMERSE_FROM_DOMAIN || 'gdg.mmmut.app';
 
         console.log('📧 Immerse Email Service Initializing...');
         console.log('   API Key present:', !!this.apiKey);
@@ -22,8 +22,8 @@ class ImmerseEmailService {
             this.resend = new Resend(this.apiKey);
         }
 
-        this.fromEmail = `team@${this.domain}`;
-        this.fromName = 'IMMERSE 2026 - MMMUT';
+        this.fromEmail = process.env.IMMERSE_FROM_EMAIL || `team@${this.domain}`;
+        this.fromName = process.env.IMMERSE_FROM_NAME || 'IMMERSE 2026 - MMMUT';
         console.log('   From:', `${this.fromName} <${this.fromEmail}>`);
     }
 

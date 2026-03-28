@@ -7,13 +7,19 @@ import {
     notificationTemplate
 } from '../utils/emailTemplates.js';
 
+const maskEmailAddress = (email) => {
+    if (!email || typeof email !== 'string' || !email.includes('@')) return '[REDACTED]';
+    const [local, domain] = email.split('@');
+    const visible = local.slice(0, 2);
+    return `${visible}***@${domain}`;
+};
+
 class EmailService {
     constructor() {
-        this.apiKey = process.env.RESEND_API_KEY;
+        this.apiKey = process.env.RESEND_API_KEY?.trim();
 
         console.log('📧 Email Service Initializing...');
         console.log('   API Key present:', !!this.apiKey);
-        console.log('   API Key prefix:', this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'N/A');
 
         // Check if API key is the placeholder or missing
         if (!this.apiKey || this.apiKey.includes('placeholder')) {
@@ -24,8 +30,8 @@ class EmailService {
             this.resend = new Resend(this.apiKey);
         }
 
-        this.fromEmail = 'support@gdg.mmmut.app';
-        this.fromName = 'Google Developers Group On Campus MMMUT Gorakhpur';
+        this.fromEmail = process.env.RESEND_FROM_EMAIL || 'team@gdg.mmmut.app';
+        this.fromName = process.env.RESEND_FROM_NAME || 'GDG MMMUT';
         console.log('   From:', `${this.fromName} <${this.fromEmail}>`);
     }
 
@@ -38,7 +44,7 @@ class EmailService {
         let errorMsg = null;
 
         if (!this.resend) {
-            console.log('📧 [MOCK EMAIL] To:', to);
+            console.log('📧 [MOCK EMAIL] To:', maskEmailAddress(to));
             console.log('   Subject:', subject);
             console.log('   Content Preview:', html.substring(0, 100) + '...');
             messageId = 'mock_id_' + Date.now();
@@ -50,14 +56,13 @@ class EmailService {
                     subject,
                     html,
                 });
-                console.log(`✅ Email sent to ${to}: ${data.data?.id}`);
+                console.log(`✅ Email sent to ${maskEmailAddress(to)}: ${data.data?.id}`);
                 messageId = data.data?.id;
             } catch (error) {
-                console.error(`❌ Error sending email to ${to}:`);
+                console.error(`❌ Error sending email to ${maskEmailAddress(to)}:`);
                 console.error('   Error name:', error.name);
                 console.error('   Error message:', error.message);
                 if (error.statusCode) console.error('   Status code:', error.statusCode);
-                if (error.response) console.error('   Response:', JSON.stringify(error.response));
                 status = 'failed';
                 errorMsg = error.message;
             }

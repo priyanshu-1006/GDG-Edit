@@ -31,6 +31,8 @@ copy .env.example .env
 # Server Configuration
 PORT=5000
 NODE_ENV=development
+API_BASE_URL=http://localhost:5000
+ALLOWED_ORIGINS=http://localhost:5173
 
 # Database - Choose one option:
 
@@ -65,10 +67,30 @@ FRONTEND_URL=http://localhost:5173
 # Session Secret (Change this!)
 SESSION_SECRET=your-session-secret-key-CHANGE-THIS
 
-# Immerse Mail System (Optional - for Immerse event management)
-IMMERSE_RESEND_API_KEY=your-resend-api-key
+# Mail Sender Configuration
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=team@gdg.mmmut.app
+RESEND_FROM_NAME=GDG MMMUT
+
+# Immerse Mail System (Optional - dedicated key/sender)
+IMMERSE_RESEND_API_KEY=your-immerse-resend-api-key
+IMMERSE_FROM_EMAIL=team@immerse.mmmut.app
+IMMERSE_FROM_NAME=IMMERSE 2026 - MMMUT
+IMMERSE_FROM_DOMAIN=immerse.mmmut.app
+
+# Resend enforcement for OTP routes
+REQUIRE_RESEND_FOR_OTP=false
+
 IMMERSE_JWT_SECRET=your-immerse-jwt-secret-CHANGE-THIS
+
+# Feature flags
+ENABLE_SETUP_ROUTES=false
+ENABLE_NOTIFICATIONS_MODULE=false
 ```
+
+Notes:
+- `IMMERSE_JWT_SECRET` is required in production.
+- For local development, if `IMMERSE_JWT_SECRET` is missing, the server uses a temporary fallback and prints a warning.
 
 ---
 

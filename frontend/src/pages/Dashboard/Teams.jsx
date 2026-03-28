@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { FiUsers, FiCalendar, FiLogOut, FiUserPlus } from 'react-icons/fi';
+import { API_BASE_URL } from '../../config/api';
 
 const Container = styled.div`
   animation: fadeIn 0.5s ease;
@@ -265,7 +266,6 @@ const Teams = () => {
   const fetchTeams = async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       const response = await axios.get(
         `${API_BASE_URL}/api/teams/user`,
@@ -288,7 +288,6 @@ const Teams = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = 'http://localhost:5000';
 
       await axios.delete(
         `${API_BASE_URL}/api/teams/${teamId}/leave`,

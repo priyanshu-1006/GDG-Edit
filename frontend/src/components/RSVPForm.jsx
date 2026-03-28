@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { Send, CheckCircle, AlertCircle, Loader2, Heart } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 // 🔹 Styled Components
 const FormContainer = styled.form`
@@ -176,7 +177,7 @@ const RSVPForm = ({ eventId, onSuccess }) => {
     setSubmitStatus('idle');
 
     try {
-      const response = await axios.post(`http://localhost:5000/api/rsvp/user`, formData);
+      const response = await axios.post(`${API_BASE_URL}/api/rsvp/user`, formData);
       setSubmitStatus('success');
       setTimeout(() => onSuccess(), 2000);
     } catch (err) {

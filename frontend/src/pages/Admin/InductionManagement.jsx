@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../contexts/useAuth";
+import { API_BASE_URL } from "../../config/api";
 
-const API = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api`;
+const API = `${API_BASE_URL}/api`;
 
 const InductionManagement = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -37,9 +38,13 @@ const InductionManagement = () => {
     if (!window.confirm(`Are you sure you want to permanently delete the application for ${name}?`)) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API}/induction/${id}`, {
+      const { data } = await axios.delete(`${API}/induction/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (data?.success) {
+        const deletedCount = Number(data.deletedCount || 1);
+        alert(`Deleted ${deletedCount} submission(s) for ${name}.`);
+      }
       fetchSubmissions();
       setSelectedStudent(null);
     } catch (err) {

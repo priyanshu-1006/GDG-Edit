@@ -729,6 +729,20 @@ const InductionForm = () => {
             section: data.user.section || '',
             rollNumber: data.user.rollNo || ''
           }));
+
+          // Check if this user already has an induction submission in DB.
+          try {
+            const submissionResponse = await fetch(`${API_BASE_URL}/api/induction/my-submission-status`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const submissionData = await submissionResponse.json();
+
+            if (submissionData.success && submissionData.hasSubmitted) {
+              setSubmitted(true);
+            }
+          } catch (submissionErr) {
+            console.error('Failed to fetch submission status:', submissionErr);
+          }
         } else {
           sessionStorage.removeItem('inductionToken');
           setAuthError('Session expired. Please sign in again.');
@@ -751,6 +765,7 @@ const InductionForm = () => {
   const handleLogout = () => {
     sessionStorage.removeItem('inductionToken');
     setAuthenticated(false);
+    setSubmitted(false);
     setAuthError(null);
     setFormData(prev => ({ ...prev, email: '', firstName: '', lastName: '' }));
   };
