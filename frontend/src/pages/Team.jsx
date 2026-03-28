@@ -209,6 +209,25 @@ function buildResponsiveSrcSet(url) {
   return widths.map(w => `${buildCloudinaryUrl(url, w)} ${w}w`).join(', ');
 }
 
+function normalizeExternalUrl(url) {
+  if (typeof url !== 'string') return '#';
+
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === '#') return '#';
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed.replace(/^\/+/, '')}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '#';
+    return parsed.toString();
+  } catch {
+    return '#';
+  }
+}
+
 export default function Team() {
   const [upload, setUpload] = useState(false);
   const [selectedYear, setSelectedYear] = useState("GDG Lead");
@@ -467,24 +486,27 @@ export default function Team() {
                     <MemberRole>{member.role}</MemberRole>
                     <SocialLinks>
                       <SocialLink
-                        href={member.social?.linkedin || '#'}
-                        target="_ blank"
+                        href={normalizeExternalUrl(member.social?.linkedin)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         whileHover={{ y: -3 }}
                         aria-label={`${member.name}'s LinkedIn`}
                       >
                         <i className="fab fa-linkedin"><FaLinkedin /></i>
                       </SocialLink>
                       <SocialLink
-                        href={member.social?.twitter || '#'}
+                        href={normalizeExternalUrl(member.social?.twitter)}
                         target="_blank"
+                        rel="noopener noreferrer"
                         whileHover={{ y: -3 }}
                         aria-label={`${member.name}'s Twitter`}
                       >
                         <i className="fab fa-twitter"><FaTwitter /></i>
                       </SocialLink>
                       <SocialLink
-                        href={member.social?.github || '#'}
+                        href={normalizeExternalUrl(member.social?.github)}
                         target="_blank"
+                        rel="noopener noreferrer"
                         whileHover={{ y: -3 }}
                         aria-label={`${member.name}'s GitHub`}
                       >

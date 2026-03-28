@@ -157,6 +157,33 @@ const Button = styled.button`
   `}
 `;
 
+function normalizeExternalUrl(url) {
+  if (typeof url !== "string") return "";
+
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === "#") return "";
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed.replace(/^\/+/, "")}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function normalizeSocialLinks(social = {}) {
+  return {
+    linkedin: normalizeExternalUrl(social.linkedin),
+    twitter: normalizeExternalUrl(social.twitter),
+    github: normalizeExternalUrl(social.github),
+  };
+}
+
 export default function TeamMemberModal({ member, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -211,7 +238,10 @@ export default function TeamMemberModal({ member, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    onSave({
+      ...formData,
+      social: normalizeSocialLinks(formData.social),
+    });
   };
 
   return (
