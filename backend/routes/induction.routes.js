@@ -6,7 +6,10 @@ import XLSX from 'xlsx';
 import cloudinary from '../config/cloudinary.js';
 import Induction from '../models/Induction.js';
 import InductionInvite from '../models/InductionInvite.js';
+import InductionPanel from '../models/InductionPanel.js';
+import InductionPanelEvaluation from '../models/InductionPanelEvaluation.js';
 import Settings from '../models/Settings.js';
+import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import PDFParser from 'pdf2json';
 import https from 'https';
@@ -219,6 +222,60 @@ const getInviteShareUrl = ({ inviteId, token }) => {
   return `${base}/induction/special/${encodeURIComponent(inviteId)}/${encodeURIComponent(token)}`;
 };
 
+const isApprovedEventManager = (userDoc) =>
+  userDoc?.role === 'event_manager' && userDoc?.isApproved !== false;
+
+const getOrCreateSettings = async () => {
+  let settings = await Settings.findOne();
+  if (!settings) {
+    settings = await Settings.create({
+      isInductionOpen: true,
+      piRound: 'shortlisted_online',
+      isPiStarted: false,
+    });
+  }
+  return settings;
+};
+
+const canAccessPanel = (panel, reqUser) => {
+  if (!panel || !reqUser) return false;
+  if (reqUser.role === 'super_admin') return true;
+  return panel.members.some((memberId) => String(memberId) === String(reqUser._id));
+};
+
+const findManagerConflicts = async ({ memberIds = [], excludePanelId }) => {
+  if (!memberIds.length) return [];
+
+  const query = {
+    members: { $in: memberIds },
+    isActive: true,
+  };
+
+  if (excludePanelId) {
+    query._id = { $ne: excludePanelId };
+  }
+
+  const conflictingPanels = await InductionPanel.find(query)
+    .select('name members')
+    .populate('members', 'name email');
+
+  if (!conflictingPanels.length) return [];
+
+  const memberIdSet = new Set(memberIds.map((id) => String(id)));
+
+  return conflictingPanels.flatMap((panel) =>
+    (panel.members || [])
+      .filter((member) => memberIdSet.has(String(member._id)))
+      .map((member) => ({
+        panelId: panel._id,
+        panelName: panel.name,
+        memberId: member._id,
+        memberName: member.name,
+        memberEmail: member.email,
+      })),
+  );
+};
+
 // Middleware to verify induction JWT
 const verifyInductionToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -397,6 +454,729 @@ router.get('/special/:inviteId/:token', async (req, res) => {
     });
   } catch (error) {
     console.error('Validate special link error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panel-members — Get eligible GDG members for induction panels
+router.get('/panel-members', protect, authorize('admin', 'super_admin'), async (req, res) => {
+  try {
+    const members = await User.find({
+      role: 'event_manager',
+      isApproved: true,
+    })
+      .select('name email role isApproved')
+      .sort({ name: 1 });
+
+    return res.json({ success: true, data: members });
+  } catch (error) {
+    console.error('Fetch panel members error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/pi-control — Get global PI controls
+router.get('/pi-control', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const settings = await getOrCreateSettings();
+    return res.json({
+      success: true,
+      data: {
+        piRound: settings.piRound || 'shortlisted_online',
+        isPiStarted: !!settings.isPiStarted,
+        piStartedAt: settings.piStartedAt || null,
+      },
+    });
+  } catch (error) {
+    console.error('Fetch PI control error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PUT /api/induction/pi-control — Update PI round or global start/stop
+router.put('/pi-control', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const settings = await getOrCreateSettings();
+    const hasRound = Object.prototype.hasOwnProperty.call(req.body || {}, 'piRound');
+    const hasStartToggle = Object.prototype.hasOwnProperty.call(req.body || {}, 'isPiStarted');
+
+    if (hasRound) {
+      const round = String(req.body?.piRound || '').trim();
+      const allowedRounds = ['shortlisted_online', 'shortlisted_offline'];
+      if (!allowedRounds.includes(round)) {
+        return res.status(400).json({ success: false, message: 'Invalid PI round' });
+      }
+      settings.piRound = round;
+      settings.isPiStarted = false;
+      settings.piStartedAt = null;
+      settings.piStartedBy = null;
+
+      await InductionPanel.updateMany(
+        { isActive: true },
+        { $set: { piStarted: false }, $unset: { piStartedAt: '', piStartedBy: '' } },
+      );
+    }
+
+    if (hasStartToggle) {
+      const shouldStart = !!req.body?.isPiStarted;
+      settings.isPiStarted = shouldStart;
+      settings.piStartedAt = shouldStart ? new Date() : null;
+      settings.piStartedBy = shouldStart ? req.user?._id : null;
+
+      await InductionPanel.updateMany(
+        { isActive: true },
+        shouldStart
+          ? { $set: { piStarted: true, piStartedAt: settings.piStartedAt, piStartedBy: req.user?._id } }
+          : { $set: { piStarted: false }, $unset: { piStartedAt: '', piStartedBy: '' } },
+      );
+    }
+
+    await settings.save();
+
+    return res.json({
+      success: true,
+      message: 'PI control updated successfully',
+      data: {
+        piRound: settings.piRound,
+        isPiStarted: settings.isPiStarted,
+        piStartedAt: settings.piStartedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Update PI control error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/pi-candidates — Get shortlisted candidates by selected PI round
+router.get('/pi-candidates', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const settings = await getOrCreateSettings();
+    const requestedRound = String(req.query?.round || '').trim();
+    const round = requestedRound || settings.piRound || 'shortlisted_online';
+    const allowedRounds = ['shortlisted_online', 'shortlisted_offline'];
+
+    if (!allowedRounds.includes(round)) {
+      return res.status(400).json({ success: false, message: 'Invalid PI round' });
+    }
+
+    const students = await Induction.find({ status: round })
+      .select('firstName lastName email rollNumber branch section status createdAt')
+      .sort({ firstName: 1, lastName: 1, rollNumber: 1 });
+
+    const studentIds = students.map((student) => student._id);
+    const panels = await InductionPanel.find({ 'students.student': { $in: studentIds } })
+      .select('name students.student');
+
+    const assignmentMap = new Map();
+    panels.forEach((panel) => {
+      (panel.students || []).forEach((entry) => {
+        assignmentMap.set(String(entry.student), {
+          panelId: panel._id,
+          panelName: panel.name,
+        });
+      });
+    });
+
+    const data = students.map((student) => ({
+      ...student.toObject(),
+      assignedPanel: assignmentMap.get(String(student._id)) || null,
+    }));
+
+    return res.json({ success: true, data, round });
+  } catch (error) {
+    console.error('Fetch PI candidates error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/panels — Create induction evaluation panel
+router.post('/panels', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const panelName = String(req.body?.name || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const memberUserIds = Array.isArray(req.body?.memberUserIds) ? req.body.memberUserIds : [];
+
+    if (!panelName) {
+      return res.status(400).json({ success: false, message: 'Panel name is required' });
+    }
+
+    if (!memberUserIds.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one panel member' });
+    }
+
+    const uniqueMemberIds = [...new Set(memberUserIds.map((id) => String(id)))];
+    const memberUsers = await User.find({ _id: { $in: uniqueMemberIds } }).select('_id role isApproved');
+
+    if (memberUsers.length !== uniqueMemberIds.length) {
+      return res.status(400).json({ success: false, message: 'Some selected panel members are invalid' });
+    }
+
+    const invalidMember = memberUsers.find((member) => !isApprovedEventManager(member));
+
+    if (invalidMember) {
+      return res.status(400).json({
+        success: false,
+        message: 'Panel members must be approved event managers',
+      });
+    }
+
+    const managerConflicts = await findManagerConflicts({ memberIds: uniqueMemberIds });
+    if (managerConflicts.length > 0) {
+      const conflict = managerConflicts[0];
+      return res.status(409).json({
+        success: false,
+        message: `${conflict.memberName || 'Selected manager'} is already assigned to ${conflict.panelName}. One event manager can be in only one panel.`,
+      });
+    }
+
+    const panel = await InductionPanel.create({
+      name: panelName,
+      description,
+      members: uniqueMemberIds,
+      createdBy: req.user?._id,
+    });
+
+    const populatedPanel = await InductionPanel.findById(panel._id).populate('members', 'name email role');
+    return res.status(201).json({ success: true, data: populatedPanel });
+  } catch (error) {
+    console.error('Create panel error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panels/:panelId — Get one panel details for management
+router.get('/panels/:panelId', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const panel = await InductionPanel.findById(panelId)
+      .populate('members', 'name email role')
+      .populate('students.student', 'firstName lastName email rollNumber branch section status');
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (!canAccessPanel(panel, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    }
+
+    return res.json({ success: true, data: panel });
+  } catch (error) {
+    console.error('Fetch panel detail error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/induction/panels/:panelId — Update panel details and members
+router.patch('/panels/:panelId', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const panel = await InductionPanel.findById(panelId);
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    const hasName = Object.prototype.hasOwnProperty.call(req.body || {}, 'name');
+    const hasDescription = Object.prototype.hasOwnProperty.call(req.body || {}, 'description');
+    const hasMembers = Object.prototype.hasOwnProperty.call(req.body || {}, 'memberUserIds');
+
+    if (hasName) {
+      const panelName = String(req.body?.name || '').trim();
+      if (!panelName) {
+        return res.status(400).json({ success: false, message: 'Panel name is required' });
+      }
+      panel.name = panelName;
+    }
+
+    if (hasDescription) {
+      panel.description = String(req.body?.description || '').trim();
+    }
+
+    if (hasMembers) {
+      const memberUserIds = Array.isArray(req.body?.memberUserIds) ? req.body.memberUserIds : [];
+      if (!memberUserIds.length) {
+        return res.status(400).json({ success: false, message: 'Select at least one panel member' });
+      }
+
+      const uniqueMemberIds = [...new Set(memberUserIds.map((id) => String(id)))];
+      const memberUsers = await User.find({ _id: { $in: uniqueMemberIds } }).select('_id role isApproved');
+
+      if (memberUsers.length !== uniqueMemberIds.length) {
+        return res.status(400).json({ success: false, message: 'Some selected panel members are invalid' });
+      }
+
+      const invalidMember = memberUsers.find((member) => !isApprovedEventManager(member));
+      if (invalidMember) {
+        return res.status(400).json({
+          success: false,
+          message: 'Panel members must be approved event managers',
+        });
+      }
+
+      const managerConflicts = await findManagerConflicts({
+        memberIds: uniqueMemberIds,
+        excludePanelId: panel._id,
+      });
+      if (managerConflicts.length > 0) {
+        const conflict = managerConflicts[0];
+        return res.status(409).json({
+          success: false,
+          message: `${conflict.memberName || 'Selected manager'} is already assigned to ${conflict.panelName}. One event manager can be in only one panel.`,
+        });
+      }
+
+      panel.members = uniqueMemberIds;
+    }
+
+    await panel.save();
+
+    const updatedPanel = await InductionPanel.findById(panel._id)
+      .populate('members', 'name email role')
+      .populate('students.student', 'firstName lastName email rollNumber branch status');
+
+    return res.json({ success: true, message: 'Panel updated successfully', data: updatedPanel });
+  } catch (error) {
+    console.error('Update panel error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/panels/:panelId/start-pi — Start PI round for a panel
+router.post('/panels/:panelId/start-pi', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const panel = await InductionPanel.findById(panelId);
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (panel.piStarted) {
+      return res.json({ success: true, message: 'PI round is already started for this panel' });
+    }
+
+    panel.piStarted = true;
+    panel.piStartedAt = new Date();
+    panel.piStartedBy = req.user?._id;
+    await panel.save();
+
+    return res.json({ success: true, message: 'PI round started successfully' });
+  } catch (error) {
+    console.error('Start PI error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panels — List induction panels (event managers see their own)
+router.get('/panels', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const includeStudents = String(req.query?.includeStudents || '') === 'true';
+    const query = req.user.role === 'event_manager'
+      ? { members: req.user._id, isActive: true }
+      : {};
+
+    let panelQuery = InductionPanel.find(query)
+      .populate('members', 'name email role')
+      .sort({ createdAt: -1 });
+
+    if (includeStudents) {
+      panelQuery = panelQuery.populate('students.student', 'firstName lastName email rollNumber branch status');
+    }
+
+    const panels = await panelQuery;
+
+    return res.json({ success: true, data: panels });
+  } catch (error) {
+    console.error('List panels error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/induction/panels/:panelId/students — Assign shortlisted students to panel
+router.patch('/panels/:panelId/students', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const studentIds = Array.isArray(req.body?.studentIds) ? req.body.studentIds : [];
+    const mode = String(req.body?.mode || 'add').toLowerCase();
+
+    if (!studentIds.length) {
+      return res.status(400).json({ success: false, message: 'studentIds array is required' });
+    }
+
+    const panel = await InductionPanel.findById(panelId);
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    const students = await Induction.find({ _id: { $in: studentIds } }).select('_id status');
+    const allowedStatuses = ['shortlisted_online', 'shortlisted_offline'];
+    const assignable = students.filter((student) => allowedStatuses.includes(student.status));
+
+    if (!assignable.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only shortlisted students can be assigned to panels',
+      });
+    }
+
+    const nextEntries = assignable.map((student) => ({
+      student: student._id,
+      addedBy: req.user?._id,
+      addedAt: new Date(),
+    }));
+
+    const assignableIds = assignable.map((student) => student._id);
+    const conflictingPanels = await InductionPanel.find({
+      _id: { $ne: panel._id },
+      'students.student': { $in: assignableIds },
+      isActive: true,
+    }).select('name students.student');
+
+    if (conflictingPanels.length > 0) {
+      const conflictingStudentIds = new Set(
+        conflictingPanels
+          .flatMap((conflictPanel) => conflictPanel.students || [])
+          .map((entry) => String(entry.student))
+          .filter((sid) => assignableIds.some((id) => String(id) === sid)),
+      );
+
+      if (conflictingStudentIds.size > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Some students are already assigned to another panel. One student can be in only one panel.',
+        });
+      }
+    }
+
+    if (mode === 'set') {
+      panel.students = nextEntries.map((entry, index) => ({
+        ...entry,
+        sequence: index + 1,
+      }));
+    } else {
+      const existingSet = new Set(panel.students.map((entry) => String(entry.student)));
+      const maxSequence = panel.students.reduce(
+        (max, entry) => Math.max(max, Number(entry.sequence || 0)),
+        0,
+      );
+      let nextSequence = maxSequence + 1;
+
+      nextEntries.forEach((entry) => {
+        if (!existingSet.has(String(entry.student))) {
+          panel.students.push({
+            ...entry,
+            sequence: nextSequence,
+          });
+          nextSequence += 1;
+        }
+      });
+    }
+
+    await panel.save();
+
+    const updatedPanel = await InductionPanel.findById(panel._id)
+      .populate('members', 'name email role')
+      .populate('students.student', 'firstName lastName email rollNumber branch status');
+
+    return res.json({
+      success: true,
+      message: 'Students assigned to panel successfully',
+      data: updatedPanel,
+    });
+  } catch (error) {
+    console.error('Assign panel students error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panels/:panelId/students — Get panel students with evaluations
+router.get('/panels/:panelId/students', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const settings = await getOrCreateSettings();
+    const panel = await InductionPanel.findById(panelId)
+      .populate('members', 'name email role')
+      .populate('students.student', 'firstName lastName email rollNumber branch status');
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (!canAccessPanel(panel, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    }
+
+    const studentIds = panel.students.map((entry) => entry.student?._id).filter(Boolean);
+    const evaluations = await InductionPanelEvaluation.find({
+      panel: panel._id,
+      student: { $in: studentIds },
+    }).populate('evaluator', 'name email role');
+
+    const evalByStudent = new Map();
+    evaluations.forEach((evaluation) => {
+      const key = String(evaluation.student);
+      const bucket = evalByStudent.get(key) || [];
+      bucket.push(evaluation);
+      evalByStudent.set(key, bucket);
+    });
+
+    const students = panel.students
+      .filter((entry) => entry.student)
+      .map((entry) => {
+        const sid = String(entry.student._id);
+        const list = evalByStudent.get(sid) || [];
+        const avgScore = list.length
+          ? Number((list.reduce((sum, ev) => sum + Number(ev.score || 0), 0) / list.length).toFixed(2))
+          : null;
+        const myEvaluation = list.find((ev) => String(ev.evaluator?._id) === String(req.user._id)) || null;
+
+        return {
+          sequence: entry.sequence || 1,
+          student: entry.student,
+          isFinalized: !!entry.isFinalized,
+          finalStatus: entry.finalStatus || null,
+          finalNote: entry.finalNote || '',
+          finalizedAt: entry.finalizedAt || null,
+          evaluations: list,
+          averageScore: avgScore,
+          myEvaluation,
+        };
+      })
+      .sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0));
+
+    return res.json({
+      success: true,
+      data: {
+        panel,
+        piControl: {
+          piRound: settings.piRound || 'shortlisted_online',
+          isPiStarted: !!settings.isPiStarted,
+          piStartedAt: settings.piStartedAt || null,
+        },
+        students,
+      },
+    });
+  } catch (error) {
+    console.error('Fetch panel students error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/panels/:panelId/evaluate — Save evaluator score for student
+router.post('/panels/:panelId/evaluate', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const {
+      studentId,
+      score,
+      overallRating,
+      technicalSkills,
+      softSkills,
+      comment,
+      review,
+      remarks,
+      recommendation,
+    } = req.body;
+
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: 'studentId is required' });
+    }
+
+    const overallRatingNumber = Number(overallRating);
+    const technicalSkillsNumber = Number(technicalSkills);
+    const softSkillsNumber = Number(softSkills);
+    const hasRubric =
+      !Number.isNaN(overallRatingNumber) &&
+      !Number.isNaN(technicalSkillsNumber) &&
+      !Number.isNaN(softSkillsNumber);
+    const rubricValid =
+      hasRubric &&
+      overallRatingNumber >= 1 && overallRatingNumber <= 10 &&
+      technicalSkillsNumber >= 1 && technicalSkillsNumber <= 10 &&
+      softSkillsNumber >= 1 && softSkillsNumber <= 10;
+
+    if (hasRubric && !rubricValid) {
+      return res.status(400).json({ success: false, message: 'Ratings must be between 1 and 10' });
+    }
+
+    const scoreNumber = !Number.isNaN(Number(score))
+      ? Number(score)
+      : hasRubric
+        ? Math.round(((overallRatingNumber + technicalSkillsNumber + softSkillsNumber) / 3) * 10)
+        : NaN;
+
+    if (Number.isNaN(scoreNumber) || scoreNumber < 0 || scoreNumber > 100) {
+      return res.status(400).json({ success: false, message: 'Score must be between 0 and 100' });
+    }
+
+    const settings = await getOrCreateSettings();
+    const panel = await InductionPanel.findById(panelId);
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (!canAccessPanel(panel, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    }
+
+    if (!settings.isPiStarted) {
+      return res.status(403).json({
+        success: false,
+        message: 'PI round is not started yet. Ask super admin to start PI first.',
+      });
+    }
+
+    const isStudentAssigned = panel.students.some((entry) => String(entry.student) === String(studentId));
+    if (!isStudentAssigned) {
+      return res.status(400).json({ success: false, message: 'Student is not assigned to this panel' });
+    }
+
+    const allowedRecommendations = ['hold', 'shortlisted_offline', 'selected', 'rejected'];
+    const safeRecommendation = allowedRecommendations.includes(String(recommendation || ''))
+      ? String(recommendation)
+      : 'hold';
+
+    const evaluationUpdate = {
+      score: scoreNumber,
+      comment: String(comment || '').trim(),
+      review: String(review || '').trim(),
+      remarks: String(remarks || '').trim(),
+      recommendation: safeRecommendation,
+    };
+
+    if (rubricValid) {
+      evaluationUpdate.overallRating = overallRatingNumber;
+      evaluationUpdate.technicalSkills = technicalSkillsNumber;
+      evaluationUpdate.softSkills = softSkillsNumber;
+    }
+
+    const evaluation = await InductionPanelEvaluation.findOneAndUpdate(
+      {
+        panel: panel._id,
+        student: studentId,
+        evaluator: req.user._id,
+      },
+      {
+        $set: evaluationUpdate,
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
+    ).populate('evaluator', 'name email role');
+
+    return res.json({ success: true, data: evaluation });
+  } catch (error) {
+    console.error('Save panel evaluation error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/panels/:panelId/finalize — Finalize panel decision for one student
+router.post('/panels/:panelId/finalize', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const { studentId, finalStatus, finalNote } = req.body;
+
+    if (!studentId || !finalStatus) {
+      return res.status(400).json({ success: false, message: 'studentId and finalStatus are required' });
+    }
+
+    if (!VALID_INDUCTION_STATUSES.includes(finalStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid final status' });
+    }
+
+    const panel = await InductionPanel.findById(panelId);
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (!canAccessPanel(panel, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    }
+
+    const settings = await getOrCreateSettings();
+    if (!settings.isPiStarted) {
+      return res.status(403).json({
+        success: false,
+        message: 'PI round is not started yet. Ask super admin to start PI first.',
+      });
+    }
+
+    const targetEntry = panel.students.find((entry) => String(entry.student) === String(studentId));
+    if (!targetEntry) {
+      return res.status(400).json({ success: false, message: 'Student is not assigned to this panel' });
+    }
+
+    targetEntry.isFinalized = true;
+    targetEntry.finalStatus = finalStatus;
+    targetEntry.finalizedBy = req.user._id;
+    targetEntry.finalizedAt = new Date();
+    targetEntry.finalNote = String(finalNote || '').trim();
+    await panel.save();
+
+    await Induction.findByIdAndUpdate(studentId, { $set: { status: finalStatus } });
+
+    return res.json({
+      success: true,
+      message: 'Student finalized successfully',
+    });
+  } catch (error) {
+    console.error('Finalize panel student error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panels/:panelId/students/:studentId — Get detailed student profile and my evaluation for panel
+router.get('/panels/:panelId/students/:studentId', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { panelId, studentId } = req.params;
+    const settings = await getOrCreateSettings();
+    const panel = await InductionPanel.findById(panelId).populate('members', 'name email role');
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    if (!canAccessPanel(panel, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    }
+
+    const panelEntry = panel.students.find((entry) => String(entry.student) === String(studentId));
+    if (!panelEntry) {
+      return res.status(404).json({ success: false, message: 'Student is not assigned to this panel' });
+    }
+
+    const student = await Induction.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const myEvaluation = await InductionPanelEvaluation.findOne({
+      panel: panel._id,
+      student: student._id,
+      evaluator: req.user._id,
+    }).populate('evaluator', 'name email role');
+
+    return res.json({
+      success: true,
+      data: {
+        panel,
+        panelEntry,
+        student,
+        myEvaluation,
+        piControl: {
+          piRound: settings.piRound || 'shortlisted_online',
+          isPiStarted: !!settings.isPiStarted,
+          piStartedAt: settings.piStartedAt || null,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Fetch panel student detail error:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -595,6 +1375,30 @@ router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), asy
     const parsedLimit = Math.max(parseInt(limit, 10) || 50, 1);
 
     const filter = buildInductionFilter({ status, branch, search });
+
+    if (req.user.role === 'event_manager') {
+      const myPanels = await InductionPanel.find({ members: req.user._id }).select('students.student');
+      const panelStudentIds = [...new Set(
+        myPanels
+          .flatMap((panel) => panel.students || [])
+          .map((entry) => String(entry.student))
+          .filter(Boolean),
+      )];
+
+      if (!panelStudentIds.length) {
+        return res.json({
+          success: true,
+          data: [],
+          pagination: {
+            total: 0,
+            page: parsedPage,
+            pages: 1,
+          },
+        });
+      }
+
+      filter._id = { $in: panelStudentIds };
+    }
 
     const submissions = await Induction.find(filter)
       .sort({ createdAt: -1 })

@@ -3,6 +3,8 @@ import { Routes, Route } from "react-router-dom";
 import { useTheme } from "./contexts/ThemeContext";
 import GlobalStyles from "./styles/GlobalStyles";
 import { ThemeProvider as StyledThemeProvider } from "styled-components";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import AppContainer from "./utils/AppContainer";
 import Spinner from "./components/GDG-Spinner";
 import CertificateDisplay from "./pages/CertificateDisplay";
@@ -41,6 +43,9 @@ const EditEvent = lazy(() => import("./pages/Admin/EditEvent"));
 const AdminRegistrations = lazy(() => import("./pages/Admin/Registrations"));
 const EmailCenter = lazy(() => import("./pages/Admin/EmailCenter"));
 const InductionManagement = lazy(() => import("./pages/Admin/InductionManagement"));
+const InductionPIRound = lazy(() => import("./pages/Admin/InductionPIRound"));
+const InductionPIManagePanel = lazy(() => import("./pages/Admin/InductionPIManagePanel"));
+const InductionPIStudentEvaluation = lazy(() => import("./pages/Admin/InductionPIStudentEvaluation"));
 const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin"));
 const EventManagerRegister = lazy(() => import("./pages/Admin/EventManagerRegister"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -68,7 +73,7 @@ const InductionSpecialForm = lazy(() => import("./pages/InductionSpecialForm"));
 const InductionResults = lazy(() => import("./pages/InductionResults"));
 
 function App() {
-  const { theme } = useTheme();
+  const { theme, isDarkTheme } = useTheme();
 
   useEffect(() => {
     document.title = "GDG MMMUT - Google Developer Group";
@@ -80,6 +85,14 @@ function App() {
         {/* Using StyledThemeProvider to apply the theme */}
         <StyledThemeProvider theme={theme}>
           <GlobalStyles />
+          <ToastContainer
+            position="top-right"
+            autoClose={4200}
+            newestOnTop
+            closeOnClick
+            pauseOnFocusLoss={false}
+            theme={isDarkTheme ? "dark" : "light"}
+          />
           <FollowCursor />
           <ChatWidget />
           <Routes>
@@ -134,6 +147,9 @@ function App() {
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="induction" element={<InductionManagement />} />
+              <Route path="induction-pi" element={<InductionPIRound />} />
+              <Route path="induction-pi/panels/:panelId" element={<InductionPIManagePanel />} />
+              <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
               <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
               <Route path="teams" element={<TeamManagement />} />
@@ -166,6 +182,8 @@ function App() {
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="induction" element={<InductionManagement />} />
+              <Route path="induction-pi" element={<InductionPIRound />} />
+              <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
               <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
               <Route path="teams" element={<TeamManagement />} />
@@ -198,6 +216,8 @@ function App() {
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="induction" element={<InductionManagement />} />
+              <Route path="induction-pi" element={<InductionPIRound />} />
+              <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
             </Route>
 
             {/* Immerse Login - Separate Portal */}

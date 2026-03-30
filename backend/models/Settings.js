@@ -5,7 +5,25 @@ const settingsSchema = new mongoose.Schema({
   isInductionOpen: { 
     type: Boolean, 
     default: true 
-  }
+  },
+  piRound: {
+    type: String,
+    enum: ['shortlisted_online', 'shortlisted_offline'],
+    default: 'shortlisted_online',
+  },
+  isPiStarted: {
+    type: Boolean,
+    default: false,
+  },
+  piStartedAt: {
+    type: Date,
+    required: false,
+  },
+  piStartedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+  },
 }, { timestamps: true });
 
 // Settings is intended to be a single-document collection. 

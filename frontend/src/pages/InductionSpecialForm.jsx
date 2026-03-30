@@ -153,10 +153,19 @@ export default function InductionSpecialForm() {
         <Subtitle>
           This one-time form link is for applicants without college sign-in access.
         </Subtitle>
+        <MetaRow>
+          <MetaBadge>Invite ID: {inviteMeta?.inviteId || inviteId}</MetaBadge>
+          <MetaBadge>
+            {inviteMeta?.expiresAt
+              ? `Expires: ${new Date(inviteMeta.expiresAt).toLocaleDateString()}`
+              : "No Expiry"}
+          </MetaBadge>
+        </MetaRow>
         {inviteMeta?.note ? <InviteNote>Note: {inviteMeta.note}</InviteNote> : null}
         {error ? <InlineError>{error}</InlineError> : null}
 
         <Form onSubmit={handleSubmit}>
+          <SectionTitle>Basic Details</SectionTitle>
           <Row>
             <Field>
               <Label>First Name *</Label>
@@ -226,6 +235,7 @@ export default function InductionSpecialForm() {
             </CheckboxGrid>
           </Field>
 
+          <SectionTitle>Technical Background</SectionTitle>
           <Field>
             <Label>Tech Stack</Label>
             <Input value={formData.techStack} onChange={(e) => setValue("techStack", e.target.value)} />
@@ -236,6 +246,7 @@ export default function InductionSpecialForm() {
             <TextArea rows={3} value={formData.projects} onChange={(e) => setValue("projects", e.target.value)} />
           </Field>
 
+          <SectionTitle>Profiles</SectionTitle>
           <Row>
             <Field>
               <Label>GitHub ID *</Label>
@@ -247,6 +258,7 @@ export default function InductionSpecialForm() {
             </Field>
           </Row>
 
+          <SectionTitle>Motivation</SectionTitle>
           <Field>
             <Label>Why do you want to join GDG? *</Label>
             <TextArea required rows={4} value={formData.whyJoin} onChange={(e) => setValue("whyJoin", e.target.value)} />
@@ -257,6 +269,7 @@ export default function InductionSpecialForm() {
             <TextArea rows={2} value={formData.interestingFact} onChange={(e) => setValue("interestingFact", e.target.value)} />
           </Field>
 
+          <RequiredHint>* marked fields are required</RequiredHint>
           <SubmitButton type="submit" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit Special Form"}
           </SubmitButton>
@@ -268,28 +281,61 @@ export default function InductionSpecialForm() {
 
 const Container = styled.div`
   min-height: 100vh;
-  padding: 28px 16px;
+  padding: clamp(14px, 3vw, 28px) 12px;
   background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
 `;
 
 const Card = styled.div`
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 24px;
+  padding: clamp(14px, 3vw, 24px);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
 `;
 
 const Title = styled.h1`
   margin: 0;
-  font-size: 28px;
+  font-size: clamp(22px, 4vw, 30px);
   color: #0f172a;
 `;
 
 const Subtitle = styled.p`
   margin: 8px 0 16px;
   color: #475569;
+  font-size: 14px;
+`;
+
+const MetaRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+`;
+
+const MetaBadge = styled.div`
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e40af;
+  background: #dbeafe;
+`;
+
+const SectionTitle = styled.h3`
+  margin: 8px 0 2px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  color: #334155;
+
+  &:first-child {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+  }
 `;
 
 const InviteNote = styled.div`
@@ -330,26 +376,26 @@ const Label = styled.label`
 `;
 
 const Input = styled.input`
-  height: 42px;
+  height: 44px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: 16px;
 `;
 
 const Select = styled.select`
-  height: 42px;
+  height: 44px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: 16px;
 `;
 
 const TextArea = styled.textarea`
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
   resize: vertical;
 `;
 
@@ -369,6 +415,20 @@ const CheckboxLabel = styled.label`
   gap: 8px;
   font-size: 14px;
   color: #334155;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+
+  input {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const RequiredHint = styled.div`
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
 `;
 
 const SubmitButton = styled.button`

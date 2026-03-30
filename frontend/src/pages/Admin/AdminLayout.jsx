@@ -16,6 +16,7 @@ import {
   LogOut,
   ChevronDown,
   FileText,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "../../contexts/useAuth";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -38,6 +39,7 @@ const AdminLayout = () => {
       { path: `${basePath}/events`, icon: Calendar, label: "Events" },
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+      { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
       { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
       { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
       { path: `${basePath}/teams`, icon: Users2, label: "Teams" },
@@ -50,6 +52,7 @@ const AdminLayout = () => {
       { path: `${basePath}/events`, icon: Calendar, label: "Events" },
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+      { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
       { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
       { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
       { path: `${basePath}/teams`, icon: Users2, label: "Teams" },
@@ -62,6 +65,7 @@ const AdminLayout = () => {
       { path: `${basePath}/events`, icon: Calendar, label: "Events" },
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
+      { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
     ];
   }
 
