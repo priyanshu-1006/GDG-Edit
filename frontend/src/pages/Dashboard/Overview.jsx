@@ -152,6 +152,68 @@ const Card = styled.div`
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 `;
 
+const InductionCard = styled(Card)`
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const InductionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+`;
+
+const InductionTitle = styled.h2`
+  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 700;
+`;
+
+const InductionBadge = styled.span`
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: ${({ $tone }) =>
+    $tone === 'good' ? '#86efac' : $tone === 'bad' ? '#fda4af' : '#93c5fd'};
+  background: ${({ $tone }) =>
+    $tone === 'good'
+      ? 'rgba(22, 163, 74, 0.2)'
+      : $tone === 'bad'
+        ? 'rgba(225, 29, 72, 0.2)'
+        : 'rgba(30, 64, 175, 0.3)'};
+`;
+
+const InductionGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+`;
+
+const InductionItem = styled.div`
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.75rem;
+`;
+
+const InductionLabel = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  font-weight: 600;
+`;
+
+const InductionValue = styled.div`
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 0.95rem;
+  font-weight: 600;
+`;
+
 const CardHeader = styled.div`
   display: flex;
   align-items: center;
@@ -287,6 +349,7 @@ const LoadingSpinner = styled.div`
 
 const Overview = () => {
   const { user } = useAuth();
+  const induction = user?.induction || null;
   const [stats, setStats] = useState({
     eventsRegistered: 0,
     certificatesEarned: 0,
@@ -375,6 +438,30 @@ const Overview = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Not available';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getInductionTone = (status) => {
+    if (status === 'selected') return 'good';
+    if (status === 'rejected') return 'bad';
+    return 'info';
+  };
+
+  const formatPiRound = (piRound) => {
+    if (piRound === 'shortlisted_offline') return 'Offline PI Round';
+    if (piRound === 'shortlisted_online') return 'Online PI Round';
+    return 'Not announced';
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -427,6 +514,41 @@ const Overview = () => {
           </StatInfo>
         </StatCard>
       </StatsGrid>
+
+      {user?.role === 'student' && (
+        <InductionCard>
+          <InductionHeader>
+            <InductionTitle>Induction Progress</InductionTitle>
+            <InductionBadge $tone={getInductionTone(induction?.status)}>
+              {induction?.statusLabel || 'Not Applied Yet'}
+            </InductionBadge>
+          </InductionHeader>
+
+          <InductionGrid>
+            <InductionItem>
+              <InductionLabel>Current Round</InductionLabel>
+              <InductionValue>{induction?.roundLabel || 'No Active Round'}</InductionValue>
+            </InductionItem>
+
+            <InductionItem>
+              <InductionLabel>PI Window</InductionLabel>
+              <InductionValue>
+                {`${formatPiRound(induction?.activePiRound)} (${induction?.isPiStarted ? 'Started' : 'Not Started'})`}
+              </InductionValue>
+            </InductionItem>
+
+            <InductionItem>
+              <InductionLabel>Application</InductionLabel>
+              <InductionValue>{induction?.hasSubmitted ? 'Submitted' : 'Not Submitted'}</InductionValue>
+            </InductionItem>
+
+            <InductionItem>
+              <InductionLabel>Last Update</InductionLabel>
+              <InductionValue>{formatDateTime(induction?.updatedAt)}</InductionValue>
+            </InductionItem>
+          </InductionGrid>
+        </InductionCard>
+      )}
 
       <ContentGrid>
         <Card>

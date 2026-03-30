@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import OTP from '../models/OTP.js';
+import Induction from '../models/Induction.js';
+import Settings from '../models/Settings.js';
 import { sendTokenResponse, generateToken } from '../utils/auth.utils.js';
 import { protect } from '../middleware/auth.middleware.js';
 import emailService from '../services/emailService.js';
@@ -13,6 +15,29 @@ const router = express.Router();
 
 const requireResendForOtp =
   process.env.NODE_ENV === 'production' || process.env.REQUIRE_RESEND_FOR_OTP === 'true';
+
+const INDUCTION_STATUS_META = {
+  applied: {
+    label: 'Application Submitted',
+    roundLabel: 'Application Review',
+  },
+  shortlisted_online: {
+    label: 'Shortlisted For Online Round',
+    roundLabel: 'Online PI Round',
+  },
+  shortlisted_offline: {
+    label: 'Shortlisted For Offline Round',
+    roundLabel: 'Offline PI Round',
+  },
+  selected: {
+    label: 'Selected',
+    roundLabel: 'Final Result',
+  },
+  rejected: {
+    label: 'Not Selected',
+    roundLabel: 'Final Result',
+  },
+};
 
 /**
  * Generate a 6-digit OTP
@@ -408,9 +433,51 @@ router.get('/github/callback',
 router.get('/profile', protect, async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
+    const profile = user.toPublicJSON();
+
+    if (user.role === 'student') {
+      const induction = await Induction.findOne({
+        email: String(user.email || '').toLowerCase().trim(),
+      })
+        .select('status createdAt updatedAt rollNumber')
+        .sort({ createdAt: -1 });
+
+      const settings = await Settings.findOne().select('piRound isPiStarted piStartedAt');
+
+      if (!induction) {
+        profile.induction = {
+          hasSubmitted: false,
+          status: 'not_applied',
+          statusLabel: 'Not Applied Yet',
+          roundLabel: 'No Active Round',
+          submittedAt: null,
+          updatedAt: null,
+          rollNumber: null,
+          activePiRound: settings?.piRound || null,
+          isPiStarted: !!settings?.isPiStarted,
+          piStartedAt: settings?.piStartedAt || null,
+        };
+      } else {
+        const statusKey = induction.status || 'applied';
+        const statusMeta = INDUCTION_STATUS_META[statusKey] || INDUCTION_STATUS_META.applied;
+
+        profile.induction = {
+          hasSubmitted: true,
+          status: statusKey,
+          statusLabel: statusMeta.label,
+          roundLabel: statusMeta.roundLabel,
+          submittedAt: induction.createdAt || null,
+          updatedAt: induction.updatedAt || null,
+          rollNumber: induction.rollNumber || null,
+          activePiRound: settings?.piRound || null,
+          isPiStarted: !!settings?.isPiStarted,
+          piStartedAt: settings?.piStartedAt || null,
+        };
+      }
+    }
 
     // Return user data directly (not nested in a user object)
-    res.json(user.toPublicJSON());
+    res.json(profile);
   } catch (error) {
     next(error);
   }

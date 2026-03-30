@@ -136,6 +136,56 @@ const Badge = styled.span`
   font-weight: 600;
 `;
 
+const InductionStatusCard = styled.div`
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 1rem;
+`;
+
+const InductionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+`;
+
+const InductionPill = styled.span`
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: ${({ $tone }) =>
+    $tone === 'good' ? '#86efac' : $tone === 'bad' ? '#fda4af' : '#93c5fd'};
+  background: ${({ $tone }) =>
+    $tone === 'good'
+      ? 'rgba(22, 163, 74, 0.2)'
+      : $tone === 'bad'
+        ? 'rgba(225, 29, 72, 0.2)'
+        : 'rgba(30, 64, 175, 0.3)'};
+`;
+
+const InductionMetaGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.85rem;
+`;
+
+const InductionMetaItem = styled.div`
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.7rem;
+`;
+
+const InductionNote = styled.p`
+  margin: 0.85rem 0 0;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.92rem;
+`;
+
 const ProfileBody = styled.div`
   padding: 2rem;
 `;
@@ -282,6 +332,7 @@ const Button = styled.button`
 
 const Profile = () => {
   const { user } = useAuth();
+  const induction = user?.induction;
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -318,7 +369,7 @@ const Profile = () => {
       const token = localStorage.getItem('token');
 
       await axios.put(
-        `${API_BASE_URL}/api/users/profile`,
+        `${API_BASE_URL}/api/auth/profile`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -353,6 +404,24 @@ const Profile = () => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Not available';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getInductionTone = (status) => {
+    if (status === 'selected') return 'good';
+    if (status === 'rejected') return 'bad';
+    return 'info';
+  };
+
   return (
     <Container>
       <Header>
@@ -377,11 +446,62 @@ const Profile = () => {
             <ProfileBadges>
               <Badge>🎓 Student</Badge>
               <Badge>Member since {formatJoinDate(user?.createdAt || new Date())}</Badge>
+              {user?.role === 'student' && induction?.statusLabel && (
+                <Badge>Induction: {induction.statusLabel}</Badge>
+              )}
             </ProfileBadges>
           </ProfileInfo>
         </ProfileHeader>
 
         <ProfileBody>
+          {user?.role === 'student' && (
+            <Section>
+              <SectionHeader>
+                <SectionTitle>Induction Status</SectionTitle>
+              </SectionHeader>
+
+              <InductionStatusCard>
+                <InductionHeader>
+                  <InfoValue>
+                    {induction?.hasSubmitted ? induction.roundLabel : 'No induction application yet'}
+                  </InfoValue>
+                  <InductionPill $tone={getInductionTone(induction?.status)}>
+                    {induction?.statusLabel || 'Not Applied Yet'}
+                  </InductionPill>
+                </InductionHeader>
+
+                <InductionMetaGrid>
+                  <InductionMetaItem>
+                    <InfoLabel>Current Round</InfoLabel>
+                    <InfoValue>{induction?.roundLabel || 'No Active Round'}</InfoValue>
+                  </InductionMetaItem>
+                  <InductionMetaItem>
+                    <InfoLabel>Submitted At</InfoLabel>
+                    <InfoValue>{formatDateTime(induction?.submittedAt)}</InfoValue>
+                  </InductionMetaItem>
+                  <InductionMetaItem>
+                    <InfoLabel>Last Updated</InfoLabel>
+                    <InfoValue>{formatDateTime(induction?.updatedAt)}</InfoValue>
+                  </InductionMetaItem>
+                  <InductionMetaItem>
+                    <InfoLabel>PI Window</InfoLabel>
+                    <InfoValue>
+                      {induction?.activePiRound
+                        ? `${induction.activePiRound === 'shortlisted_offline' ? 'Offline PI' : 'Online PI'} (${induction.isPiStarted ? 'Started' : 'Not Started'})`
+                        : 'Not announced'}
+                    </InfoValue>
+                  </InductionMetaItem>
+                </InductionMetaGrid>
+
+                {!induction?.hasSubmitted && (
+                  <InductionNote>
+                    You have not submitted your induction form yet. Complete it to enter the induction rounds.
+                  </InductionNote>
+                )}
+              </InductionStatusCard>
+            </Section>
+          )}
+
           <Section>
             <SectionHeader>
               <SectionTitle>Personal Information</SectionTitle>
