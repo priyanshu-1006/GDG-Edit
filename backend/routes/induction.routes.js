@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import Groq from 'groq-sdk';
 import crypto from 'crypto';
+import XLSX from 'xlsx';
 import cloudinary from '../config/cloudinary.js';
 import Induction from '../models/Induction.js';
 import InductionInvite from '../models/InductionInvite.js';
@@ -27,6 +28,140 @@ const INVITE_ID_PATTERN = /^[A-Za-z0-9_-]{4,60}$/;
 
 const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactTrimmedRegex = (value = '') => new RegExp(`^\\s*${escapeRegex(String(value).trim())}\\s*$`, 'i');
+const VALID_INDUCTION_STATUSES = ['applied', 'shortlisted_online', 'shortlisted_offline', 'selected', 'rejected'];
+const BRANCH_VARIANTS = {
+  'Computer Science and Engineering': [
+    'Computer Science and Engineering',
+    'Computer Science and Engineering (CSE)',
+    'CSE',
+  ],
+  'Information Technology': [
+    'Information Technology',
+    'Information Technology (IT)',
+    'IT',
+  ],
+  'Electronics and Communication Engineering': [
+    'Electronics and Communication Engineering',
+    'Electronics and Communication Engineering (ECE)',
+    'ECE',
+  ],
+  'Electrical Engineering': [
+    'Electrical Engineering',
+    'Electrical Engineering (EE)',
+    'EE',
+  ],
+  'Mechanical Engineering': [
+    'Mechanical Engineering',
+    'Mechanical Engineering (ME)',
+    'ME',
+  ],
+  'Civil Engineering': [
+    'Civil Engineering',
+    'Civil Engineering (CE)',
+    'CE',
+  ],
+  'Chemical Engineering': [
+    'Chemical Engineering',
+    'Chemical Engineering (CHE)',
+    'CHE',
+  ],
+  'Internet of Things': [
+    'Internet of Things',
+    'Internet of Things (IoT)',
+    'IoT',
+  ],
+};
+
+const getBranchVariants = (branch = '') => {
+  const normalizedBranch = String(branch).trim().toLowerCase();
+  if (!normalizedBranch) return [];
+
+  for (const variants of Object.values(BRANCH_VARIANTS)) {
+    if (variants.some((candidate) => candidate.toLowerCase() === normalizedBranch)) {
+      return variants;
+    }
+  }
+
+  return [String(branch).trim()];
+};
+
+const buildInductionFilter = ({ status, branch, search }) => {
+  const filter = {};
+
+  const normalizedStatus = String(status || '').trim();
+  if (normalizedStatus && VALID_INDUCTION_STATUSES.includes(normalizedStatus)) {
+    filter.status = normalizedStatus;
+  }
+
+  const normalizedBranch = String(branch || '').trim();
+  if (normalizedBranch) {
+    filter.branch = {
+      $in: getBranchVariants(normalizedBranch).map((value) => exactTrimmedRegex(value)),
+    };
+  }
+
+  const normalizedSearch = String(search || '').trim();
+  if (normalizedSearch) {
+    const escapedSearch = escapeRegex(normalizedSearch);
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    filter.$or = [
+      { firstName: searchRegex },
+      { lastName: searchRegex },
+      { email: searchRegex },
+      { rollNumber: searchRegex },
+      {
+        $expr: {
+          $regexMatch: {
+            input: {
+              $trim: {
+                input: {
+                  $concat: [
+                    { $ifNull: ['$firstName', ''] },
+                    ' ',
+                    { $ifNull: ['$lastName', ''] },
+                  ],
+                },
+              },
+            },
+            regex: escapedSearch,
+            options: 'i',
+          },
+        },
+      },
+    ];
+  }
+
+  return filter;
+};
+
+const mapSubmissionForExport = (submission) => ({
+  'Roll No': submission.rollNumber || '',
+  Name: `${submission.firstName || ''} ${submission.lastName || ''}`.trim(),
+  Email: submission.email || '',
+  Phone: submission.phone || '',
+  Branch: submission.branch || '',
+  Section: submission.section || '',
+  Domains: (submission.domains || []).join('; '),
+  'Tech Stack': submission.techStack || '',
+  'Tech Skills': submission.techSkills || '',
+  'Soft Skills': submission.softSkills || '',
+  Projects: submission.projects || '',
+  GitHub: submission.githubId || '',
+  LinkedIn: submission.linkedinUrl || '',
+  Codeforces: submission.codeforcesId || '',
+  CodeChef: submission.codechefId || '',
+  HackerRank: submission.hackerrankId || '',
+  LeetCode: submission.leetcodeId || '',
+  'Why Join': submission.whyJoin || '',
+  'Interesting Fact': submission.interestingFact || '',
+  'Other Clubs': submission.otherClubs || '',
+  Strengths: submission.strengths || '',
+  Weaknesses: submission.weaknesses || '',
+  Residence: submission.residenceType || '',
+  Resume: submission.resumeUrl || '',
+  Status: submission.status || '',
+  'Submitted At': submission.createdAt ? new Date(submission.createdAt).toISOString() : '',
+});
 
 const normalizeInductionPayload = (body = {}) => {
   const {
@@ -455,15 +590,16 @@ router.get('/my-submission-status', verifyInductionToken, async (req, res) => {
 // GET /api/induction — Get all submissions (event_manager/admin/super_admin)
 router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
   try {
-    const { status, branch, page = 1, limit = 50 } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    if (branch) filter.branch = branch;
+    const { status, branch, search, page = 1, limit = 50 } = req.query;
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const parsedLimit = Math.max(parseInt(limit, 10) || 50, 1);
+
+    const filter = buildInductionFilter({ status, branch, search });
 
     const submissions = await Induction.find(filter)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .skip((parsedPage - 1) * parsedLimit)
+      .limit(parsedLimit);
 
     const total = await Induction.countDocuments(filter);
 
@@ -472,13 +608,48 @@ router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), asy
       data: submissions,
       pagination: {
         total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit)
+        page: parsedPage,
+        pages: Math.max(Math.ceil(total / parsedLimit), 1),
       }
     });
   } catch (error) {
     console.error('Induction fetch error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/export — Export all matching submissions as Excel (event_manager/admin/super_admin)
+router.get('/export', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { status, branch, search } = req.query;
+    const filter = buildInductionFilter({ status, branch, search });
+
+    const submissions = await Induction.find(filter).lean();
+    submissions.sort((a, b) => {
+      const nameA = `${a.firstName || ''} ${a.lastName || ''}`.trim();
+      const nameB = `${b.firstName || ''} ${b.lastName || ''}`.trim();
+
+      const byName = nameA.localeCompare(nameB, 'en', { sensitivity: 'base' });
+      if (byName !== 0) return byName;
+
+      return String(a.rollNumber || '').localeCompare(String(b.rollNumber || ''), 'en', { sensitivity: 'base' });
+    });
+
+    const worksheetRows = submissions.map(mapSubmissionForExport);
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(worksheetRows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Induction Submissions');
+
+    const fileBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const today = new Date().toISOString().split('T')[0];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="induction_submissions_${today}.xlsx"`);
+    return res.send(fileBuffer);
+  } catch (error) {
+    console.error('Induction export error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -490,8 +661,7 @@ router.patch('/bulk-advance', protect, authorize('super_admin'), async (req, res
       return res.status(400).json({ success: false, message: 'Invalid data provided' });
     }
 
-    const validStatuses = ['applied', 'shortlisted_online', 'shortlisted_offline', 'selected', 'rejected'];
-    if (!validStatuses.includes(targetStatus)) {
+    if (!VALID_INDUCTION_STATUSES.includes(targetStatus)) {
       return res.status(400).json({ success: false, message: 'Invalid target status' });
     }
 

@@ -23,6 +23,7 @@ const InductionManagement = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,6 +43,14 @@ const InductionManagement = () => {
   const [inviteLinks, setInviteLinks] = useState([]);
   const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchInviteLinks = useCallback(async () => {
     if (user?.role !== "super_admin") return;
@@ -133,6 +142,8 @@ const InductionManagement = () => {
       const token = localStorage.getItem("token");
       const params = new URLSearchParams();
       if (branchFilter) params.append("branch", branchFilter);
+      if (statusFilter) params.append("status", statusFilter);
+      if (debouncedSearch) params.append("search", debouncedSearch);
       params.append("page", page);
       params.append("limit", 25);
 
@@ -151,7 +162,7 @@ const InductionManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [branchFilter, page]);
+  }, [branchFilter, page, statusFilter, debouncedSearch]);
 
   const fetchInductionStatus = useCallback(async () => {
     try {
@@ -168,9 +179,16 @@ const InductionManagement = () => {
 
   useEffect(() => {
     fetchSubmissions();
+  }, [fetchSubmissions]);
+
+  useEffect(() => {
     fetchInductionStatus();
     fetchInviteLinks();
-  }, [fetchSubmissions, fetchInductionStatus, fetchInviteLinks]);
+  }, [fetchInductionStatus, fetchInviteLinks]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, statusFilter, branchFilter, debouncedSearch]);
 
   const handleToggleInductionForm = async () => {
     if (!window.confirm(`Are you sure you want to ${isInductionOpen ? 'CLOSE' : 'OPEN'} the induction form?`)) return;
@@ -189,22 +207,9 @@ const InductionManagement = () => {
     }
   };
 
-  const filteredSubmissions = submissions.filter((s) => {
-    if (statusFilter && s.status !== statusFilter) return false;
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      s.firstName?.toLowerCase().includes(q) ||
-      s.lastName?.toLowerCase().includes(q) ||
-      s.email?.toLowerCase().includes(q) ||
-      s.rollNumber?.toLowerCase().includes(q) ||
-      s.branch?.toLowerCase().includes(q)
-    );
-  });
-
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(filteredSubmissions.map(s => s._id));
+      setSelectedIds(submissions.map(s => s._id));
     } else {
       setSelectedIds([]);
     }
@@ -245,73 +250,36 @@ const InductionManagement = () => {
     }
   };
 
-  const handleExport = () => {
-    const headers = [
-      "Roll No",
-      "Name",
-      "Email",
-      "Phone",
-      "Branch",
-      "Section",
-      "Domains",
-      "Tech Stack",
-      "Tech Skills",
-      "Soft Skills",
-      "Projects",
-      "GitHub",
-      "LinkedIn",
-      "Codeforces",
-      "CodeChef",
-      "HackerRank",
-      "LeetCode",
-      "Why Join",
-      "Interesting Fact",
-      "Other Clubs",
-      "Strengths",
-      "Weaknesses",
-      "Residence",
-      "Resume",
-      "Status",
-      "Submitted At",
-    ];
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (branchFilter) params.append("branch", branchFilter);
+      if (statusFilter) params.append("status", statusFilter);
+      if (debouncedSearch) params.append("search", debouncedSearch);
 
-    const rows = filteredSubmissions.map((s) => [
-      s.rollNumber || "",
-      `${s.firstName || ""} ${s.lastName || ""}`.trim(),
-      s.email || "",
-      s.phone || "",
-      s.branch || "",
-      s.section || "",
-      (s.domains || []).join("; "),
-      s.techStack || "",
-      (s.techSkills || "").replace(/"/g, '""'),
-      (s.softSkills || "").replace(/"/g, '""'),
-      s.projects || "",
-      s.githubId || "",
-      s.linkedinUrl || "",
-      s.codeforcesId || "",
-      s.codechefId || "",
-      s.hackerrankId || "",
-      s.leetcodeId || "",
-      (s.whyJoin || "").replace(/"/g, '""'),
-      (s.interestingFact || "").replace(/"/g, '""'),
-      (s.otherClubs || "").replace(/"/g, '""'),
-      (s.strengths || "").replace(/"/g, '""'),
-      (s.weaknesses || "").replace(/"/g, '""'),
-      s.residenceType || "",
-      s.resumeUrl || "",
-      s.status || "",
-      s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "",
-    ]);
+      const response = await axios.get(
+        `${API}/induction/export?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
 
-    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `induction_submissions_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob(
+        [response.data],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `induction_submissions_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export induction data:", err);
+      alert("Failed to export Excel file. Please try again.");
+    }
   };
 
   const branches = [
@@ -322,6 +290,7 @@ const InductionManagement = () => {
     "Mechanical Engineering",
     "Civil Engineering",
     "Chemical Engineering",
+    "Internet of Things",
   ];
 
   return (
@@ -343,7 +312,7 @@ const InductionManagement = () => {
           {user?.role === 'super_admin' && (
             <ExportButton onClick={handleExport}>
               <Download size={16} />
-              Export CSV
+              Export Excel
             </ExportButton>
           )}
         </HeaderActions>
@@ -425,7 +394,10 @@ const InductionManagement = () => {
             type="text"
             placeholder="Search by name, email, roll no..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </SearchBox>
         <FilterGroup>
@@ -480,7 +452,7 @@ const InductionManagement = () => {
 
       {loading ? (
         <LoadingState>Loading submissions...</LoadingState>
-      ) : filteredSubmissions.length === 0 ? (
+      ) : submissions.length === 0 ? (
         <EmptyState>No induction applications found.</EmptyState>
       ) : (
         <>
@@ -493,7 +465,7 @@ const InductionManagement = () => {
                       <input 
                         type="checkbox" 
                         onChange={handleSelectAll} 
-                        checked={filteredSubmissions.length > 0 && selectedIds.length === filteredSubmissions.length}
+                        checked={submissions.length > 0 && selectedIds.length === submissions.length}
                       />
                     </Th>
                   )}
@@ -506,7 +478,7 @@ const InductionManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSubmissions.map((s) => (
+                {submissions.map((s) => (
                   <tr key={s._id} style={{ background: selectedIds.includes(s._id) ? 'rgba(66, 133, 244, 0.05)' : 'transparent' }}>
                     {user?.role === 'super_admin' && (
                       <Td style={{ textAlign: 'center' }}>

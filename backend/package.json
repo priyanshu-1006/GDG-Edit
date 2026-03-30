@@ -17,6 +17,7 @@
     "fix-admin-password": "node scripts/updatePassword.js",
     "seed-super-admin": "node scripts/seedSuperAdmin.js",
     "seed-admins": "node scripts/seedAdmins.js",
+    "sync:students-induction": "node scripts/syncStudentsAndInductionDepartment.js",
     "migrate-indexes": "node scripts/migrateIndexes.js",
     "test:email": "node scripts/sendTestEmail.js"
   },
