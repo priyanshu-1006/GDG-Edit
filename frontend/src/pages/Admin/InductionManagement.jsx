@@ -10,6 +10,8 @@ import {
   ExternalLink,
   FileText,
   Trash2,
+  Link2,
+  Copy,
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../contexts/useAuth";
@@ -32,7 +34,79 @@ const InductionManagement = () => {
   const [targetStatus, setTargetStatus] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [inviteId, setInviteId] = useState("");
+  const [inviteNote, setInviteNote] = useState("");
+  const [inviteExpiresInDays, setInviteExpiresInDays] = useState(7);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [generatedInviteUrl, setGeneratedInviteUrl] = useState("");
+  const [inviteLinks, setInviteLinks] = useState([]);
+  const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
   const { user } = useAuth();
+
+  const fetchInviteLinks = useCallback(async () => {
+    if (user?.role !== "super_admin") return;
+
+    setInviteLinksLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API}/induction/invite-links`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data?.success) {
+        setInviteLinks(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch invite links:", err);
+    } finally {
+      setInviteLinksLoading(false);
+    }
+  }, [user?.role]);
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Link copied to clipboard");
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      alert("Failed to copy. Please copy manually.");
+    }
+  };
+
+  const handleCreateInviteLink = async () => {
+    if (!inviteId.trim()) {
+      alert("Please enter a specific invite ID");
+      return;
+    }
+
+    setCreatingInvite(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `${API}/induction/invite-links`,
+        {
+          inviteId: inviteId.trim(),
+          note: inviteNote.trim(),
+          expiresInDays: Number(inviteExpiresInDays) || 0,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (data?.success) {
+        const url = data?.data?.url || "";
+        setGeneratedInviteUrl(url);
+        setInviteId("");
+        setInviteNote("");
+        setInviteExpiresInDays(7);
+        await fetchInviteLinks();
+      }
+    } catch (err) {
+      console.error("Failed to create invite link:", err);
+      alert(err.response?.data?.message || "Failed to create invite link");
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
 
   const handleDeleteRegistration = async (id, name) => {
     if (!window.confirm(`Are you sure you want to permanently delete the application for ${name}?`)) return;
@@ -95,7 +169,8 @@ const InductionManagement = () => {
   useEffect(() => {
     fetchSubmissions();
     fetchInductionStatus();
-  }, [fetchSubmissions, fetchInductionStatus]);
+    fetchInviteLinks();
+  }, [fetchSubmissions, fetchInductionStatus, fetchInviteLinks]);
 
   const handleToggleInductionForm = async () => {
     if (!window.confirm(`Are you sure you want to ${isInductionOpen ? 'CLOSE' : 'OPEN'} the induction form?`)) return;
@@ -273,6 +348,75 @@ const InductionManagement = () => {
           )}
         </HeaderActions>
       </Header>
+
+      {user?.role === "super_admin" && (
+        <InviteSection>
+          <InviteHeading>
+            <Link2 size={16} />
+            Special One-Time Induction Links
+          </InviteHeading>
+
+          <InviteFormRow>
+            <InviteInput
+              placeholder="Specific ID (e.g. EXT-2026-001)"
+              value={inviteId}
+              onChange={(e) => setInviteId(e.target.value)}
+            />
+            <InviteInput
+              placeholder="Note (optional)"
+              value={inviteNote}
+              onChange={(e) => setInviteNote(e.target.value)}
+            />
+            <InviteSelect
+              value={inviteExpiresInDays}
+              onChange={(e) => setInviteExpiresInDays(Number(e.target.value))}
+            >
+              <option value={0}>No Expiry</option>
+              <option value={1}>1 day</option>
+              <option value={3}>3 days</option>
+              <option value={7}>7 days</option>
+              <option value={15}>15 days</option>
+              <option value={30}>30 days</option>
+            </InviteSelect>
+            <ActionBtn onClick={handleCreateInviteLink} disabled={creatingInvite}>
+              {creatingInvite ? "Generating..." : "Generate Link"}
+            </ActionBtn>
+          </InviteFormRow>
+
+          {generatedInviteUrl ? (
+            <GeneratedLinkBar>
+              <GeneratedLinkText>{generatedInviteUrl}</GeneratedLinkText>
+              <CopyButton onClick={() => copyToClipboard(generatedInviteUrl)}>
+                <Copy size={14} /> Copy
+              </CopyButton>
+            </GeneratedLinkBar>
+          ) : null}
+
+          <InviteList>
+            {inviteLinksLoading ? (
+              <InviteListEmpty>Loading invite links...</InviteListEmpty>
+            ) : inviteLinks.length === 0 ? (
+              <InviteListEmpty>No invite links generated yet.</InviteListEmpty>
+            ) : (
+              inviteLinks.slice(0, 8).map((invite) => (
+                <InviteRow key={invite.id}>
+                  <InviteMeta>
+                    <strong>{invite.inviteId}</strong>
+                    <span>{invite.note || "No note"}</span>
+                    <small>
+                      {invite.isUsed ? "Used" : "Unused"}
+                      {invite.expiresAt ? ` • Expires ${new Date(invite.expiresAt).toLocaleDateString()}` : " • No expiry"}
+                    </small>
+                  </InviteMeta>
+                  <CopyButton onClick={() => copyToClipboard(invite.url)}>
+                    <Copy size={14} /> Copy Link
+                  </CopyButton>
+                </InviteRow>
+              ))
+            )}
+          </InviteList>
+        </InviteSection>
+      )}
 
       <FiltersRow>
         <SearchBox>
@@ -1251,6 +1395,178 @@ const ActionBtn = styled.button`
     opacity: 0.7;
     cursor: not-allowed;
   }
+`;
+
+const InviteSection = styled.div`
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+
+  .dark & {
+    background: #0f172a;
+    border-color: #1e3a8a;
+  }
+`;
+
+const InviteHeading = styled.h3`
+  margin: 0 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e40af;
+
+  .dark & {
+    color: #93c5fd;
+  }
+`;
+
+const InviteFormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 0.8fr auto;
+  gap: 10px;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const InviteInput = styled.input`
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 14px;
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+`;
+
+const InviteSelect = styled.select`
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 14px;
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+`;
+
+const GeneratedLinkBar = styled.div`
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const GeneratedLinkText = styled.div`
+  flex: 1;
+  font-size: 12px;
+  color: #1e3a8a;
+  overflow-wrap: anywhere;
+`;
+
+const CopyButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #93c5fd;
+  background: #ffffff;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+
+  .dark & {
+    background: #0f172a;
+    border-color: #1d4ed8;
+    color: #93c5fd;
+  }
+`;
+
+const InviteList = styled.div`
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+`;
+
+const InviteRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dark & {
+    border-color: #334155;
+  }
+`;
+
+const InviteMeta = styled.div`
+  display: grid;
+  gap: 2px;
+
+  strong {
+    color: #0f172a;
+    font-size: 13px;
+  }
+
+  span {
+    color: #64748b;
+    font-size: 12px;
+  }
+
+  small {
+    color: #475569;
+    font-size: 11px;
+  }
+
+  .dark & {
+    strong {
+      color: #e2e8f0;
+    }
+
+    span {
+      color: #94a3b8;
+    }
+
+    small {
+      color: #cbd5e1;
+    }
+  }
+`;
+
+const InviteListEmpty = styled.div`
+  font-size: 13px;
+  color: #64748b;
 `;
 
 export default InductionManagement;

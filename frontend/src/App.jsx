@@ -64,6 +64,7 @@ const ImmerseRegistrations = lazy(() => import("./pages/Immerse/ImmerseRegistrat
 
 // Induction Form & Results
 const InductionForm = lazy(() => import("./pages/InductionForm"));
+const InductionSpecialForm = lazy(() => import("./pages/InductionSpecialForm"));
 const InductionResults = lazy(() => import("./pages/InductionResults"));
 
 function App() {
@@ -204,6 +205,7 @@ function App() {
 
             {/* Induction Form & Results */}
             <Route path="/induction" element={<InductionForm />} />
+            <Route path="/induction/special/:inviteId/:token" element={<InductionSpecialForm />} />
             <Route path="/induction-results" element={<InductionResults />} />
 
             {/* Immerse Routes */}

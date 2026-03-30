@@ -125,6 +125,15 @@ const inductionSchema = new mongoose.Schema({
     type: String,
     enum: ['applied', 'shortlisted_online', 'shortlisted_offline', 'selected', 'rejected'],
     default: 'applied'
+  },
+  applicationType: {
+    type: String,
+    enum: ['college_oauth', 'special_link'],
+    default: 'college_oauth'
+  },
+  inviteId: {
+    type: String,
+    trim: true,
   }
 }, {
   timestamps: true
@@ -133,6 +142,7 @@ const inductionSchema = new mongoose.Schema({
 // Indexes
 inductionSchema.index({ status: 1 });
 inductionSchema.index({ branch: 1 });
+inductionSchema.index({ inviteId: 1 });
 
 const Induction = mongoose.model('Induction', inductionSchema);
 

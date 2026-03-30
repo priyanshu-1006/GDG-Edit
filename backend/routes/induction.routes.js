@@ -1,8 +1,10 @@
 import express from 'express';
 import multer from 'multer';
 import Groq from 'groq-sdk';
+import crypto from 'crypto';
 import cloudinary from '../config/cloudinary.js';
 import Induction from '../models/Induction.js';
+import InductionInvite from '../models/InductionInvite.js';
 import Settings from '../models/Settings.js';
 import jwt from 'jsonwebtoken';
 import PDFParser from 'pdf2json';
@@ -21,9 +23,66 @@ const upload = multer({
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
+const INVITE_ID_PATTERN = /^[A-Za-z0-9_-]{4,60}$/;
 
 const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactTrimmedRegex = (value = '') => new RegExp(`^\\s*${escapeRegex(String(value).trim())}\\s*$`, 'i');
+
+const normalizeInductionPayload = (body = {}) => {
+  const {
+    firstName, lastName, email, phone, branch, section, rollNumber,
+    techStack, domains, projects, githubId, linkedinUrl,
+    whyJoin, interestingFact, otherClubs, residenceType,
+    codeforcesId, codechefId, hackerrankId, resumeUrl,
+    strengths, weaknesses, techSkills, softSkills,
+    leetcodeId,
+  } = body;
+
+  return {
+    firstName,
+    lastName,
+    email: String(email || '').toLowerCase().trim(),
+    phone,
+    branch,
+    section,
+    rollNumber: String(rollNumber || '').trim(),
+    techStack,
+    domains,
+    projects,
+    githubId,
+    linkedinUrl,
+    whyJoin,
+    interestingFact,
+    otherClubs,
+    residenceType,
+    codeforcesId,
+    codechefId,
+    hackerrankId,
+    resumeUrl,
+    strengths,
+    weaknesses,
+    techSkills,
+    softSkills,
+    leetcodeId,
+  };
+};
+
+const findExistingInductionByIdentity = async ({ email, rollNumber }) => {
+  const candidateConditions = [];
+  if (email) candidateConditions.push({ email: exactTrimmedRegex(email) });
+  if (rollNumber) candidateConditions.push({ rollNumber: exactTrimmedRegex(rollNumber) });
+
+  if (candidateConditions.length === 0) {
+    return null;
+  }
+
+  return Induction.findOne({ $or: candidateConditions });
+};
+
+const getInviteShareUrl = ({ inviteId, token }) => {
+  const base = (process.env.FRONTEND_URL || 'https://gdg.mmmut.app').replace(/\/$/, '');
+  return `${base}/induction/special/${encodeURIComponent(inviteId)}/${encodeURIComponent(token)}`;
+};
 
 // Middleware to verify induction JWT
 const verifyInductionToken = (req, res, next) => {
@@ -92,6 +151,121 @@ router.put('/status', protect, authorize('super_admin'), async (req, res) => {
   }
 });
 
+// POST /api/induction/invite-links — Create a one-time special induction form link (super_admin)
+router.post('/invite-links', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const rawInviteId = String(req.body?.inviteId || '').trim();
+    const note = String(req.body?.note || '').trim();
+    const expiresInDays = Number(req.body?.expiresInDays || 0);
+
+    if (!INVITE_ID_PATTERN.test(rawInviteId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invite ID must be 4-60 chars and use only letters, numbers, _ or -',
+      });
+    }
+
+    const inviteId = rawInviteId;
+    const existingInvite = await InductionInvite.findOne({ inviteId });
+    if (existingInvite) {
+      return res.status(409).json({
+        success: false,
+        message: 'This invite ID already exists. Please use a different ID.',
+      });
+    }
+
+    const token = crypto.randomBytes(24).toString('hex');
+    const inviteDoc = new InductionInvite({
+      inviteId,
+      token,
+      note,
+      createdBy: req.user?._id,
+      expiresAt: expiresInDays > 0 ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000) : undefined,
+    });
+
+    await inviteDoc.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Special induction link generated successfully.',
+      data: {
+        inviteId: inviteDoc.inviteId,
+        note: inviteDoc.note,
+        isUsed: inviteDoc.isUsed,
+        isActive: inviteDoc.isActive,
+        expiresAt: inviteDoc.expiresAt,
+        createdAt: inviteDoc.createdAt,
+        url: getInviteShareUrl({ inviteId: inviteDoc.inviteId, token: inviteDoc.token }),
+      },
+    });
+  } catch (error) {
+    console.error('Create invite link error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/invite-links — List existing special induction links (super_admin)
+router.get('/invite-links', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const invites = await InductionInvite.find()
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'name email')
+      .populate('submission', 'firstName lastName email');
+
+    const data = invites.map((invite) => ({
+      id: invite._id,
+      inviteId: invite.inviteId,
+      note: invite.note,
+      isActive: invite.isActive,
+      isUsed: invite.isUsed,
+      usedAt: invite.usedAt,
+      usedByEmail: invite.usedByEmail,
+      expiresAt: invite.expiresAt,
+      createdAt: invite.createdAt,
+      createdBy: invite.createdBy,
+      submission: invite.submission,
+      url: getInviteShareUrl({ inviteId: invite.inviteId, token: invite.token }),
+    }));
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('List invite links error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/special/:inviteId/:token — Validate special induction link (public)
+router.get('/special/:inviteId/:token', async (req, res) => {
+  try {
+    const { inviteId, token } = req.params;
+    const invite = await InductionInvite.findOne({ inviteId, token, isActive: true });
+
+    if (!invite) {
+      return res.status(404).json({ success: false, message: 'Invalid special induction link.' });
+    }
+
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      return res.status(410).json({ success: false, message: 'This link has expired.' });
+    }
+
+    if (invite.isUsed) {
+      return res.status(410).json({ success: false, message: 'This link has already been used.' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        inviteId: invite.inviteId,
+        note: invite.note,
+        expiresAt: invite.expiresAt,
+      },
+    });
+  } catch (error) {
+    console.error('Validate special link error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // POST /api/induction — Submit induction form
 router.post('/', async (req, res) => {
   try {
@@ -103,27 +277,11 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const {
-      firstName, lastName, email, phone, branch, section, rollNumber,
-      techStack, domains, projects, githubId, linkedinUrl,
-      whyJoin, interestingFact, otherClubs, residenceType,
-      codeforcesId, codechefId, hackerrankId, resumeUrl,
-      strengths, weaknesses, techSkills, softSkills,
-      leetcodeId
-    } = req.body;
-
-    const normalizedEmail = String(email || '').toLowerCase().trim();
-    const normalizedRollNumber = String(rollNumber || '').trim();
-
-    // Enforce one active induction application per candidate identity.
-    const candidateConditions = [];
-    if (normalizedEmail) candidateConditions.push({ email: exactTrimmedRegex(normalizedEmail) });
-    if (normalizedRollNumber) candidateConditions.push({ rollNumber: exactTrimmedRegex(normalizedRollNumber) });
-
-    const existing =
-      candidateConditions.length > 0
-        ? await Induction.findOne({ $or: candidateConditions })
-        : null;
+    const normalizedPayload = normalizeInductionPayload(req.body);
+    const existing = await findExistingInductionByIdentity({
+      email: normalizedPayload.email,
+      rollNumber: normalizedPayload.rollNumber,
+    });
 
     if (existing) {
       return res.status(409).json({
@@ -133,21 +291,17 @@ router.post('/', async (req, res) => {
     }
 
     const induction = new Induction({
-      firstName, lastName, email: normalizedEmail, phone, branch, section, rollNumber: normalizedRollNumber,
-      techStack, domains, projects, githubId, linkedinUrl,
-      whyJoin, interestingFact, otherClubs, residenceType,
-      codeforcesId, codechefId, hackerrankId, resumeUrl,
-      strengths, weaknesses, techSkills, softSkills,
-      leetcodeId
+      ...normalizedPayload,
+      applicationType: 'college_oauth',
     });
 
     await induction.save();
 
     // Send confirmation email asynchronously
     sendGlobalEmail({
-      to: email,
+      to: normalizedPayload.email,
       subject: 'Application Received 🚀 - GDG MMMUT Induction',
-      html: inductionSubmissionTemplate(firstName, induction)
+      html: inductionSubmissionTemplate(normalizedPayload.firstName, induction)
     });
 
     res.status(201).json({
@@ -167,6 +321,91 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.'
+    });
+  }
+});
+
+// POST /api/induction/special/:inviteId/:token/submit — Submit special induction form via one-time link
+router.post('/special/:inviteId/:token/submit', async (req, res) => {
+  try {
+    const { inviteId, token } = req.params;
+    const invite = await InductionInvite.findOne({ inviteId, token, isActive: true });
+
+    if (!invite) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid special induction link.',
+      });
+    }
+
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      return res.status(410).json({
+        success: false,
+        message: 'This link has expired.',
+      });
+    }
+
+    if (invite.isUsed) {
+      return res.status(410).json({
+        success: false,
+        message: 'This link has already been used to submit a form.',
+      });
+    }
+
+    const normalizedPayload = normalizeInductionPayload(req.body);
+    const existing = await findExistingInductionByIdentity({
+      email: normalizedPayload.email,
+      rollNumber: normalizedPayload.rollNumber,
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'An induction submission already exists for this email or roll number.',
+      });
+    }
+
+    const induction = new Induction({
+      ...normalizedPayload,
+      applicationType: 'special_link',
+      inviteId: invite.inviteId,
+    });
+
+    await induction.save();
+
+    invite.isUsed = true;
+    invite.usedAt = new Date();
+    invite.usedByEmail = normalizedPayload.email;
+    invite.submission = induction._id;
+    await invite.save();
+
+    sendGlobalEmail({
+      to: normalizedPayload.email,
+      subject: 'Application Received 🚀 - GDG MMMUT Induction',
+      html: inductionSubmissionTemplate(normalizedPayload.firstName, induction),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Special induction form submitted successfully.',
+      data: {
+        id: induction._id,
+        inviteId: invite.inviteId,
+      },
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((e) => e.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', '),
+      });
+    }
+
+    console.error('Special induction submit error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.',
     });
   }
 });
