@@ -1376,29 +1376,8 @@ router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), asy
 
     const filter = buildInductionFilter({ status, branch, search });
 
-    if (req.user.role === 'event_manager') {
-      const myPanels = await InductionPanel.find({ members: req.user._id }).select('students.student');
-      const panelStudentIds = [...new Set(
-        myPanels
-          .flatMap((panel) => panel.students || [])
-          .map((entry) => String(entry.student))
-          .filter(Boolean),
-      )];
-
-      if (!panelStudentIds.length) {
-        return res.json({
-          success: true,
-          data: [],
-          pagination: {
-            total: 0,
-            page: parsedPage,
-            pages: 1,
-          },
-        });
-      }
-
-      filter._id = { $in: panelStudentIds };
-    }
+    // Event managers can see all applications (not restricted to their panels)
+    // This allows them to view total applications and select students for panel assignment
 
     const submissions = await Induction.find(filter)
       .sort({ createdAt: -1 })
