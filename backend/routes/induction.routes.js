@@ -8,6 +8,7 @@ import Induction from '../models/Induction.js';
 import InductionInvite from '../models/InductionInvite.js';
 import InductionPanel from '../models/InductionPanel.js';
 import InductionPanelEvaluation from '../models/InductionPanelEvaluation.js';
+import InductionAdvancementRequest from '../models/InductionAdvancementRequest.js';
 import Settings from '../models/Settings.js';
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
@@ -1641,6 +1642,231 @@ router.get('/download-resume', verifyInductionToken, (req, res) => {
     console.error('Error fetching resume for download:', err);
     res.status(500).send('Failed to download resume');
   });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ADVANCEMENT REQUEST ROUTES (event_manager can request, super_admin approves)
+// ═══════════════════════════════════════════════════════════════
+
+// POST /api/induction/advancement-requests — Create advancement request (event_manager/admin)
+router.post('/advancement-requests', protect, authorize('event_manager', 'admin'), async (req, res) => {
+  try {
+    const { studentIds, targetStatus, reason } = req.body;
+
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Student IDs are required' });
+    }
+
+    if (!targetStatus || !['shortlisted_online', 'shortlisted_offline', 'selected', 'rejected'].includes(targetStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid target status' });
+    }
+
+    // Get student details
+    const students = await Induction.find({ _id: { $in: studentIds } }).select('_id firstName lastName status');
+
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'No students found' });
+    }
+
+    // Check if requests already exist for these students with pending status
+    const existingRequests = await InductionAdvancementRequest.find({
+      student: { $in: studentIds },
+      status: 'pending'
+    });
+
+    if (existingRequests.length > 0) {
+      const existingStudentIds = existingRequests.map(r => r.student.toString());
+      return res.status(400).json({
+        success: false,
+        message: `Some students already have pending requests: ${existingStudentIds.join(', ')}`
+      });
+    }
+
+    // Create requests for each student
+    const requests = students.map(student => ({
+      student: student._id,
+      requestedBy: req.user._id,
+      requestedByName: req.user.name,
+      requestedByRole: req.user.role,
+      currentStatus: student.status,
+      targetStatus,
+      reason: reason || '',
+      status: 'pending'
+    }));
+
+    const createdRequests = await InductionAdvancementRequest.insertMany(requests);
+
+    res.json({
+      success: true,
+      message: `Advancement request created for ${createdRequests.length} student(s)`,
+      data: createdRequests
+    });
+  } catch (error) {
+    console.error('Create advancement request error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/advancement-requests — Get all advancement requests
+router.get('/advancement-requests', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { status } = req.query;
+    const filter = {};
+
+    // Event managers only see their own requests
+    if (req.user.role === 'event_manager') {
+      filter.requestedBy = req.user._id;
+    }
+
+    // Filter by status if provided
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+
+    const requests = await InductionAdvancementRequest.find(filter)
+      .populate('student', 'firstName lastName email rollNumber branch status')
+      .populate('reviewedBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: requests
+    });
+  } catch (error) {
+    console.error('Get advancement requests error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/advancement-requests/pending-count — Get count of pending requests (super_admin)
+router.get('/advancement-requests/pending-count', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const count = await InductionAdvancementRequest.countDocuments({ status: 'pending' });
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Get pending count error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/induction/advancement-requests/:id/approve — Approve request (super_admin only)
+router.patch('/advancement-requests/:id/approve', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { reviewNote } = req.body;
+    const request = await InductionAdvancementRequest.findById(req.params.id).populate('student');
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already reviewed' });
+    }
+
+    // Update student status
+    await Induction.findByIdAndUpdate(request.student._id, {
+      status: request.targetStatus
+    });
+
+    // Update request
+    request.status = 'approved';
+    request.reviewedBy = req.user._id;
+    request.reviewedByName = req.user.name;
+    request.reviewedAt = new Date();
+    request.reviewNote = reviewNote || '';
+    await request.save();
+
+    // Send email to student
+    let roundName = "";
+    let nextRoundDetails = "";
+
+    if (request.targetStatus === 'shortlisted_online') {
+      roundName = "Online PI Round";
+      nextRoundDetails = "Get ready for a virtual interview where we will evaluate your technical and soft skills. Check your WhatsApp regularly for updates, the meeting link, and interview slot timings.";
+    } else if (request.targetStatus === 'shortlisted_offline') {
+      roundName = "Offline PI Round";
+      nextRoundDetails = "You cleared the online round! The final offline interview details will be shared soon. Be prepared to showcase your projects and problem-solving skills in person.";
+    } else if (request.targetStatus === 'selected') {
+      roundName = "Core Team Member";
+      nextRoundDetails = "Welcome to the GDG MMMUT family! We are thrilled to have you onboard. We will contact you shortly with onboarding details.";
+    }
+
+    if (['shortlisted_online', 'shortlisted_offline', 'selected'].includes(request.targetStatus)) {
+      sendInductionRoundEmail(request.student.email, request.student.firstName, roundName, nextRoundDetails);
+    }
+
+    res.json({
+      success: true,
+      message: 'Request approved and student status updated',
+      data: request
+    });
+  } catch (error) {
+    console.error('Approve request error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/induction/advancement-requests/:id/reject — Reject request (super_admin only)
+router.patch('/advancement-requests/:id/reject', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { reviewNote } = req.body;
+    const request = await InductionAdvancementRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already reviewed' });
+    }
+
+    request.status = 'rejected';
+    request.reviewedBy = req.user._id;
+    request.reviewedByName = req.user.name;
+    request.reviewedAt = new Date();
+    request.reviewNote = reviewNote || '';
+    await request.save();
+
+    res.json({
+      success: true,
+      message: 'Request rejected',
+      data: request
+    });
+  } catch (error) {
+    console.error('Reject request error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// DELETE /api/induction/advancement-requests/:id — Delete request (requester or super_admin)
+router.delete('/advancement-requests/:id', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const request = await InductionAdvancementRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Only requester or super_admin can delete
+    if (req.user.role !== 'super_admin' && request.requestedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this request' });
+    }
+
+    // Can only delete pending requests
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Cannot delete reviewed requests' });
+    }
+
+    await request.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Request deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete request error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 export default router;

@@ -43,6 +43,8 @@ const InductionManagement = () => {
   const [generatedInviteUrl, setGeneratedInviteUrl] = useState("");
   const [inviteLinks, setInviteLinks] = useState([]);
   const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -228,6 +230,11 @@ const InductionManagement = () => {
     if (!targetStatus) return alert("Please select a target round.");
     if (selectedIds.length === 0) return alert("Please select at least one candidate.");
     
+    // Event managers create advancement request, super admins can directly advance
+    if (user?.role === 'event_manager') {
+      return handleRequestAdvancement();
+    }
+    
     const confirmMessage = `Are you sure you want to move ${selectedIds.length} candidate(s) to '${targetStatus.replace('_', ' ')}'? This will automatically email them.`;
     if (!window.confirm(confirmMessage)) return;
 
@@ -250,6 +257,39 @@ const InductionManagement = () => {
       alert("Failed to advance candidates. Please try again.");
     } finally {
       setIsAdvancing(false);
+    }
+  };
+
+  const handleRequestAdvancement = async () => {
+    if (!targetStatus) return alert("Please select a target round.");
+    if (selectedIds.length === 0) return alert("Please select at least one candidate.");
+    
+    const confirmMessage = `Request advancement for ${selectedIds.length} candidate(s) to '${targetStatus.replace('_', ' ')}'? Super admin will review your request.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsRequesting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(`${API}/induction/advancement-requests`, 
+        { 
+          studentIds: selectedIds, 
+          targetStatus,
+          reason: requestReason.trim()
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (data.success) {
+        alert(data.message + "\nSuper admin will review your request.");
+        setSelectedIds([]);
+        setTargetStatus("");
+        setRequestReason("");
+      }
+    } catch (err) {
+      console.error("Failed to create advancement request:", err);
+      alert(err.response?.data?.message || "Failed to create request. Please try again.");
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -435,10 +475,10 @@ const InductionManagement = () => {
         </FilterGroup>
       </FiltersRow>
 
-      {user?.role === 'super_admin' && selectedIds.length > 0 && (
+      {selectedIds.length > 0 && (
         <BulkActionsPanel>
           <span>{selectedIds.length} candidate{selectedIds.length > 1 ? 's' : ''} selected</span>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
             <Select style={{ padding: '8px', minWidth: '180px' }} value={targetStatus} onChange={(e) => setTargetStatus(e.target.value)}>
               <option value="">-- Move to Round --</option>
               <option value="shortlisted_online">Shortlist: Online PI</option>
@@ -446,8 +486,19 @@ const InductionManagement = () => {
               <option value="selected">Finalize: Selected</option>
               <option value="rejected">Reject</option>
             </Select>
-            <ActionBtn onClick={handleBulkAdvance} disabled={isAdvancing}>
-              {isAdvancing ? "Processing..." : "Finalize Selected"}
+            {user?.role === 'event_manager' && (
+              <RequestReasonInput
+                placeholder="Reason for request (optional)"
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+              />
+            )}
+            <ActionBtn onClick={handleBulkAdvance} disabled={isAdvancing || isRequesting}>
+              {isAdvancing || isRequesting 
+                ? "Processing..." 
+                : user?.role === 'event_manager' 
+                  ? "Request Advancement" 
+                  : "Finalize Selected"}
             </ActionBtn>
           </div>
         </BulkActionsPanel>
@@ -463,7 +514,7 @@ const InductionManagement = () => {
             <Table>
               <thead>
                 <tr>
-                  {user?.role === 'super_admin' && (
+                  {(user?.role === 'super_admin' || user?.role === 'event_manager' || user?.role === 'admin') && (
                     <Th style={{ width: '40px', textAlign: 'center' }}>
                       <input 
                         type="checkbox" 
@@ -483,7 +534,7 @@ const InductionManagement = () => {
               <tbody>
                 {submissions.map((s) => (
                   <tr key={s._id} style={{ background: selectedIds.includes(s._id) ? 'rgba(66, 133, 244, 0.05)' : 'transparent' }}>
-                    {user?.role === 'super_admin' && (
+                    {(user?.role === 'super_admin' || user?.role === 'event_manager' || user?.role === 'admin') && (
                       <Td style={{ textAlign: 'center' }}>
                         <input 
                           type="checkbox" 
@@ -1349,6 +1400,27 @@ const DeleteButton = styled(ViewButton)`
       background: #7f1d1d;
       border-color: #991b1b;
     }
+  }
+`;
+
+const RequestReasonInput = styled.input`
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  color: #1e293b;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
   }
 `;
 
