@@ -1870,6 +1870,37 @@ const InviteSelect = styled.select`
   }
 `;
 
+const Input = styled.input`
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 14px;
+  width: 100%;
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 70px;
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+`;
+
 const GeneratedLinkBar = styled.div`
   margin-top: 12px;
   display: flex;
