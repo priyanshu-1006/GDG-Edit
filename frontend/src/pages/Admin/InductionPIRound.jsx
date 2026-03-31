@@ -46,6 +46,9 @@ export default function InductionPIRound() {
   const [updatingControl, setUpdatingControl] = useState(false);
   const [creatingPanel, setCreatingPanel] = useState(false);
   const [loadingPanelStudents, setLoadingPanelStudents] = useState(false);
+  const [editingPanelId, setEditingPanelId] = useState("");
+  const [editingPanelName, setEditingPanelName] = useState("");
+  const [savingPanelName, setSavingPanelName] = useState(false);
 
   const [newPanelName, setNewPanelName] = useState("");
   const [newPanelDescription, setNewPanelDescription] = useState("");
@@ -198,6 +201,53 @@ export default function InductionPIRound() {
     );
   };
 
+  const startEditingPanelName = (panel) => {
+    setEditingPanelId(String(panel._id));
+    setEditingPanelName(panel.name || "");
+  };
+
+  const cancelEditingPanelName = () => {
+    setEditingPanelId("");
+    setEditingPanelName("");
+  };
+
+  const savePanelName = async (panelId) => {
+    const nextName = editingPanelName.trim();
+    if (!nextName) {
+      showWarningToast("Panel name is required.");
+      return;
+    }
+
+    setSavingPanelName(true);
+    try {
+      const { data } = await axios.patch(
+        `${API}/induction/panels/${panelId}`,
+        { name: nextName },
+        tokenConfig,
+      );
+
+      if (data?.success) {
+        showSuccessToast("Panel name updated successfully.");
+        setPanels((prev) =>
+          prev.map((panel) =>
+            String(panel._id) === String(panelId)
+              ? {
+                  ...panel,
+                  name: data.data?.name || nextName,
+                }
+              : panel,
+          ),
+        );
+        cancelEditingPanelName();
+      }
+    } catch (error) {
+      console.error("Update panel name failed:", error);
+      showApiErrorToast(error, "Failed to update panel name.");
+    } finally {
+      setSavingPanelName(false);
+    }
+  };
+
   useEffect(() => {
     fetchBaseData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,17 +376,56 @@ export default function InductionPIRound() {
           panels.map((panel) => (
             <PanelCard key={panel._id}>
               <div>
-                <h4>{panel.name}</h4>
+                {isSuperAdmin && String(editingPanelId) === String(panel._id) ? (
+                  <InlineEditRow>
+                    <input
+                      value={editingPanelName}
+                      onChange={(e) => setEditingPanelName(e.target.value)}
+                      placeholder="Panel name"
+                      disabled={savingPanelName}
+                    />
+                    <InlineEditActions>
+                      <button
+                        type="button"
+                        onClick={() => savePanelName(panel._id)}
+                        disabled={savingPanelName}
+                      >
+                        {savingPanelName ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={cancelEditingPanelName}
+                        disabled={savingPanelName}
+                      >
+                        Cancel
+                      </button>
+                    </InlineEditActions>
+                  </InlineEditRow>
+                ) : (
+                  <h4>{panel.name}</h4>
+                )}
                 <p>{panel.description || "No description"}</p>
                 <small>Members: {(panel.members || []).map((m) => m.name).join(", ") || "-"}</small>
               </div>
               {isSuperAdmin ? (
-                <button
-                  type="button"
-                  onClick={() => navigate(`${getBasePath(user?.role)}/induction-pi/panels/${panel._id}`)}
-                >
-                  Manage Panel
-                </button>
+                <PanelActions>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`${getBasePath(user?.role)}/induction-pi/panels/${panel._id}`)}
+                  >
+                    Manage Panel
+                  </button>
+                  {String(editingPanelId) !== String(panel._id) && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => startEditingPanelName(panel)}
+                    >
+                      Edit Name
+                    </button>
+                  )}
+                </PanelActions>
               ) : (
                 <button type="button" onClick={() => setSelectedPanelId(String(panel._id))}>Open Panel</button>
               )}
@@ -618,6 +707,45 @@ const PanelCard = styled.div`
     small {
       color: #cbd5e1;
     }
+  }
+`;
+
+const PanelActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  button.secondary {
+    background: #0f766e;
+  }
+`;
+
+const InlineEditRow = styled.div`
+  display: grid;
+  gap: 8px;
+
+  input {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .dark & input {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+`;
+
+const InlineEditActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  button.secondary {
+    background: #475569;
   }
 `;
 
