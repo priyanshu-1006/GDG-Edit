@@ -29,6 +29,7 @@ const InductionManagement = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -407,7 +408,7 @@ const InductionManagement = () => {
       if (statusFilter) params.append("status", statusFilter);
       if (debouncedSearch) params.append("search", debouncedSearch);
       params.append("page", page);
-      params.append("limit", 25);
+      params.append("limit", pageSize);
 
       const { data } = await axios.get(
         `${API}/induction?${params.toString()}`,
@@ -424,7 +425,7 @@ const InductionManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [branchFilter, page, statusFilter, debouncedSearch]);
+  }, [branchFilter, page, statusFilter, debouncedSearch, pageSize]);
 
   const fetchInductionStatus = useCallback(async () => {
     try {
@@ -460,7 +461,7 @@ const InductionManagement = () => {
 
   useEffect(() => {
     setSelectedIds([]);
-  }, [page, statusFilter, branchFilter, debouncedSearch]);
+  }, [page, statusFilter, branchFilter, debouncedSearch, pageSize]);
 
   const handleToggleInductionForm = async () => {
     if (!window.confirm(`Are you sure you want to ${isInductionOpen ? 'CLOSE' : 'OPEN'} the induction form?`)) return;
@@ -962,24 +963,42 @@ const InductionManagement = () => {
 
           <Pagination>
             <PageInfo>
-              Page {page} of {totalPages} ({total} results)
+              Showing {total === 0 ? 0 : (page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total} results (Page {page} of {totalPages})
             </PageInfo>
-            <PageButtons>
-              <PageBtn
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft size={16} />
-                Previous
-              </PageBtn>
-              <PageBtn
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-                <ChevronRight size={16} />
-              </PageBtn>
-            </PageButtons>
+            <PaginationControls>
+              <PerPageControl>
+                <PerPageLabel>Rows per page</PerPageLabel>
+                <Select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  style={{ minWidth: "92px", padding: "8px 12px" }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </Select>
+              </PerPageControl>
+              <PageButtons>
+                <PageBtn
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft size={16} />
+                  Previous
+                </PageBtn>
+                <PageBtn
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </PageBtn>
+              </PageButtons>
+            </PaginationControls>
           </Pagination>
         </>
       )}
@@ -1512,6 +1531,31 @@ const PageInfo = styled.span.attrs({
 const PageButtons = styled.div`
   display: flex;
   gap: 8px;
+`;
+
+const PaginationControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 500px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+`;
+
+const PerPageControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PerPageLabel = styled.span.attrs({
+  className: "text-gray-500 dark:text-gray-400",
+})`
+  font-size: 13px;
+  white-space: nowrap;
 `;
 
 const PageBtn = styled.button`
