@@ -565,7 +565,17 @@ router.get('/pi-candidates', protect, authorize('super_admin'), async (req, res)
       return res.status(400).json({ success: false, message: 'Invalid PI round' });
     }
 
-    const students = await Induction.find({ status: round })
+    // Fetch students with the specified round status
+    // Also include students from BOTH rounds if no specific round is requested
+    let statusFilter;
+    if (requestedRound) {
+      statusFilter = round;
+    } else {
+      // If no specific round requested, show all shortlisted students
+      statusFilter = { $in: allowedRounds };
+    }
+
+    const students = await Induction.find({ status: statusFilter })
       .select('firstName lastName email rollNumber branch section status createdAt')
       .sort({ firstName: 1, lastName: 1, rollNumber: 1 });
 
@@ -1913,6 +1923,210 @@ router.delete('/advancement-requests/:id', protect, authorize('event_manager', '
     });
   } catch (error) {
     console.error('Delete request error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/analytics — Get comprehensive analytics for panels and evaluations
+router.get('/analytics', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const isSuperAdmin = req.user.role === 'super_admin';
+    const isEventManager = req.user.role === 'event_manager';
+
+    // Build query based on role
+    let panelQuery = { isActive: true };
+    if (isEventManager) {
+      // Event managers only see their own panels
+      panelQuery.members = req.user._id;
+    }
+
+    // Fetch panels with populated data
+    const panels = await InductionPanel.find(panelQuery)
+      .populate('members', 'name email role')
+      .populate({
+        path: 'students.student',
+        select: 'firstName lastName email rollNumber branch status'
+      })
+      .lean();
+
+    // Get PI control status from Settings
+    const settings = await Settings.findOne().lean();
+    const piControl = {
+      isPiStarted: !!settings?.isPiStarted,
+      piRound: settings?.piRound || 'shortlisted_online',
+      piStartedAt: settings?.piStartedAt
+    };
+
+    // Calculate analytics for each panel
+    const panelAnalytics = await Promise.all(panels.map(async (panel) => {
+      const totalStudents = panel.students?.length || 0;
+      const studentIds = (panel.students || []).map(entry => entry.student?._id).filter(Boolean);
+
+      // Get all evaluations for this panel
+      const evaluations = await InductionPanelEvaluation.find({
+        panel: panel._id,
+        student: { $in: studentIds }
+      }).lean();
+
+      // Calculate unique students evaluated (a student might have multiple evaluations from different panel members)
+      const evaluatedStudentIds = new Set(evaluations.map(ev => String(ev.student)));
+      const studentsEvaluated = evaluatedStudentIds.size;
+      const studentsPending = totalStudents - studentsEvaluated;
+
+      // Calculate recommendation breakdown
+      const recommendations = {
+        hold: 0,
+        shortlisted_offline: 0,
+        selected: 0,
+        rejected: 0
+      };
+
+      evaluations.forEach(ev => {
+        if (recommendations.hasOwnProperty(ev.recommendation)) {
+          recommendations[ev.recommendation]++;
+        }
+      });
+
+      // Calculate average ratings
+      const ratingsData = evaluations.filter(ev => ev.overallRating);
+      const avgOverallRating = ratingsData.length > 0
+        ? (ratingsData.reduce((sum, ev) => sum + ev.overallRating, 0) / ratingsData.length).toFixed(2)
+        : 0;
+
+      const techRatingsData = evaluations.filter(ev => ev.technicalSkills);
+      const avgTechnicalSkills = techRatingsData.length > 0
+        ? (techRatingsData.reduce((sum, ev) => sum + ev.technicalSkills, 0) / techRatingsData.length).toFixed(2)
+        : 0;
+
+      const softRatingsData = evaluations.filter(ev => ev.softSkills);
+      const avgSoftSkills = softRatingsData.length > 0
+        ? (softRatingsData.reduce((sum, ev) => sum + ev.softSkills, 0) / softRatingsData.length).toFixed(2)
+        : 0;
+
+      // Calculate finalization status (students with finalStatus set)
+      const finalizedStudents = (panel.students || []).filter(entry => entry.finalStatus).length;
+
+      // Student status breakdown (based on their current induction status)
+      const statusBreakdown = {
+        shortlisted_online: 0,
+        shortlisted_offline: 0,
+        selected: 0,
+        rejected: 0,
+        other: 0
+      };
+
+      (panel.students || []).forEach(entry => {
+        const status = entry.student?.status;
+        if (statusBreakdown.hasOwnProperty(status)) {
+          statusBreakdown[status]++;
+        } else {
+          statusBreakdown.other++;
+        }
+      });
+
+      return {
+        panelId: panel._id,
+        panelName: panel.name,
+        description: panel.description,
+        members: panel.members?.map(m => ({
+          id: m._id,
+          name: m.name,
+          email: m.email
+        })) || [],
+        totalStudents,
+        studentsEvaluated,
+        studentsPending,
+        evaluationProgress: totalStudents > 0 ? ((studentsEvaluated / totalStudents) * 100).toFixed(1) : 0,
+        totalEvaluations: evaluations.length,
+        finalizedStudents,
+        finalizationProgress: totalStudents > 0 ? ((finalizedStudents / totalStudents) * 100).toFixed(1) : 0,
+        averageRatings: {
+          overall: parseFloat(avgOverallRating),
+          technical: parseFloat(avgTechnicalSkills),
+          soft: parseFloat(avgSoftSkills)
+        },
+        recommendations,
+        statusBreakdown,
+        piStarted: panel.piStarted || false,
+        piStartedAt: panel.piStartedAt
+      };
+    }));
+
+    // Calculate overall system stats (for super admin)
+    let systemStats = null;
+    if (isSuperAdmin) {
+      const totalPanels = panelAnalytics.length;
+      const totalStudentsAcrossAllPanels = panelAnalytics.reduce((sum, p) => sum + p.totalStudents, 0);
+      const totalEvaluationsAcrossAllPanels = panelAnalytics.reduce((sum, p) => sum + p.totalEvaluations, 0);
+      const totalStudentsEvaluatedAcrossAllPanels = panelAnalytics.reduce((sum, p) => sum + p.studentsEvaluated, 0);
+      const totalFinalizedAcrossAllPanels = panelAnalytics.reduce((sum, p) => sum + p.finalizedStudents, 0);
+
+      const overallEvaluationProgress = totalStudentsAcrossAllPanels > 0
+        ? ((totalStudentsEvaluatedAcrossAllPanels / totalStudentsAcrossAllPanels) * 100).toFixed(1)
+        : 0;
+
+      const overallFinalizationProgress = totalStudentsAcrossAllPanels > 0
+        ? ((totalFinalizedAcrossAllPanels / totalStudentsAcrossAllPanels) * 100).toFixed(1)
+        : 0;
+
+      // Aggregate recommendations across all panels
+      const aggregatedRecommendations = {
+        hold: 0,
+        shortlisted_offline: 0,
+        selected: 0,
+        rejected: 0
+      };
+
+      panelAnalytics.forEach(panel => {
+        Object.keys(aggregatedRecommendations).forEach(key => {
+          aggregatedRecommendations[key] += panel.recommendations[key] || 0;
+        });
+      });
+
+      // Count induction applications by status
+      const inductionStats = await Induction.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      const inductionStatusBreakdown = {};
+      inductionStats.forEach(stat => {
+        inductionStatusBreakdown[stat._id] = stat.count;
+      });
+
+      systemStats = {
+        totalPanels,
+        totalStudents: totalStudentsAcrossAllPanels,
+        totalEvaluations: totalEvaluationsAcrossAllPanels,
+        studentsEvaluated: totalStudentsEvaluatedAcrossAllPanels,
+        studentsPending: totalStudentsAcrossAllPanels - totalStudentsEvaluatedAcrossAllPanels,
+        studentsFinalized: totalFinalizedAcrossAllPanels,
+        evaluationProgress: parseFloat(overallEvaluationProgress),
+        finalizationProgress: parseFloat(overallFinalizationProgress),
+        aggregatedRecommendations,
+        inductionApplications: inductionStatusBreakdown,
+        piStatus: {
+          isStarted: piControl.isPiStarted,
+          round: piControl.piRound,
+          startedAt: piControl.piStartedAt
+        }
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        panels: panelAnalytics,
+        systemStats,
+        piControl
+      }
+    });
+  } catch (error) {
+    console.error('Analytics fetch error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

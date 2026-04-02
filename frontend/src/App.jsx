@@ -46,6 +46,7 @@ const InductionManagement = lazy(() => import("./pages/Admin/InductionManagement
 const InductionPIRound = lazy(() => import("./pages/Admin/InductionPIRound"));
 const InductionPIManagePanel = lazy(() => import("./pages/Admin/InductionPIManagePanel"));
 const InductionPIStudentEvaluation = lazy(() => import("./pages/Admin/InductionPIStudentEvaluation"));
+const InductionAnalytics = lazy(() => import("./pages/Admin/InductionAnalytics"));
 const AdvancementRequests = lazy(() => import("./pages/Admin/AdvancementRequests"));
 const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin"));
 const EventManagerRegister = lazy(() => import("./pages/Admin/EventManagerRegister"));
@@ -151,6 +152,7 @@ function App() {
               <Route path="induction-pi" element={<InductionPIRound />} />
               <Route path="induction-pi/panels/:panelId" element={<InductionPIManagePanel />} />
               <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
+              <Route path="induction-analytics" element={<InductionAnalytics />} />
               <Route path="advancement-requests" element={<AdvancementRequests />} />
               <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
@@ -186,6 +188,7 @@ function App() {
               <Route path="induction" element={<InductionManagement />} />
               <Route path="induction-pi" element={<InductionPIRound />} />
               <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
+              <Route path="induction-analytics" element={<InductionAnalytics />} />
               <Route path="emails" element={<EmailCenter />} />
               <Route path="certificates" element={<CertificateManagement />} />
               <Route path="teams" element={<TeamManagement />} />
@@ -220,6 +223,7 @@ function App() {
               <Route path="induction" element={<InductionManagement />} />
               <Route path="induction-pi" element={<InductionPIRound />} />
               <Route path="induction-pi/panels/:panelId/students/:studentId" element={<InductionPIStudentEvaluation />} />
+              <Route path="induction-analytics" element={<InductionAnalytics />} />
             </Route>
 
             {/* Immerse Login - Separate Portal */}

@@ -186,21 +186,136 @@ export default function InductionPIStudentEvaluation() {
 
       <Grid>
         <Card>
-          <h3>Student Form Details</h3>
+          <h3>📋 Basic Information</h3>
           <DetailsList>
+            <li><strong>Roll Number:</strong> {student.rollNumber || "-"}</li>
+            <li><strong>Email:</strong> {student.email || "-"}</li>
+            <li><strong>Phone:</strong> {student.phone || "-"}</li>
             <li><strong>Branch:</strong> {student.branch || "-"}</li>
             <li><strong>Section:</strong> {student.section || "-"}</li>
-            <li><strong>Phone:</strong> {student.phone || "-"}</li>
-            <li><strong>Domains:</strong> {(student.domains || []).join(", ") || "-"}</li>
-            <li><strong>Tech Stack:</strong> {student.techStack || "-"}</li>
-            <li><strong>GitHub:</strong> {student.githubId || "-"}</li>
-            <li><strong>LinkedIn:</strong> {student.linkedinUrl || "-"}</li>
-            <li><strong>Why Join:</strong> {student.whyJoin || "-"}</li>
-            <li><strong>Projects:</strong> {student.projects || "-"}</li>
-            <li><strong>Strengths:</strong> {student.strengths || "-"}</li>
-            <li><strong>Weaknesses:</strong> {student.weaknesses || "-"}</li>
+            <li><strong>Residence:</strong> {student.residenceType || "-"}</li>
           </DetailsList>
         </Card>
+
+        <Card>
+          <h3>💻 Technical Profile</h3>
+          <DetailsList>
+            <li><strong>Domains:</strong> {(student.domains || []).join(", ") || "-"}</li>
+            <li><strong>Tech Stack:</strong> {student.techStack || "-"}</li>
+            <li><strong>Technical Skills:</strong> {student.techSkills || "-"}</li>
+            <li><strong>Soft Skills:</strong> {student.softSkills || "-"}</li>
+            <li><strong>Projects:</strong> {student.projects || "-"}</li>
+          </DetailsList>
+        </Card>
+      </Grid>
+
+      <Grid>
+        <Card>
+          <h3>🔗 Online Profiles</h3>
+          <DetailsList>
+            <li>
+              <strong>GitHub:</strong>{" "}
+              {student.githubId ? (
+                <a href={`https://github.com/${student.githubId}`} target="_blank" rel="noopener noreferrer">
+                  {student.githubId}
+                </a>
+              ) : "-"}
+            </li>
+            <li>
+              <strong>LinkedIn:</strong>{" "}
+              {student.linkedinUrl ? (
+                <a href={student.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                  View Profile
+                </a>
+              ) : "-"}
+            </li>
+            <li>
+              <strong>LeetCode:</strong>{" "}
+              {student.leetcodeId ? (
+                <a href={`https://leetcode.com/${student.leetcodeId}`} target="_blank" rel="noopener noreferrer">
+                  {student.leetcodeId}
+                </a>
+              ) : "-"}
+            </li>
+            <li>
+              <strong>Codeforces:</strong>{" "}
+              {student.codeforcesId ? (
+                <a href={`https://codeforces.com/profile/${student.codeforcesId}`} target="_blank" rel="noopener noreferrer">
+                  {student.codeforcesId}
+                </a>
+              ) : "-"}
+            </li>
+            <li>
+              <strong>CodeChef:</strong>{" "}
+              {student.codechefId ? (
+                <a href={`https://www.codechef.com/users/${student.codechefId}`} target="_blank" rel="noopener noreferrer">
+                  {student.codechefId}
+                </a>
+              ) : "-"}
+            </li>
+            <li>
+              <strong>HackerRank:</strong>{" "}
+              {student.hackerrankId ? (
+                <a href={`https://www.hackerrank.com/${student.hackerrankId}`} target="_blank" rel="noopener noreferrer">
+                  {student.hackerrankId}
+                </a>
+              ) : "-"}
+            </li>
+          </DetailsList>
+        </Card>
+
+        <Card>
+          <h3>📄 Resume & Documents</h3>
+          <DetailsList>
+            <li>
+              <strong>Resume:</strong>{" "}
+              {student.resumeUrl ? (
+                <a href={student.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', fontWeight: 600 }}>
+                  📥 View/Download Resume
+                </a>
+              ) : "Not uploaded"}
+            </li>
+          </DetailsList>
+        </Card>
+      </Grid>
+
+      <Card>
+        <h3>💬 Personal Statements</h3>
+        <DetailsList>
+          <li>
+            <strong>Why Join GDG?</strong>
+            <div style={{ marginTop: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', color: '#1e293b' }}>
+              {student.whyJoin || "-"}
+            </div>
+          </li>
+          <li style={{ marginTop: '16px' }}>
+            <strong>Interesting Fact:</strong>
+            <div style={{ marginTop: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', color: '#1e293b' }}>
+              {student.interestingFact || "-"}
+            </div>
+          </li>
+          <li style={{ marginTop: '16px' }}>
+            <strong>Other Clubs/Activities:</strong>
+            <div style={{ marginTop: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', color: '#1e293b' }}>
+              {student.otherClubs || "-"}
+            </div>
+          </li>
+          <li style={{ marginTop: '16px' }}>
+            <strong>Strengths:</strong>
+            <div style={{ marginTop: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', color: '#1e293b' }}>
+              {student.strengths || "-"}
+            </div>
+          </li>
+          <li style={{ marginTop: '16px' }}>
+            <strong>Weaknesses:</strong>
+            <div style={{ marginTop: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', color: '#1e293b' }}>
+              {student.weaknesses || "-"}
+            </div>
+          </li>
+        </DetailsList>
+      </Card>
+
+      <Grid>
 
         <Card>
           <h3>Evaluation Form</h3>
@@ -385,6 +500,31 @@ const DetailsList = styled.ul`
 
   strong {
     color: #0f172a;
+  }
+
+  a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  div {
+    .dark & {
+      background: #0f172a !important;
+      color: #cbd5e1 !important;
+    }
+  }
+
+  .dark & li {
+    color: #94a3b8;
+  }
+
+  .dark & strong {
+    color: #e2e8f0;
   }
 `;
 

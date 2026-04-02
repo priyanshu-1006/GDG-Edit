@@ -40,6 +40,7 @@ const AdminLayout = () => {
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
       { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
+      { path: `${basePath}/induction-analytics`, icon: BarChart3, label: "Induction Analytics" },
       { path: `${basePath}/advancement-requests`, icon: ClipboardCheck, label: "Advancement Requests" },
       { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
       { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
@@ -54,6 +55,7 @@ const AdminLayout = () => {
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
       { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
+      { path: `${basePath}/induction-analytics`, icon: BarChart3, label: "Induction Analytics" },
       { path: `${basePath}/emails`, icon: Mail, label: "Email Center" },
       { path: `${basePath}/certificates`, icon: Award, label: "Certificates" },
       { path: `${basePath}/teams`, icon: Users2, label: "Teams" },
@@ -67,6 +69,7 @@ const AdminLayout = () => {
       { path: `${basePath}/registrations`, icon: ClipboardList, label: "Registrations" },
       { path: `${basePath}/induction`, icon: FileText, label: "Induction" },
       { path: `${basePath}/induction-pi`, icon: ClipboardCheck, label: "Induction PI Round" },
+      { path: `${basePath}/induction-analytics`, icon: BarChart3, label: "Induction Analytics" },
     ];
   }
 
