@@ -241,7 +241,11 @@ const getOrCreateSettings = async () => {
 const canAccessPanel = (panel, reqUser) => {
   if (!panel || !reqUser) return false;
   if (reqUser.role === 'super_admin') return true;
-  return panel.members.some((memberId) => String(memberId) === String(reqUser._id));
+  // Handle both populated (object with _id) and non-populated (ObjectId) members
+  return panel.members.some((member) => {
+    const memberId = member?._id || member;
+    return String(memberId) === String(reqUser._id);
+  });
 };
 
 const findManagerConflicts = async ({ memberIds = [], excludePanelId }) => {
