@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/useAuth";
 import { API_BASE_URL } from "../../config/api";
 import {
@@ -248,6 +249,31 @@ export default function InductionPIRound() {
     }
   };
 
+  const deletePanel = async (panelId, panelName) => {
+    if (!window.confirm(`Are you sure you want to delete panel "${panelName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { data } = await axios.delete(
+        `${API}/induction/panels/${panelId}`,
+        tokenConfig,
+      );
+
+      if (data?.success) {
+        showSuccessToast("Panel deleted successfully.");
+        setPanels((prev) => prev.filter((panel) => String(panel._id) !== String(panelId)));
+        if (String(selectedPanelId) === String(panelId)) {
+          setSelectedPanelId("");
+          setPanelStudents([]);
+        }
+      }
+    } catch (error) {
+      console.error("Delete panel failed:", error);
+      showApiErrorToast(error, "Failed to delete panel.");
+    }
+  };
+
   useEffect(() => {
     fetchBaseData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,13 +443,23 @@ export default function InductionPIRound() {
                     Manage Panel
                   </button>
                   {String(editingPanelId) !== String(panel._id) && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => startEditingPanelName(panel)}
-                    >
-                      Edit Name
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => startEditingPanelName(panel)}
+                      >
+                        Edit Name
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => deletePanel(panel._id, panel.name)}
+                        title="Delete Panel"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
                   )}
                 </PanelActions>
               ) : (
@@ -718,6 +754,18 @@ const PanelActions = styled.div`
 
   button.secondary {
     background: #0f766e;
+  }
+
+  button.danger {
+    background: #dc2626;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &:hover {
+      background: #b91c1c;
+    }
   }
 `;
 

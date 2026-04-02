@@ -748,6 +748,33 @@ router.patch('/panels/:panelId', protect, authorize('super_admin'), async (req, 
   }
 });
 
+// DELETE /api/induction/panels/:panelId — Delete a panel (super_admin only)
+router.delete('/panels/:panelId', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    const panel = await InductionPanel.findById(panelId);
+
+    if (!panel) {
+      return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    // Optional: Check if panel has students and prevent deletion
+    if (panel.students && panel.students.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete panel with ${panel.students.length} assigned student(s). Please remove students first.` 
+      });
+    }
+
+    await InductionPanel.findByIdAndDelete(panelId);
+
+    return res.json({ success: true, message: 'Panel deleted successfully' });
+  } catch (error) {
+    console.error('Delete panel error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // POST /api/induction/panels/:panelId/start-pi — Start PI round for a panel
 router.post('/panels/:panelId/start-pi', protect, authorize('super_admin'), async (req, res) => {
   try {
