@@ -833,13 +833,30 @@ router.patch('/panels/:panelId/students', protect, authorize('super_admin'), asy
     const studentIds = Array.isArray(req.body?.studentIds) ? req.body.studentIds : [];
     const mode = String(req.body?.mode || 'add').toLowerCase();
 
-    if (!studentIds.length) {
+    // Allow empty array only for 'set' mode (to clear all students)
+    if (!studentIds.length && mode !== 'set') {
       return res.status(400).json({ success: false, message: 'studentIds array is required' });
     }
 
     const panel = await InductionPanel.findById(panelId);
     if (!panel) {
       return res.status(404).json({ success: false, message: 'Panel not found' });
+    }
+
+    // If mode is 'set' and studentIds is empty, clear all students
+    if (mode === 'set' && !studentIds.length) {
+      panel.students = [];
+      await panel.save();
+
+      const updatedPanel = await InductionPanel.findById(panel._id)
+        .populate('members', 'name email role')
+        .populate('students.student', 'firstName lastName email rollNumber branch status');
+
+      return res.json({
+        success: true,
+        message: 'All students removed from panel successfully',
+        data: updatedPanel,
+      });
     }
 
     const students = await Induction.find({ _id: { $in: studentIds } }).select('_id status');
