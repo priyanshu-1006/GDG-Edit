@@ -154,7 +154,10 @@ ${actionButton('View Event Details', 'https://gdg.mmmut.app/events', GDG_GREEN)}
 /**
  * Qualification Email Template (for multi-round events)
  */
-const qualificationTemplate = (userName, eventName, roundName, nextRoundDetails) => {
+const qualificationTemplate = (userName, eventName, roundName, nextRoundDetails, scores = null) => {
+  // Check if this is for offline round to show venue details
+  const isOfflineRound = roundName && roundName.toLowerCase().includes('offline');
+  
   const content = `
 <table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
 <tr>
@@ -175,9 +178,38 @@ const qualificationTemplate = (userName, eventName, roundName, nextRoundDetails)
 <td style="background-color:${GDG_GREEN};color:white;padding:8px 20px;border-radius:20px;font-weight:600;font-size:14px;">Qualified for ${roundName}</td>
 </tr>
 </table>
+${scores ? `
+<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0 0;">
+<tr>
+<td style="background-color:white;border:2px solid #e8eaed;padding:16px 24px;border-radius:12px;">
+<p style="margin:0 0 8px;font-size:13px;color:${GDG_GRAY};">Your Evaluation Scores</p>
+<p style="margin:0;font-size:24px;font-weight:700;color:${GDG_BLUE};">${scores.overall}/10</p>
+<p style="margin:8px 0 0;font-size:12px;color:${GDG_GRAY};">Technical: ${scores.technical}/10 | Soft Skills: ${scores.soft}/10</p>
 </td>
 </tr>
 </table>
+` : ''}
+</td>
+</tr>
+</table>
+${isOfflineRound ? `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fef7e0;border:3px solid #f9ab00;border-radius:12px;margin:24px 0;">
+<tr>
+<td style="padding:24px;">
+<h3 style="margin:0 0 16px;font-size:18px;color:${GDG_DARK};font-weight:700;">📍 Offline PI Details</h3>
+<p style="margin:8px 0;font-size:15px;color:${GDG_DARK};"><strong>📌 Venue:</strong> Pushpagiri Hall</p>
+<p style="margin:8px 0;font-size:15px;color:${GDG_DARK};"><strong>⏰ Time:</strong> 10:00 AM onwards</p>
+<p style="margin:16px 0 0;font-size:14px;color:${GDG_GRAY};line-height:1.7;">
+<strong style="color:${GDG_DARK};">Important Instructions:</strong><br>
+• Please be in your <strong>formal attire</strong><br>
+• Bring your <strong>project ready</strong> with you (if any)<br>
+• Arrive 15 minutes early<br>
+• Carry your college ID card
+</p>
+</td>
+</tr>
+</table>
+` : ''}
 ${nextRoundDetails ? `
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${GDG_LIGHT_GRAY};border-radius:12px;margin:24px 0;">
 <tr>

@@ -1,13 +1,14 @@
 import { qualificationTemplate } from "./emailTemplates.js";
 import { sendGlobalEmail } from "./unifiedEmail.js";
 
-export const sendInductionRoundEmail = async (email, firstName, roundName, nextRoundDetails) => {
+export const sendInductionRoundEmail = async (email, firstName, roundName, nextRoundDetails, scores = null) => {
   try {
     const html = qualificationTemplate(
       firstName, 
       "GDG MMMUT Induction 2026", 
       roundName, 
-      nextRoundDetails
+      nextRoundDetails,
+      scores // Pass scores to template
     );
     
     await sendGlobalEmail({

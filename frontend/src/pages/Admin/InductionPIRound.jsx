@@ -274,6 +274,32 @@ export default function InductionPIRound() {
     }
   };
 
+  const handleExportPanels = async () => {
+    if (!isSuperAdmin) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API}/induction/panels-export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const blob = new Blob(
+        [response.data],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `induction_panels_students_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showSuccessToast("Panel student sheet downloaded.");
+    } catch (error) {
+      console.error("Panel export failed:", error);
+      showApiErrorToast(error, "Failed to export panel sheet.");
+    }
+  };
+
   useEffect(() => {
     fetchBaseData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -309,6 +335,13 @@ export default function InductionPIRound() {
       <Header>
         <h2>Induction PI Round</h2>
         <p>Round: {formatRound(piControl.piRound)} | Status: {piControl.isPiStarted ? "Started" : "Not Started"}</p>
+        {isSuperAdmin && (
+          <HeaderActionRow>
+            <button type="button" onClick={handleExportPanels}>
+              Export Panels Excel
+            </button>
+          </HeaderActionRow>
+        )}
       </Header>
 
       {isSuperAdmin && (
@@ -534,6 +567,20 @@ const Header = styled.div`
 
   .dark & p {
     color: #cbd5e1;
+  }
+`;
+
+const HeaderActionRow = styled.div`
+  margin-top: 10px;
+
+  button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
   }
 `;
 

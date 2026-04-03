@@ -41,6 +41,7 @@ export default function InductionPIStudentEvaluation() {
   const [loading, setLoading] = useState(true);
   const [savingEval, setSavingEval] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [shortlisting, setShortlisting] = useState(false);
 
   const [form, setForm] = useState({
     overallRating: "",
@@ -155,6 +156,35 @@ export default function InductionPIStudentEvaluation() {
       showApiErrorToast(error, "Failed to finalize student.");
     } finally {
       setFinalizing(false);
+    }
+  };
+
+  const shortlistForOffline = async () => {
+    if (!detail?.allEvaluations || detail.allEvaluations.length === 0) {
+      showWarningToast("No evaluations found. Cannot shortlist student.");
+      return;
+    }
+
+    const confirmMsg = `Shortlist ${detail.student.firstName} ${detail.student.lastName} for Offline PI? This will send an email with their scores and venue details.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setShortlisting(true);
+    try {
+      const { data } = await axios.post(
+        `${API}/induction/shortlist-for-offline`,
+        { studentId },
+        tokenConfig
+      );
+
+      if (data?.success) {
+        showSuccessToast("Student shortlisted and email sent!");
+        await fetchDetail();
+      }
+    } catch (error) {
+      console.error("Shortlist failed:", error);
+      showApiErrorToast(error, "Failed to shortlist student.");
+    } finally {
+      setShortlisting(false);
     }
   };
 
@@ -390,37 +420,107 @@ export default function InductionPIStudentEvaluation() {
         </Card>
       </Grid>
 
-      <Card>
-        <h3>Finalize Student</h3>
-        <FinalizeGrid>
-          <Field>
-            <label>Final Status</label>
-            <select
-              value={finalStatus}
-              onChange={(e) => setFinalStatus(e.target.value)}
-              disabled={!detail.piControl?.isPiStarted}
-            >
-              {finalStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field>
-            <label>Final Note</label>
-            <textarea
-              rows={3}
-              value={finalNote}
-              onChange={(e) => setFinalNote(e.target.value)}
-              disabled={!detail.piControl?.isPiStarted}
-            />
-          </Field>
-        </FinalizeGrid>
-        <ActionRow>
-          <button type="button" onClick={finalizeStudent} disabled={finalizing || !detail.piControl?.isPiStarted}>
-            {finalizing ? "Finalizing..." : "Finalize Student"}
-          </button>
-        </ActionRow>
-      </Card>
+      {/* All Evaluations Section - Visible to all roles */}
+      {detail?.allEvaluations && detail.allEvaluations.length > 0 && (
+        <Card>
+          <h3>📊 All Evaluations ({detail.allEvaluations.length})</h3>
+          <EvaluationsList>
+            {detail.allEvaluations.map((evaluation, idx) => (
+              <EvaluationCard key={evaluation._id || idx}>
+                <EvalHeader>
+                  <div>
+                    <EvalName>{evaluation.evaluator?.name || "Unknown"}</EvalName>
+                    <EvalEmail>{evaluation.evaluator?.email || "-"}</EvalEmail>
+                  </div>
+                  <EvalDate>{new Date(evaluation.createdAt).toLocaleString()}</EvalDate>
+                </EvalHeader>
+                <EvalBody>
+                  <EvalRow>
+                    <span>Overall Rating:</span>
+                    <strong>{evaluation.overallRating || "-"}/10</strong>
+                  </EvalRow>
+                  <EvalRow>
+                    <span>Technical Skills:</span>
+                    <strong>{evaluation.technicalSkills || "-"}/10</strong>
+                  </EvalRow>
+                  <EvalRow>
+                    <span>Soft Skills:</span>
+                    <strong>{evaluation.softSkills || "-"}/10</strong>
+                  </EvalRow>
+                  <EvalRow>
+                    <span>Recommendation:</span>
+                    <RecommendationBadge recommendation={evaluation.recommendation}>
+                      {evaluation.recommendation || "hold"}
+                    </RecommendationBadge>
+                  </EvalRow>
+                  {evaluation.comment && (
+                    <EvalCommentBox>
+                      <strong>Comment:</strong>
+                      <p>{evaluation.comment}</p>
+                    </EvalCommentBox>
+                  )}
+                  {evaluation.review && (
+                    <EvalCommentBox>
+                      <strong>Review:</strong>
+                      <p>{evaluation.review}</p>
+                    </EvalCommentBox>
+                  )}
+                </EvalBody>
+              </EvaluationCard>
+            ))}
+          </EvaluationsList>
+        </Card>
+      )}
+
+      {/* Quick Shortlist Button - SUPER ADMIN ONLY */}
+      {user?.role === "super_admin" && detail?.allEvaluations && detail.allEvaluations.length > 0 && (
+        <Card>
+          <h3>⚡ Quick Shortlist for Offline Round</h3>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '8px 0 16px' }}>
+            Click below to shortlist this student for offline PI. An email will be sent with their evaluation scores and venue details.
+          </p>
+          <ActionRow>
+            <ShortlistButton type="button" onClick={shortlistForOffline} disabled={shortlisting || !detail.piControl?.isPiStarted}>
+              {shortlisting ? "Sending Email..." : "✓ Shortlist for Offline PI & Send Email"}
+            </ShortlistButton>
+          </ActionRow>
+        </Card>
+      )}
+
+      {/* Finalization Section - SUPER ADMIN ONLY */}
+      {user?.role === "super_admin" && (
+        <Card>
+          <h3>🎯 Finalize Student (Super Admin Only)</h3>
+          <FinalizeGrid>
+            <Field>
+              <label>Final Status</label>
+              <select
+                value={finalStatus}
+                onChange={(e) => setFinalStatus(e.target.value)}
+                disabled={!detail.piControl?.isPiStarted}
+              >
+                {finalStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field>
+              <label>Final Note</label>
+              <textarea
+                rows={3}
+                value={finalNote}
+                onChange={(e) => setFinalNote(e.target.value)}
+                disabled={!detail.piControl?.isPiStarted}
+              />
+            </Field>
+          </FinalizeGrid>
+          <ActionRow>
+            <button type="button" onClick={finalizeStudent} disabled={finalizing || !detail.piControl?.isPiStarted}>
+              {finalizing ? "Finalizing..." : "Finalize Student"}
+            </button>
+          </ActionRow>
+        </Card>
+      )}
     </Wrap>
   );
 }
@@ -586,4 +686,132 @@ const StateCard = styled.div`
   color: #475569;
   font-size: 13px;
   background: #ffffff;
+`;
+
+const EvaluationsList = styled.div`
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+`;
+
+const EvaluationCard = styled.div`
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+`;
+
+const EvalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #f1f5f9;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+const EvalName = styled.div`
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 14px;
+`;
+
+const EvalEmail = styled.div`
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+`;
+
+const EvalDate = styled.div`
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+`;
+
+const EvalBody = styled.div`
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+`;
+
+const EvalRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #334155;
+
+  span {
+    color: #64748b;
+  }
+
+  strong {
+    color: #0f172a;
+    font-weight: 600;
+  }
+`;
+
+const RecommendationBadge = styled.span`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: ${({ recommendation }) => {
+    if (recommendation === "selected") return "#d1fae5";
+    if (recommendation === "shortlisted_offline") return "#dbeafe";
+    if (recommendation === "rejected") return "#fee2e2";
+    return "#f3f4f6";
+  }};
+  color: ${({ recommendation }) => {
+    if (recommendation === "selected") return "#065f46";
+    if (recommendation === "shortlisted_offline") return "#1e40af";
+    if (recommendation === "rejected") return "#991b1b";
+    return "#374151";
+  }};
+`;
+
+const EvalCommentBox = styled.div`
+  margin-top: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  strong {
+    display: block;
+    color: #0f172a;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+  }
+`;
+
+const ShortlistButton = styled.button`
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  background: #10b981;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #059669;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 `;

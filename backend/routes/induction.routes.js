@@ -1134,8 +1134,8 @@ router.post('/panels/:panelId/evaluate', protect, authorize('event_manager', 'ad
   }
 });
 
-// POST /api/induction/panels/:panelId/finalize — Finalize panel decision for one student
-router.post('/panels/:panelId/finalize', protect, authorize('event_manager', 'admin', 'super_admin'), async (req, res) => {
+// POST /api/induction/panels/:panelId/finalize — Finalize panel decision for one student (SUPER ADMIN ONLY)
+router.post('/panels/:panelId/finalize', protect, authorize('super_admin'), async (req, res) => {
   try {
     const { panelId } = req.params;
     const { studentId, finalStatus, finalNote } = req.body;
@@ -1153,9 +1153,10 @@ router.post('/panels/:panelId/finalize', protect, authorize('event_manager', 'ad
       return res.status(404).json({ success: false, message: 'Panel not found' });
     }
 
-    if (!canAccessPanel(panel, req.user)) {
-      return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
-    }
+    // Super admin doesn't need panel access check - they have full control
+    // if (!canAccessPanel(panel, req.user)) {
+    //   return res.status(403).json({ success: false, message: 'Not authorized for this panel' });
+    // }
 
     const settings = await getOrCreateSettings();
     if (!settings.isPiStarted) {
@@ -1220,6 +1221,12 @@ router.get('/panels/:panelId/students/:studentId', protect, authorize('event_man
       evaluator: req.user._id,
     }).populate('evaluator', 'name email role');
 
+    // Fetch ALL evaluations for this student in this panel
+    const allEvaluations = await InductionPanelEvaluation.find({
+      panel: panel._id,
+      student: student._id,
+    }).populate('evaluator', 'name email role').sort({ createdAt: 1 });
+
     return res.json({
       success: true,
       data: {
@@ -1227,6 +1234,7 @@ router.get('/panels/:panelId/students/:studentId', protect, authorize('event_man
         panelEntry,
         student,
         myEvaluation,
+        allEvaluations,
         piControl: {
           piRound: settings.piRound || 'shortlisted_online',
           isPiStarted: !!settings.isPiStarted,
@@ -1236,6 +1244,69 @@ router.get('/panels/:panelId/students/:studentId', protect, authorize('event_man
     });
   } catch (error) {
     console.error('Fetch panel student detail error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/shortlist-for-offline — Shortlist student for offline PI with email (SUPER ADMIN ONLY)
+router.post('/shortlist-for-offline', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { studentId } = req.body;
+
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: 'studentId is required' });
+    }
+
+    const student = await Induction.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Fetch all evaluations for this student across all panels
+    const allEvaluations = await InductionPanelEvaluation.find({ student: studentId });
+    
+    if (!allEvaluations || allEvaluations.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No evaluations found for this student. Cannot shortlist without evaluation data.' 
+      });
+    }
+
+    // Calculate average scores
+    const totalCount = allEvaluations.length;
+    const sumOverall = allEvaluations.reduce((sum, e) => sum + (Number(e.overallRating) || 0), 0);
+    const sumTechnical = allEvaluations.reduce((sum, e) => sum + (Number(e.technicalSkills) || 0), 0);
+    const sumSoft = allEvaluations.reduce((sum, e) => sum + (Number(e.softSkills) || 0), 0);
+
+    const scores = {
+      overall: (sumOverall / totalCount).toFixed(1),
+      technical: (sumTechnical / totalCount).toFixed(1),
+      soft: (sumSoft / totalCount).toFixed(1),
+    };
+
+    // Update student status
+    student.status = 'shortlisted_offline';
+    await student.save();
+
+    // Send email with scores and venue details
+    const roundName = 'Offline PI Round';
+    const nextRoundDetails = null; // Venue details are automatically shown for offline round in template
+    
+    await sendInductionRoundEmail(
+      student.email, 
+      student.firstName, 
+      roundName, 
+      nextRoundDetails,
+      scores
+    );
+
+    return res.json({
+      success: true,
+      message: `${student.firstName} ${student.lastName} shortlisted for offline PI. Email sent with scores and venue details.`,
+      data: { scores, status: 'shortlisted_offline' }
+    });
+  } catch (error) {
+    console.error('Shortlist for offline error:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -1491,6 +1562,62 @@ router.get('/export', protect, authorize('event_manager', 'admin', 'super_admin'
     return res.send(fileBuffer);
   } catch (error) {
     console.error('Induction export error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/panels-export — Export all panels with assigned students as Excel (super_admin)
+// Note: keep this outside `/panels/:panelId` namespace to avoid route-param collision with "export".
+router.get('/panels-export', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const panels = await InductionPanel.find({ isActive: true })
+      .populate('students.student', 'firstName lastName rollNumber branch section phone email')
+      .sort({ name: 1 })
+      .lean();
+
+    const rows = [];
+    panels.forEach((panel) => {
+      const panelStudents = panel.students || [];
+
+      if (!panelStudents.length) {
+        rows.push({
+          'Panel Name': panel.name || '-',
+          'Student Name': '',
+          'Roll Number': '',
+          Branch: '',
+          Section: '',
+          Phone: '',
+          Email: '',
+        });
+        return;
+      }
+
+      panelStudents.forEach((entry) => {
+        const student = entry?.student || {};
+        rows.push({
+          'Panel Name': panel.name || '-',
+          'Student Name': `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          'Roll Number': student.rollNumber || '',
+          Branch: student.branch || '',
+          Section: student.section || '',
+          Phone: student.phone || '',
+          Email: student.email || '',
+        });
+      });
+    });
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Panels & Students');
+
+    const fileBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const today = new Date().toISOString().split('T')[0];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="induction_panels_students_${today}.xlsx"`);
+    return res.send(fileBuffer);
+  } catch (error) {
+    console.error('Panel export error:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
