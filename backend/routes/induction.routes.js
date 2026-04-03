@@ -2258,4 +2258,130 @@ router.get('/analytics', protect, authorize('event_manager', 'admin', 'super_adm
   }
 });
 
+// GET /api/induction/evaluated-students — Get all students with their evaluations (SUPER ADMIN)
+router.get('/evaluated-students', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    // Find all panels with students
+    const panels = await InductionPanel.find({ isActive: true })
+      .populate({
+        path: 'students.student',
+        select: 'firstName lastName email rollNumber branch section phone status'
+      })
+      .lean();
+
+    // Collect all unique students across panels
+    const studentMap = new Map();
+    
+    for (const panel of panels) {
+      for (const entry of panel.students || []) {
+        if (!entry.student) continue;
+        
+        const studentId = String(entry.student._id);
+        if (!studentMap.has(studentId)) {
+          studentMap.set(studentId, {
+            _id: entry.student._id,
+            firstName: entry.student.firstName,
+            lastName: entry.student.lastName,
+            email: entry.student.email,
+            rollNumber: entry.student.rollNumber,
+            branch: entry.student.branch,
+            section: entry.student.section,
+            phone: entry.student.phone,
+            status: entry.student.status,
+            panels: []
+          });
+        }
+        
+        // Add panel info
+        studentMap.get(studentId).panels.push({
+          panelId: panel._id,
+          panelName: panel.name,
+          finalStatus: entry.finalStatus,
+          isFinalized: entry.isFinalized
+        });
+      }
+    }
+
+    // Get all evaluations for these students
+    const studentIds = Array.from(studentMap.keys());
+    const allEvaluations = await InductionPanelEvaluation.find({
+      student: { $in: studentIds }
+    })
+    .populate('evaluator', 'name email role')
+    .populate('panel', 'name')
+    .lean();
+
+    // Group evaluations by student and calculate stats
+    const evaluationsByStudent = {};
+    allEvaluations.forEach(ev => {
+      const sid = String(ev.student);
+      if (!evaluationsByStudent[sid]) {
+        evaluationsByStudent[sid] = [];
+      }
+      evaluationsByStudent[sid].push(ev);
+    });
+
+    // Build final student list with evaluation stats
+    const studentsWithEvaluations = Array.from(studentMap.values()).map(student => {
+      const evals = evaluationsByStudent[String(student._id)] || [];
+      
+      const avgOverall = evals.length > 0
+        ? (evals.reduce((sum, e) => sum + (Number(e.overallRating) || 0), 0) / evals.length).toFixed(1)
+        : 0;
+      
+      const avgTechnical = evals.length > 0
+        ? (evals.reduce((sum, e) => sum + (Number(e.technicalSkills) || 0), 0) / evals.length).toFixed(1)
+        : 0;
+      
+      const avgSoft = evals.length > 0
+        ? (evals.reduce((sum, e) => sum + (Number(e.softSkills) || 0), 0) / evals.length).toFixed(1)
+        : 0;
+      
+      // Collect recommendations
+      const recommendations = {};
+      evals.forEach(e => {
+        if (e.recommendation) {
+          recommendations[e.recommendation] = (recommendations[e.recommendation] || 0) + 1;
+        }
+      });
+      
+      return {
+        ...student,
+        evaluationCount: evals.length,
+        averageScores: {
+          overall: parseFloat(avgOverall),
+          technical: parseFloat(avgTechnical),
+          soft: parseFloat(avgSoft)
+        },
+        recommendations,
+        evaluations: evals.map(e => ({
+          evaluatorName: e.evaluator?.name || 'Unknown',
+          evaluatorEmail: e.evaluator?.email,
+          panelName: e.panel?.name || 'Unknown Panel',
+          overallRating: e.overallRating,
+          technicalSkills: e.technicalSkills,
+          softSkills: e.softSkills,
+          recommendation: e.recommendation,
+          createdAt: e.createdAt
+        }))
+      };
+    });
+
+    // Sort by average overall score descending
+    studentsWithEvaluations.sort((a, b) => b.averageScores.overall - a.averageScores.overall);
+
+    res.json({
+      success: true,
+      data: {
+        students: studentsWithEvaluations,
+        totalStudents: studentsWithEvaluations.length,
+        totalEvaluations: allEvaluations.length
+      }
+    });
+  } catch (error) {
+    console.error('Evaluated students fetch error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 export default router;

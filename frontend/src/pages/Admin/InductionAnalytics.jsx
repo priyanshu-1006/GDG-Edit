@@ -22,10 +22,19 @@ export default function InductionAnalytics() {
 
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'students'
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'students' && isSuperAdmin && students.length === 0) {
+      fetchStudents();
+    }
+  }, [activeTab, isSuperAdmin]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -42,6 +51,24 @@ export default function InductionAnalytics() {
       console.error("Failed to fetch analytics:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStudents = async () => {
+    setLoadingStudents(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API}/induction/evaluated-students`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (data?.success) {
+        setStudents(data.data.students || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch students:", error);
+    } finally {
+      setLoadingStudents(false);
     }
   };
 
@@ -67,7 +94,22 @@ export default function InductionAnalytics() {
         </div>
       </Header>
 
-      {isSuperAdmin && systemStats && (
+      {/* Tabs for Super Admin */}
+      {isSuperAdmin && (
+        <TabsContainer>
+          <Tab $active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+            <BarChart3 size={18} /> Overview & Stats
+          </Tab>
+          <Tab $active={activeTab === 'students'} onClick={() => setActiveTab('students')}>
+            <Users size={18} /> All Students & Evaluations
+          </Tab>
+        </TabsContainer>
+      )}
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <>
+          {isSuperAdmin && systemStats && (
         <>
           <SectionTitle>🎯 System Overview</SectionTitle>
           <StatsGrid>
@@ -278,6 +320,86 @@ export default function InductionAnalytics() {
             </PanelCard>
           ))}
         </PanelsGrid>
+      )}
+        </>
+      )}
+
+      {/* Students Tab - Super Admin Only */}
+      {activeTab === 'students' && isSuperAdmin && (
+        <>
+          <SectionTitle>👥 All Students with Evaluations</SectionTitle>
+          {loadingStudents ? (
+            <LoadingCard>Loading students...</LoadingCard>
+          ) : students.length === 0 ? (
+            <LoadingCard>No evaluated students found</LoadingCard>
+          ) : (
+            <>
+              <StudentsHeader>
+                <span>{students.length} Students Evaluated</span>
+                <span>Sorted by Average Score</span>
+              </StudentsHeader>
+              <StudentsTable>
+                <thead>
+                  <tr>
+                    <th>Roll No</th>
+                    <th>Name</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                    <th>Evaluations</th>
+                    <th>Avg Overall</th>
+                    <th>Avg Tech</th>
+                    <th>Avg Soft</th>
+                    <th>Top Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student) => {
+                    // Find most common recommendation
+                    const topRec = Object.entries(student.recommendations).sort((a, b) => b[1] - a[1])[0];
+                    const topRecommendation = topRec ? topRec[0] : 'none';
+                    
+                    return (
+                      <tr key={student._id}>
+                        <td><strong>{student.rollNumber}</strong></td>
+                        <td>
+                          <StudentName>
+                            {student.firstName} {student.lastName}
+                            <StudentEmail>{student.email}</StudentEmail>
+                          </StudentName>
+                        </td>
+                        <td>{student.branch} - {student.section}</td>
+                        <td>
+                          <StatusBadgeSmall $status={student.status}>
+                            {student.status?.replace('_', ' ')}
+                          </StatusBadgeSmall>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <EvalCount>{student.evaluationCount}</EvalCount>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <ScoreBadge $score={student.averageScores.overall}>
+                            {student.averageScores.overall}/10
+                          </ScoreBadge>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {student.averageScores.technical}/10
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {student.averageScores.soft}/10
+                        </td>
+                        <td>
+                          <RecommendationBadgeSmall $recommendation={topRecommendation}>
+                            {topRecommendation}
+                          </RecommendationBadgeSmall>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </StudentsTable>
+            </>
+          )}
+        </>
       )}
     </Container>
   );
@@ -771,4 +893,237 @@ const RecommendationItem = styled.div`
       color: #e2e8f0;
     }
   }
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e2e8f0;
+
+  .dark & {
+    border-bottom-color: #334155;
+  }
+`;
+
+const Tab = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: ${props => props.$active ? '#3b82f6' : 'transparent'};
+  color: ${props => props.$active ? 'white' : '#64748b'};
+  border: none;
+  border-bottom: 3px solid ${props => props.$active ? '#3b82f6' : 'transparent'};
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: ${props => props.$active ? '600' : '500'};
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${props => props.$active ? '#3b82f6' : '#f1f5f9'};
+    color: ${props => props.$active ? 'white' : '#1e293b'};
+  }
+
+  .dark & {
+    background: ${props => props.$active ? '#3b82f6' : 'transparent'};
+    color: ${props => props.$active ? 'white' : '#94a3b8'};
+
+    &:hover {
+      background: ${props => props.$active ? '#3b82f6' : '#1e293b'};
+      color: ${props => props.$active ? 'white' : '#e2e8f0'};
+    }
+  }
+`;
+
+const StudentsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+
+  span:last-child {
+    font-size: 13px;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+
+    span:last-child {
+      color: #94a3b8;
+    }
+  }
+`;
+
+const StudentsTable = styled.table`
+  width: 100%;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  border-collapse: collapse;
+  overflow: hidden;
+
+  thead {
+    background: #f8fafc;
+    
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #e2e8f0;
+      transition: background 0.15s;
+
+      &:hover {
+        background: #f8fafc;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #334155;
+    }
+  }
+
+  .dark & {
+    background: #1e293b;
+    border-color: #334155;
+
+    thead {
+      background: #0f172a;
+
+      th {
+        color: #94a3b8;
+        border-bottom-color: #334155;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom-color: #334155;
+
+        &:hover {
+          background: #0f172a;
+        }
+      }
+
+      td {
+        color: #cbd5e1;
+      }
+    }
+  }
+`;
+
+const StudentName = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const StudentEmail = styled.span`
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+`;
+
+const StatusBadgeSmall = styled.span`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: ${props => {
+    if (props.$status === 'selected') return '#d1fae5';
+    if (props.$status?.includes('shortlisted')) return '#dbeafe';
+    if (props.$status === 'rejected') return '#fee2e2';
+    return '#f3f4f6';
+  }};
+  color: ${props => {
+    if (props.$status === 'selected') return '#065f46';
+    if (props.$status?.includes('shortlisted')) return '#1e40af';
+    if (props.$status === 'rejected') return '#991b1b';
+    return '#374151';
+  }};
+`;
+
+const EvalCount = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 700;
+  font-size: 13px;
+`;
+
+const ScoreBadge = styled.span`
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  background: ${props => {
+    const score = props.$score;
+    if (score >= 8) return '#d1fae5';
+    if (score >= 6) return '#dbeafe';
+    if (score >= 4) return '#fef3c7';
+    return '#fee2e2';
+  }};
+  color: ${props => {
+    const score = props.$score;
+    if (score >= 8) return '#065f46';
+    if (score >= 6) return '#1e40af';
+    if (score >= 4) return '#92400e';
+    return '#991b1b';
+  }};
+`;
+
+const RecommendationBadgeSmall = styled.span`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: ${props => {
+    if (props.$recommendation === 'selected') return '#d1fae5';
+    if (props.$recommendation === 'shortlisted_offline') return '#dbeafe';
+    if (props.$recommendation === 'rejected') return '#fee2e2';
+    return '#f3f4f6';
+  }};
+  color: ${props => {
+    if (props.$recommendation === 'selected') return '#065f46';
+    if (props.$recommendation === 'shortlisted_offline') return '#1e40af';
+    if (props.$recommendation === 'rejected') return '#991b1b';
+    return '#374151';
+  }};
 `;
