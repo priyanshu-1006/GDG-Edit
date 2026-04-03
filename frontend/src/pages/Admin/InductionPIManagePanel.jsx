@@ -262,6 +262,45 @@ export default function InductionPIManagePanel() {
           </ActionRow>
         </SectionCard>
       </Grid>
+
+      {/* Assigned Students - Clickable to View/Evaluate */}
+      {panel.students && panel.students.length > 0 && (
+        <AssignedStudentsSection>
+          <h3>📋 Assigned Students ({panel.students.length})</h3>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '8px 0 16px' }}>
+            Click on any student to view their details and evaluations
+          </p>
+          <StudentsGrid>
+            {panel.students.map((entry) => {
+              const student = entry.student;
+              if (!student) return null;
+              
+              return (
+                <StudentEvalCard
+                  key={student._id}
+                  type="button"
+                  onClick={() => navigate(`${getBasePath(user?.role)}/induction-pi/panels/${panelId}/students/${student._id}`)}
+                >
+                  <StudentName>
+                    {student.firstName} {student.lastName}
+                  </StudentName>
+                  <StudentInfo>
+                    <span>{student.rollNumber || "No Roll"}</span>
+                    <span>{student.branch || "-"}</span>
+                  </StudentInfo>
+                  <StudentEmail>{student.email}</StudentEmail>
+                  {entry.finalStatus && (
+                    <StatusBadge $status={entry.finalStatus}>
+                      {entry.finalStatus.replace('_', ' ')}
+                    </StatusBadge>
+                  )}
+                  <ViewButton>→ View & Evaluate</ViewButton>
+                </StudentEvalCard>
+              );
+            })}
+          </StudentsGrid>
+        </AssignedStudentsSection>
+      )}
     </Wrap>
   );
 }
@@ -451,4 +490,98 @@ const StateCard = styled.div`
   color: #475569;
   font-size: 13px;
   background: #ffffff;
+`;
+
+const AssignedStudentsSection = styled.section`
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
+
+  h3 {
+    margin: 0;
+    color: #1e3a8a;
+    font-size: 16px;
+  }
+`;
+
+const StudentsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StudentEvalCard = styled.button`
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+    transform: translateY(-1px);
+  }
+`;
+
+const StudentName = styled.strong`
+  color: #0f172a;
+  font-size: 13px;
+`;
+
+const StudentInfo = styled.div`
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #475569;
+`;
+
+const StudentEmail = styled.small`
+  color: #64748b;
+  font-size: 11px;
+`;
+
+const StatusBadge = styled.span`
+  display: inline-block;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: ${(props) =>
+    props.$status === "selected"
+      ? "#dcfce7"
+      : props.$status?.includes("shortlisted")
+        ? "#dbeafe"
+        : props.$status === "rejected"
+          ? "#fee2e2"
+          : "#f1f5f9"};
+  color: ${(props) =>
+    props.$status === "selected"
+      ? "#166534"
+      : props.$status?.includes("shortlisted")
+        ? "#1d4ed8"
+        : props.$status === "rejected"
+          ? "#991b1b"
+          : "#334155"};
+`;
+
+const ViewButton = styled.span`
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
 `;
