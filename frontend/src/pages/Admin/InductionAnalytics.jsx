@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/useAuth";
 import { API_BASE_URL } from "../../config/api";
 import { 
@@ -15,9 +16,11 @@ import {
 } from "lucide-react";
 
 const API = `${API_BASE_URL}/api`;
+const getBasePath = (role) => (role === "super_admin" ? "/super-admin" : role === "event_manager" ? "/event-manager" : "/admin");
 
 export default function InductionAnalytics() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isSuperAdmin = user?.role === 'super_admin';
 
   const [analytics, setAnalytics] = useState(null);
@@ -25,6 +28,7 @@ export default function InductionAnalytics() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'students'
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -64,11 +68,61 @@ export default function InductionAnalytics() {
 
       if (data?.success) {
         setStudents(data.data.students || []);
+        setSelectedStudentIds([]);
       }
     } catch (error) {
       console.error("Failed to fetch students:", error);
     } finally {
       setLoadingStudents(false);
+    }
+  };
+
+  const toggleStudentSelection = (studentId) => {
+    const id = String(studentId);
+    setSelectedStudentIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllStudents = () => {
+    if (selectedStudentIds.length === students.length) {
+      setSelectedStudentIds([]);
+      return;
+    }
+    setSelectedStudentIds(students.map((s) => String(s._id)));
+  };
+
+  const openStudentProfile = (student) => {
+    const panelId = student?.panels?.[0]?.panelId;
+    if (!panelId) {
+      alert("Panel mapping not found for this student.");
+      return;
+    }
+    navigate(`${getBasePath(user?.role)}/induction-pi/panels/${panelId}/students/${student._id}`);
+  };
+
+  const shortlistSelectedFromAnalytics = async () => {
+    if (!selectedStudentIds.length) {
+      alert("Please select at least one student.");
+      return;
+    }
+    if (!window.confirm(`Shortlist ${selectedStudentIds.length} student(s) to Offline PI?`)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.patch(
+        `${API}/induction/bulk-advance`,
+        { studentIds: selectedStudentIds, targetStatus: "shortlisted_offline" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (data?.success) {
+        alert("Students shortlisted successfully.");
+        fetchStudents();
+        fetchAnalytics();
+      }
+    } catch (error) {
+      console.error("Failed to shortlist students:", error);
+      alert(error?.response?.data?.message || "Failed to shortlist students.");
     }
   };
 
@@ -336,11 +390,23 @@ export default function InductionAnalytics() {
             <>
               <StudentsHeader>
                 <span>{students.length} Students Evaluated</span>
-                <span>Sorted by Average Score</span>
+                <StudentsHeaderActions>
+                  <span>Sorted by Average Score</span>
+                  <button type="button" disabled={!selectedStudentIds.length} onClick={shortlistSelectedFromAnalytics}>
+                    Shortlist Selected ({selectedStudentIds.length})
+                  </button>
+                </StudentsHeaderActions>
               </StudentsHeader>
               <StudentsTable>
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        checked={students.length > 0 && selectedStudentIds.length === students.length}
+                        onChange={toggleSelectAllStudents}
+                      />
+                    </th>
                     <th>Roll No</th>
                     <th>Name</th>
                     <th>Branch</th>
@@ -350,6 +416,7 @@ export default function InductionAnalytics() {
                     <th>Avg Tech</th>
                     <th>Avg Soft</th>
                     <th>Top Recommendation</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,6 +427,13 @@ export default function InductionAnalytics() {
                     
                     return (
                       <tr key={student._id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.includes(String(student._id))}
+                            onChange={() => toggleStudentSelection(student._id)}
+                          />
+                        </td>
                         <td><strong>{student.rollNumber}</strong></td>
                         <td>
                           <StudentName>
@@ -391,6 +465,11 @@ export default function InductionAnalytics() {
                           <RecommendationBadgeSmall $recommendation={topRecommendation}>
                             {topRecommendation}
                           </RecommendationBadgeSmall>
+                        </td>
+                        <td>
+                          <OpenProfileBtn type="button" onClick={() => openStudentProfile(student)}>
+                            Open Profile
+                          </OpenProfileBtn>
                         </td>
                       </tr>
                     );
@@ -965,6 +1044,34 @@ const StudentsHeader = styled.div`
   }
 `;
 
+const StudentsHeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  span {
+    font-size: 13px;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
 const StudentsTable = styled.table`
   width: 100%;
   background: white;
@@ -1037,6 +1144,18 @@ const StudentsTable = styled.table`
       }
     }
   }
+`;
+
+const OpenProfileBtn = styled.button`
+  border: 1px solid #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
 `;
 
 const StudentName = styled.div`
