@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import styled from "styled-components";
 import {
   Search,
@@ -35,6 +35,7 @@ const InductionManagement = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [targetStatus, setTargetStatus] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [nameSortOrder, setNameSortOrder] = useState("");
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [inviteId, setInviteId] = useState("");
   const [inviteNote, setInviteNote] = useState("");
@@ -336,6 +337,24 @@ const InductionManagement = () => {
     "Internet of Things",
   ];
 
+  const sortedSubmissions = useMemo(() => {
+    if (!nameSortOrder) {
+      return submissions;
+    }
+
+    const direction = nameSortOrder === "asc" ? 1 : -1;
+
+    return [...submissions].sort((a, b) => {
+      const aName = `${a.firstName || ""} ${a.lastName || ""}`.trim();
+      const bName = `${b.firstName || ""} ${b.lastName || ""}`.trim();
+      return aName.localeCompare(bName, undefined, { sensitivity: "base" }) * direction;
+    });
+  }, [submissions, nameSortOrder]);
+
+  const handleToggleNameSort = () => {
+    setNameSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
   return (
     <Container>
       <Header>
@@ -472,6 +491,15 @@ const InductionManagement = () => {
               </option>
             ))}
           </Select>
+          {user?.role === "super_admin" && (
+            <SortButton type="button" onClick={handleToggleNameSort} $active={Boolean(nameSortOrder)}>
+              {nameSortOrder === "asc"
+                ? "Sorted: A-Z"
+                : nameSortOrder === "desc"
+                  ? "Sorted: Z-A"
+                  : "Sort Alphabetically"}
+            </SortButton>
+          )}
         </FilterGroup>
       </FiltersRow>
 
@@ -532,7 +560,7 @@ const InductionManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {submissions.map((s) => (
+                {sortedSubmissions.map((s) => (
                   <tr key={s._id} style={{ background: selectedIds.includes(s._id) ? 'rgba(66, 133, 244, 0.05)' : 'transparent' }}>
                     {(user?.role === 'super_admin' || user?.role === 'event_manager' || user?.role === 'admin') && (
                       <Td style={{ textAlign: 'center' }}>
@@ -882,6 +910,33 @@ const ExportButton = styled.button`
     &:hover {
       background: #334155;
     }
+  }
+`;
+
+const SortButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: ${(props) => (props.$active ? "#e8f0fe" : "white")};
+  border: 1px solid ${(props) => (props.$active ? "#4285f4" : "#e2e8f0")};
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: ${(props) => (props.$active ? "#1d4ed8" : "#475569")};
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  .dark & {
+    background: ${(props) => (props.$active ? "#1e3a8a" : "#0f172a")};
+    border-color: ${(props) => (props.$active ? "#3b82f6" : "#1e293b")};
+    color: ${(props) => (props.$active ? "#bfdbfe" : "#e2e8f0")};
   }
 `;
 
