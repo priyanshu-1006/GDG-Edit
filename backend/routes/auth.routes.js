@@ -8,13 +8,20 @@ import Induction from '../models/Induction.js';
 import Settings from '../models/Settings.js';
 import { sendTokenResponse, generateToken } from '../utils/auth.utils.js';
 import { protect } from '../middleware/auth.middleware.js';
+import imageUpload from '../middleware/imageUpload.middleware.js';
 import emailService from '../services/emailService.js';
 import { sendGlobalEmail } from '../utils/unifiedEmail.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
 const requireResendForOtp =
   process.env.NODE_ENV === 'production' || process.env.REQUIRE_RESEND_FOR_OTP === 'true';
+
+const isCloudinaryConfigured =
+  !!process.env.CLOUDINARY_CLOUD_NAME &&
+  !!process.env.CLOUDINARY_API_KEY &&
+  !!process.env.CLOUDINARY_API_SECRET;
 
 const INDUCTION_STATUS_META = {
   applied: {
@@ -37,6 +44,33 @@ const INDUCTION_STATUS_META = {
     label: 'Not Selected',
     roundLabel: 'Final Result',
   },
+};
+
+const uploadProfilePhotoToCloudinary = (buffer, userId) => {
+  const publicId = `profile-${userId}-${Date.now()}`;
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'gdg/profile-photos',
+        resource_type: 'image',
+        public_id: publicId,
+        transformation: [
+          { width: 600, height: 600, crop: 'fill', gravity: 'face' },
+          { quality: 'auto', fetch_format: 'auto' },
+        ],
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      },
+    );
+
+    stream.end(buffer);
+  });
 };
 
 /**
@@ -495,13 +529,60 @@ router.put('/profile', protect, async (req, res, next) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (college) user.college = college;
-    if (year) user.year = year;
+    if (year !== undefined) {
+      const numericYear = Number(year);
+
+      if (!Number.isInteger(numericYear) || numericYear < 1 || numericYear > 5) {
+        return res.status(400).json({
+          success: false,
+          message: 'Year must be a number between 1 and 5'
+        });
+      }
+
+      user.year = numericYear;
+    }
     if (branch) user.branch = branch;
 
     await user.save();
 
     res.json({
       success: true,
+      user: user.toPublicJSON(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   POST /api/auth/profile/photo
+// @desc    Upload profile photo to Cloudinary and update user profile
+// @access  Private
+router.post('/profile/photo', protect, imageUpload.single('photo'), async (req, res, next) => {
+  try {
+    if (!isCloudinaryConfigured) {
+      return res.status(503).json({
+        success: false,
+        message: 'Profile photo upload is not configured',
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file uploaded',
+      });
+    }
+
+    const uploadResult = await uploadProfilePhotoToCloudinary(req.file.buffer, req.user._id);
+
+    const user = await User.findById(req.user._id);
+    user.profilePhoto = uploadResult.secure_url;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({
+      success: true,
+      message: 'Profile photo updated successfully',
+      profilePhoto: user.profilePhoto,
       user: user.toPublicJSON(),
     });
   } catch (error) {

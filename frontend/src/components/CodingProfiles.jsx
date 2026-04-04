@@ -56,7 +56,7 @@ const Button = styled(motion.button)`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.googleColors.blue.main};
+        background: ${theme.googleColors.blue.primary};
         color: white;
         &:hover { background: ${theme.googleColors.blue.darker}; }
       `;
@@ -83,7 +83,7 @@ const Button = styled(motion.button)`
 
 const ProfilesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 1.5rem;
   
   @media (max-width: 768px) {
@@ -92,11 +92,11 @@ const ProfilesGrid = styled.div`
 `;
 
 const ProfileCard = styled(motion.div)`
-  background: ${({ theme }) => theme.colors.background.primary};
+  background: ${({ theme }) => theme.colors.surfaceElevated};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: ${({ theme }) => theme.colors.shadows.small};
   position: relative;
   
   ${({ $platform }) => {

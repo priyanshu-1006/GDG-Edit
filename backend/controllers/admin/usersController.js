@@ -3,6 +3,19 @@ import Registration from '../../models/Registration.js';
 import Certificate from '../../models/Certificate.js';
 import { sendGlobalEmail } from '../../utils/unifiedEmail.js';
 
+const normalizeAcademicYear = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return { hasValue: false };
+  }
+
+  const numericYear = Number(value);
+  if (!Number.isInteger(numericYear) || numericYear < 1 || numericYear > 5) {
+    return { hasValue: true, isValid: false };
+  }
+
+  return { hasValue: true, isValid: true, value: numericYear };
+};
+
 /**
  * @desc    Get all users with filtering, searching, and pagination
  * @route   GET /api/admin/users
@@ -160,6 +173,14 @@ export const createUser = async (req, res) => {
   try {
     const { email } = req.body;
 
+    const yearResult = normalizeAcademicYear(req.body.year);
+    if (yearResult.hasValue && yearResult.isValid === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Year must be a number between 1 and 5'
+      });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -169,7 +190,14 @@ export const createUser = async (req, res) => {
       });
     }
 
-    const user = await User.create(req.body);
+    const payload = { ...req.body };
+    if (yearResult.hasValue && yearResult.isValid) {
+      payload.year = yearResult.value;
+    } else {
+      delete payload.year;
+    }
+
+    const user = await User.create(payload);
 
     res.status(201).json({
       success: true,
@@ -194,6 +222,20 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { password, ...updateData } = req.body;
+
+    const yearResult = normalizeAcademicYear(updateData.year);
+    if (yearResult.hasValue && yearResult.isValid === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Year must be a number between 1 and 5'
+      });
+    }
+
+    if (yearResult.hasValue && yearResult.isValid) {
+      updateData.year = yearResult.value;
+    } else {
+      delete updateData.year;
+    }
 
     const user = await User.findByIdAndUpdate(
       req.params.id,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   FiHome,
   FiCalendar,
@@ -12,7 +13,9 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
-  FiBell
+  FiBell,
+  FiMoon,
+  FiSun,
 } from 'react-icons/fi';
 
 const DashboardContainer = styled.div`
@@ -33,7 +36,7 @@ const Sidebar = styled.aside`
   overflow-x: hidden;
   transition: width 0.3s ease;
   z-index: 1000;
-  box-shadow: 2px 0 24px rgba(0, 0, 0, 0.35);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
 
   @media (max-width: 1024px) {
     width: ${props => props.$isOpen ? '280px' : '0'};
@@ -50,18 +53,18 @@ const Sidebar = styled.aside`
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.06);
+    background: ${({ theme }) => theme.colors.background.tertiary};
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.25);
+    background: ${({ theme }) => theme.colors.divider};
     border-radius: 3px;
   }
 `;
 
 const SidebarHeader = styled.div`
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.divider};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -129,12 +132,12 @@ const NavItem = styled(NavLink)`
   border-left: 4px solid transparent;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: ${({ theme }) => theme.colors.background.tertiary};
     color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &.active {
-    background: rgba(255, 255, 255, 0.08);
+    background: ${({ theme }) => theme.colors.background.tertiary};
     color: ${({ theme }) => theme.colors.text.primary};
     border-left-color: ${({ theme }) => theme.colors.primary};
     font-weight: 600;
@@ -151,8 +154,8 @@ const UserSection = styled.div`
   left: 0;
   right: 0;
   padding: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid ${({ theme }) => theme.colors.divider};
+  background: ${({ theme }) => theme.colors.background.tertiary};
 `;
 
 const UserInfo = styled.div`
@@ -167,12 +170,17 @@ const Avatar = styled.div`
   height: 40px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.background.tertiary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${({ theme }) => theme.colors.text.primary};
   font-weight: bold;
   font-size: 1.1rem;
+  overflow: hidden;
+  background-image: ${props => props.$image ? `url(${props.$image})` : 'none'};
+  background-size: cover;
+  background-position: center;
 `;
 
 const UserDetails = styled.div`
@@ -234,10 +242,11 @@ const TopBar = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: ${({ theme }) => theme.colors.shadows.small};
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.divider};
 `;
 
 const MenuButton = styled.button`
@@ -254,7 +263,7 @@ const MenuButton = styled.button`
   transition: background 0.3s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: ${({ theme }) => theme.colors.background.tertiary};
   }
 `;
 
@@ -276,7 +285,26 @@ const NotificationButton = styled.button`
   transition: background 0.3s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: ${({ theme }) => theme.colors.background.tertiary};
+  }
+`;
+
+const ThemeToggleButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  padding: 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, color 0.3s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background.tertiary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -313,6 +341,7 @@ const ContentArea = styled.div`
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
   const { user, logout } = useAuth();
+  const { isDarkTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   // Handle window resize
@@ -376,8 +405,8 @@ const DashboardLayout = () => {
 
         <UserSection>
           <UserInfo>
-            <Avatar>
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            <Avatar $image={user?.profilePhoto}>
+              {!user?.profilePhoto && (user?.name?.charAt(0).toUpperCase() || 'U')}
             </Avatar>
             <UserDetails>
               <UserName>{user?.name || 'User'}</UserName>
@@ -397,6 +426,13 @@ const DashboardLayout = () => {
             <FiMenu />
           </MenuButton>
           <TopBarRight>
+            <ThemeToggleButton
+              onClick={toggleTheme}
+              aria-label={isDarkTheme ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={isDarkTheme ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDarkTheme ? <FiSun /> : <FiMoon />}
+            </ThemeToggleButton>
             <NotificationButton>
               <FiBell />
               <NotificationBadge>3</NotificationBadge>

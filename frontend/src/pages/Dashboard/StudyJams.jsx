@@ -24,7 +24,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-  color: white;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 2rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
@@ -35,7 +35,7 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: rgba(255, 255, 255, 0.8);
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
 
   @media (max-width: 768px) {
@@ -44,12 +44,12 @@ const Subtitle = styled.p`
 `;
 
 const ProgressCard = styled.div`
-  background: #1c1c1c;
-  // backdrop-filter: blur(10px);
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
 
   @media (max-width: 768px) {
     padding: 1.5rem;
@@ -63,7 +63,7 @@ const ProgressHeader = styled.div`
   margin-bottom: 1.5rem;
 
   h3 {
-    color: #333;
+    color: ${({ theme }) => theme.colors.text.primary};
     font-size: 1.5rem;
     font-weight: 700;
   }
@@ -82,10 +82,7 @@ const ProgressHeader = styled.div`
 const ProgressValue = styled.div`
   font-size: 3rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: ${({ theme }) => theme.colors.primary};
 
   @media (max-width: 768px) {
     font-size: 2rem;
@@ -95,7 +92,7 @@ const ProgressValue = styled.div`
 const ProgressBar = styled.div`
   width: 100%;
   height: 16px;
-  background: rgba(102, 126, 234, 0.1);
+  background: ${({ theme }) => theme.colors.background.tertiary};
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 1rem;
@@ -107,7 +104,7 @@ const ProgressBar = styled.div`
 
 const ProgressFill = styled.div`
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: ${({ theme }) => theme.colors.primary};
   border-radius: 8px;
   transition: width 0.5s ease;
 `;
@@ -126,11 +123,11 @@ const StatItem = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1rem;
 
   svg {
-    color: #667eea;
+    color: ${({ theme }) => theme.colors.primary};
     font-size: 1.25rem;
   }
 
@@ -156,11 +153,11 @@ const ModulesGrid = styled.div`
 `;
 
 const ModuleCard = styled.div`
-  background: #1c1c1c;
-  // backdrop-filter: blur(10px);
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   transition: transform 0.3s ease;
   opacity: ${props => props.$completed ? 0.8 : 1};
 
@@ -174,7 +171,9 @@ const ModuleCard = styled.div`
 `;
 
 const ModuleIcon = styled.div`
-  font-size: 2.5rem;
+  font-size: 2.25rem;
+  color: ${({ theme, $completed }) =>
+    $completed ? theme.colors.success : theme.colors.primary};
   margin-bottom: 1rem;
 
   @media (max-width: 768px) {
@@ -183,7 +182,7 @@ const ModuleIcon = styled.div`
 `;
 
 const ModuleTitle = styled.h3`
-  color: #333;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
@@ -194,7 +193,7 @@ const ModuleTitle = styled.h3`
 `;
 
 const ModuleDescription = styled.p`
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.95rem;
   line-height: 1.6;
   margin-bottom: 1rem;
@@ -210,7 +209,7 @@ const ModuleFooter = styled.div`
   justify-content: space-between;
   gap: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid ${({ theme }) => theme.colors.divider};
 
   @media (max-width: 480px) {
     flex-direction: column;
@@ -222,20 +221,20 @@ const ModuleDuration = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.9rem;
 
   svg {
-    color: #667eea;
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 const Button = styled.button`
   padding: 0.75rem 1.5rem;
-  background: ${props => props.$variant === 'primary' 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'rgba(102, 126, 234, 0.1)'};
-  color: ${props => props.$variant === 'primary' ? 'white' : '#667eea'};
+  background: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.primary : theme.colors.background.tertiary};
+  color: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.text.inverse : theme.colors.primary};
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -261,17 +260,19 @@ const Button = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: 4rem 2rem;
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 4rem;
+const EmptyIcon = styled(FiBook)`
+  font-size: 3.5rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-bottom: 1rem;
 `;
 
 const EmptyText = styled.p`
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
 `;
 
@@ -285,8 +286,8 @@ const LoadingSpinner = styled.div`
     content: '';
     width: 50px;
     height: 50px;
-    border: 5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border: 5px solid ${({ theme }) => theme.colors.divider};
+    border-top-color: ${({ theme }) => theme.colors.primary};
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -332,7 +333,7 @@ const StudyJams = () => {
     return (
       <Container>
         <Header>
-          <Title>Study Jams 📚</Title>
+          <Title>Study Jams</Title>
           <Subtitle>Track your learning progress</Subtitle>
         </Header>
         <LoadingSpinner />
@@ -348,7 +349,7 @@ const StudyJams = () => {
   return (
     <Container>
       <Header>
-        <Title>Study Jams 📚</Title>
+        <Title>Study Jams</Title>
         <Subtitle>Track your learning progress</Subtitle>
       </Header>
 
@@ -381,7 +382,9 @@ const StudyJams = () => {
           <ModulesGrid>
             {modules.map((module, index) => (
               <ModuleCard key={index} $completed={module.completed}>
-                <ModuleIcon>{module.completed ? '✅' : '📖'}</ModuleIcon>
+                <ModuleIcon $completed={module.completed}>
+                  {module.completed ? <FiCheckCircle /> : <FiBook />}
+                </ModuleIcon>
                 <ModuleTitle>{module.title || `Module ${index + 1}`}</ModuleTitle>
                 <ModuleDescription>
                   {module.description || 'Complete this module to enhance your skills'}
@@ -411,7 +414,7 @@ const StudyJams = () => {
         </>
       ) : (
         <EmptyState>
-          <EmptyIcon>📚</EmptyIcon>
+          <EmptyIcon />
           <EmptyText>No Study Jams modules available at the moment</EmptyText>
         </EmptyState>
       )}

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { useAuth } from '../../contexts/useAuth';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX, FiUpload } from 'react-icons/fi';
 import CodingProfiles from '../../components/CodingProfiles';
 import AddProfileModal from '../../components/AddProfileModal';
 import { API_BASE_URL } from '../../config/api';
@@ -40,10 +40,11 @@ const Subtitle = styled.p`
 `;
 
 const ProfileCard = styled.div`
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   margin-bottom: 2rem;
 `;
 
@@ -55,13 +56,17 @@ const ProfileHeader = styled.div`
   gap: 2rem;
 
   @media (max-width: 768px) {
+    padding: 1.25rem;
     flex-direction: column;
     text-align: center;
   }
 `;
 
 const AvatarSection = styled.div`
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 `;
 
 const Avatar = styled.div`
@@ -75,33 +80,40 @@ const Avatar = styled.div`
   font-size: 3rem;
   font-weight: bold;
   color: ${({ theme }) => theme.colors.text.primary};
-  border: 5px solid rgba(255, 255, 255, 0.08);
+  border: 5px solid ${({ theme }) => theme.colors.divider};
   background-image: ${props => props.$image ? `url(${props.$image})` : 'none'};
   background-size: cover;
   background-position: center;
 `;
 
-const EditAvatarButton = styled.button`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.colors.background.primary};
+const AvatarActionButton = styled.button`
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text.inverse};
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 1.1rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  transition: transform 0.2s ease;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 
   &:hover {
-    transform: scale(1.1);
+    transform: translateY(-1px);
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const ProfileInfo = styled.div`
@@ -113,6 +125,10 @@ const ProfileName = styled.h2`
   font-size: 2rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const ProfileEmail = styled.div`
@@ -125,20 +141,25 @@ const ProfileBadges = styled.div`
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    justify-content: center;
+  }
 `;
 
 const Badge = styled.span`
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  background: ${({ theme }) => theme.colors.background.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
+  color: ${({ theme }) => theme.colors.text.primary};
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
 `;
 
 const InductionStatusCard = styled.div`
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid ${({ theme }) => theme.colors.divider};
+  background: ${({ theme }) => theme.colors.background.secondary};
   border-radius: 12px;
   padding: 1rem;
 `;
@@ -174,8 +195,8 @@ const InductionMetaGrid = styled.div`
 `;
 
 const InductionMetaItem = styled.div`
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.background.tertiary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 10px;
   padding: 0.7rem;
 `;
@@ -203,6 +224,11 @@ const SectionHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
 `;
 
 const SectionTitle = styled.h3`
@@ -250,7 +276,8 @@ const InfoIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.colors.background.tertiary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,11 +307,27 @@ const InfoValue = styled.div`
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid ${props => props.$error ? '#f43f5e' : 'rgba(255, 255, 255, 0.08)'};
+  border: 2px solid ${({ theme, $error }) => ($error ? '#f43f5e' : theme.colors.border)};
   border-radius: 8px;
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.text.primary};
-  background: ${({ theme }) => theme.colors.background.primary};
+  background: ${({ theme }) => theme.colors.background.secondary};
+  transition: border-color 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const YearSelect = styled.select`
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  font-size: 1rem;
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.background.secondary};
   transition: border-color 0.3s ease;
 
   &:focus {
@@ -298,7 +341,7 @@ const Actions = styled.div`
   gap: 1rem;
   justify-content: flex-end;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid ${({ theme }) => theme.colors.divider};
 
   @media (max-width: 480px) {
     flex-direction: column;
@@ -311,11 +354,12 @@ const Actions = styled.div`
 
 const Button = styled.button`
   padding: 0.75rem 1.5rem;
-  background: ${props => props.$variant === 'primary' 
-    ? ({ theme }) => theme.colors.background.tertiary 
-    : 'transparent'};
-  color: ${props => props.$variant === 'primary' ? ({ theme }) => theme.colors.text.primary : ({ theme }) => theme.colors.text.secondary};
-  border: ${props => props.$variant === 'primary' ? 'none' : '2px solid rgba(255,255,255,0.12)'};
+  background: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.primary : 'transparent'};
+  color: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.text.inverse : theme.colors.text.secondary};
+  border: ${({ theme, $variant }) =>
+    $variant === 'primary' ? 'none' : `2px solid ${theme.colors.divider}`};
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -326,13 +370,14 @@ const Button = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   }
 `;
 
 const Profile = () => {
   const { user } = useAuth();
   const induction = user?.induction;
+  const photoInputRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -342,6 +387,7 @@ const Profile = () => {
     branch: ''
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -350,7 +396,7 @@ const Profile = () => {
         name: user.name || '',
         phone: user.phone || '',
         college: user.college || '',
-        year: user.year || '',
+        year: user.year ? String(user.year) : '',
         branch: user.branch || ''
       });
     }
@@ -368,9 +414,16 @@ const Profile = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
 
+      const payload = { ...formData };
+      if (payload.year === '') {
+        delete payload.year;
+      } else {
+        payload.year = Number(payload.year);
+      }
+
       await axios.put(
         `${API_BASE_URL}/api/auth/profile`,
-        formData,
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -392,11 +445,19 @@ const Profile = () => {
         name: user.name || '',
         phone: user.phone || '',
         college: user.college || '',
-        year: user.year || '',
+        year: user.year ? String(user.year) : '',
         branch: user.branch || ''
       });
     }
     setEditing(false);
+  };
+
+  const formatYear = (year) => {
+    if (!year) return 'Not provided';
+    if (year === 1) return '1st Year';
+    if (year === 2) return '2nd Year';
+    if (year === 3) return '3rd Year';
+    return `${year}th Year`;
   };
 
   const formatJoinDate = (dateString) => {
@@ -422,10 +483,58 @@ const Profile = () => {
     return 'info';
   };
 
+  const triggerPhotoPicker = () => {
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoUpload = async (event) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      event.target.value = '';
+      return;
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert('Image size must be 5MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      const token = localStorage.getItem('token');
+      const uploadData = new FormData();
+      uploadData.append('photo', selectedFile);
+
+      await axios.post(
+        `${API_BASE_URL}/api/auth/profile/photo`,
+        uploadData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      alert('Profile photo updated successfully!');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      alert('Failed to upload profile photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = '';
+    }
+  };
+
   return (
     <Container>
       <Header>
-        <Title>My Profile 👤</Title>
+        <Title>My Profile</Title>
         <Subtitle>Manage your personal information</Subtitle>
       </Header>
 
@@ -435,16 +544,23 @@ const Profile = () => {
             <Avatar $image={user?.profilePhoto}>
               {!user?.profilePhoto && (user?.name?.charAt(0).toUpperCase() || 'U')}
             </Avatar>
-            <EditAvatarButton>
-              <FiEdit2 />
-            </EditAvatarButton>
+            <AvatarActionButton type="button" onClick={triggerPhotoPicker} disabled={uploadingPhoto}>
+              <FiUpload />
+              {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+            </AvatarActionButton>
+            <HiddenFileInput
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+            />
           </AvatarSection>
 
           <ProfileInfo>
             <ProfileName>{user?.name || 'User Name'}</ProfileName>
             <ProfileEmail>{user?.email || 'user@example.com'}</ProfileEmail>
             <ProfileBadges>
-              <Badge>🎓 Student</Badge>
+              <Badge>Student</Badge>
               <Badge>Member since {formatJoinDate(user?.createdAt || new Date())}</Badge>
               {user?.role === 'student' && induction?.statusLabel && (
                 <Badge>Induction: {induction.statusLabel}</Badge>
@@ -586,15 +702,20 @@ const Profile = () => {
                 <InfoContent>
                   <InfoLabel>Year</InfoLabel>
                   {editing ? (
-                    <Input
-                      type="text"
+                    <YearSelect
                       name="year"
                       value={formData.year}
                       onChange={handleChange}
-                      placeholder="e.g., 2nd Year"
-                    />
+                    >
+                      <option value="">Select Year</option>
+                      <option value="1">1st Year</option>
+                      <option value="2">2nd Year</option>
+                      <option value="3">3rd Year</option>
+                      <option value="4">4th Year</option>
+                      <option value="5">5th Year</option>
+                    </YearSelect>
                   ) : (
-                    <InfoValue>{user?.year || 'Not provided'}</InfoValue>
+                    <InfoValue>{formatYear(user?.year)}</InfoValue>
                   )}
                 </InfoContent>
               </InfoItem>

@@ -24,7 +24,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-  color: white;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 2rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
@@ -35,7 +35,7 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: rgba(255, 255, 255, 0.8);
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
 
   @media (max-width: 768px) {
@@ -60,11 +60,11 @@ const TeamsGrid = styled.div`
 `;
 
 const TeamCard = styled.div`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   transition: transform 0.3s ease;
 
   &:hover {
@@ -79,11 +79,11 @@ const TeamCard = styled.div`
 const TeamCardHeader = styled.div`
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.divider};
 `;
 
 const TeamName = styled.h3`
-  color: #333;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
@@ -94,7 +94,7 @@ const TeamName = styled.h3`
 `;
 
 const TeamEvent = styled.div`
-  color: #667eea;
+  color: ${({ theme }) => theme.colors.primary};
   font-size: 0.95rem;
   font-weight: 600;
 `;
@@ -107,7 +107,7 @@ const MemberCount = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.95rem;
   margin-bottom: 0.75rem;
 `;
@@ -141,11 +141,11 @@ const MoreMembers = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(102, 126, 234, 0.2);
+  background: ${({ theme }) => theme.colors.background.tertiary};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667eea;
+  color: ${({ theme }) => theme.colors.primary};
   font-weight: 600;
   font-size: 0.85rem;
 
@@ -164,11 +164,11 @@ const InfoItem = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.9rem;
 
   svg {
-    color: #667eea;
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -184,11 +184,12 @@ const TeamActions = styled.div`
 const Button = styled.button`
   flex: 1;
   padding: 0.75rem;
-  background: ${props => props.$variant === 'primary' 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'transparent'};
-  color: ${props => props.$variant === 'primary' ? 'white' : '#667eea'};
-  border: ${props => props.$variant === 'primary' ? 'none' : '2px solid #667eea'};
+  background: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.primary : 'transparent'};
+  color: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.text.inverse : theme.colors.primary};
+  border: ${({ theme, $variant }) =>
+    $variant === 'primary' ? 'none' : `2px solid ${theme.colors.primary}`};
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -218,17 +219,19 @@ const EmptyState = styled.div`
   grid-column: 1 / -1;
   text-align: center;
   padding: 4rem 2rem;
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 4rem;
+const EmptyIcon = styled(FiUsers)`
+  font-size: 3.5rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-bottom: 1rem;
 `;
 
 const EmptyText = styled.p`
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   margin-bottom: 1.5rem;
 `;
@@ -244,8 +247,8 @@ const LoadingSpinner = styled.div`
     content: '';
     width: 50px;
     height: 50px;
-    border: 5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border: 5px solid ${({ theme }) => theme.colors.divider};
+    border-top-color: ${({ theme }) => theme.colors.primary};
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -315,7 +318,7 @@ const Teams = () => {
   return (
     <Container>
       <Header>
-        <Title>My Teams 👥</Title>
+        <Title>My Teams</Title>
         <Subtitle>Collaborate with other developers</Subtitle>
       </Header>
 
@@ -368,7 +371,7 @@ const Teams = () => {
           ))
         ) : (
           <EmptyState>
-            <EmptyIcon>👥</EmptyIcon>
+            <EmptyIcon />
             <EmptyText>You haven't joined any teams yet</EmptyText>
             <Button $variant="primary" onClick={() => window.location.href = '/events'}>
               <FiUserPlus />

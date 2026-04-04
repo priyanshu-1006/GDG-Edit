@@ -11,7 +11,7 @@ const Overlay = styled(motion.div)`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: ${({ theme }) => theme.colors.overlay};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,15 +70,19 @@ const PlatformSelector = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const PlatformCard = styled(motion.button)`
   padding: 1.5rem;
   border-radius: 12px;
   border: 2px solid ${({ theme, $selected }) => 
-    $selected ? theme.googleColors.blue.main : theme.colors.border};
+    $selected ? theme.googleColors.blue.primary : theme.colors.border};
   background: ${({ theme, $selected }) => 
-    $selected ? `${theme.googleColors.blue.main}15` : theme.colors.background.secondary};
+    $selected ? `${theme.googleColors.blue.primary}15` : theme.colors.background.secondary};
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -87,7 +91,7 @@ const PlatformCard = styled(motion.button)`
   transition: all 0.2s;
   
   &:hover {
-    border-color: ${({ theme }) => theme.googleColors.blue.main};
+    border-color: ${({ theme }) => theme.googleColors.blue.primary};
     transform: translateY(-2px);
   }
   
@@ -128,8 +132,8 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.googleColors.blue.main};
-    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.googleColors.blue.main}20`};
+    border-color: ${({ theme }) => theme.googleColors.blue.primary};
+    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.googleColors.blue.primary}20`};
   }
   
   &::placeholder {
@@ -154,13 +158,13 @@ const Alert = styled(motion.div)`
   ${({ $type, theme }) => {
     if ($type === 'error') {
       return `
-        background: ${theme.googleColors.red.main}15;
-        color: ${theme.googleColors.red.main};
+        background: ${theme.googleColors.red.primary}15;
+        color: ${theme.googleColors.red.primary};
       `;
     } else if ($type === 'success') {
       return `
-        background: ${theme.googleColors.green.main}15;
-        color: ${theme.googleColors.green.main};
+        background: ${theme.googleColors.green.primary}15;
+        color: ${theme.googleColors.green.primary};
       `;
     }
   }}
@@ -204,7 +208,7 @@ const Button = styled(motion.button)`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.googleColors.blue.main};
+        background: ${theme.googleColors.blue.primary};
         color: white;
         &:hover { background: ${theme.googleColors.blue.darker}; }
       `;

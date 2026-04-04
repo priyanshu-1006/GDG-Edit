@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { FiCalendar, FiMapPin, FiClock, FiUsers, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiUsers } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
 const Container = styled.div`
@@ -24,14 +24,14 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-  color: white;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 2rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
 `;
 
 const Subtitle = styled.p`
-  color: rgba(255, 255, 255, 0.8);
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
 `;
 
@@ -53,17 +53,19 @@ const Tabs = styled.div`
 
 const Tab = styled.button`
   padding: 0.75rem 1.5rem;
-  background: ${props => props.$active ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.2)'};
-  color: ${props => props.$active ? '#667eea' : 'white'};
-  border: none;
+  background: ${({ theme, $active }) =>
+    $active ? theme.colors.background.tertiary : theme.colors.background.secondary};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.text.primary : theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.95);
-    color: #667eea;
+    background: ${({ theme }) => theme.colors.background.tertiary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   @media (max-width: 768px) {
@@ -94,11 +96,11 @@ const EventsGrid = styled.div`
 `;
 
 const EventCard = styled.div`
-  background: #1c1c1c;
-  backdrop-filter: blur(10px);
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   transition: transform 0.3s ease;
 
   &:hover {
@@ -142,7 +144,7 @@ const EventContent = styled.div`
 `;
 
 const EventTitle = styled.h3`
-  color: #333;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1.25rem;
   margin-bottom: 1rem;
   font-weight: 700;
@@ -159,16 +161,16 @@ const EventDetail = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.95rem;
 
   svg {
-    color: #667eea;
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 const EventDescription = styled.p`
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.95rem;
   line-height: 1.6;
   margin-bottom: 1rem;
@@ -182,17 +184,18 @@ const EventActions = styled.div`
   display: flex;
   gap: 0.75rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid ${({ theme }) => theme.colors.divider};
 `;
 
 const Button = styled.button`
   flex: 1;
   padding: 0.75rem;
-  background: ${props => props.$variant === 'primary' 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'transparent'};
-  color: ${props => props.$variant === 'primary' ? 'white' : '#667eea'};
-  border: ${props => props.$variant === 'primary' ? 'none' : '2px solid #667eea'};
+  background: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.primary : 'transparent'};
+  color: ${({ theme, $variant }) =>
+    $variant === 'primary' ? theme.colors.text.inverse : theme.colors.primary};
+  border: ${({ theme, $variant }) =>
+    $variant === 'primary' ? 'none' : `2px solid ${theme.colors.primary}`};
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -214,17 +217,19 @@ const EmptyState = styled.div`
   grid-column: 1 / -1;
   text-align: center;
   padding: 4rem 2rem;
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
 `;
 
-const EmptyIcon = styled.div`
-  font-size: 4rem;
+const EmptyIcon = styled(FiCalendar)`
+  font-size: 3.5rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-bottom: 1rem;
 `;
 
 const EmptyText = styled.p`
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   margin-bottom: 1.5rem;
 `;
@@ -240,8 +245,8 @@ const LoadingSpinner = styled.div`
     content: '';
     width: 50px;
     height: 50px;
-    border: 5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border: 5px solid ${({ theme }) => theme.colors.divider};
+    border-top-color: ${({ theme }) => theme.colors.primary};
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -340,7 +345,7 @@ const MyEvents = () => {
   return (
     <Container>
       <Header>
-        <Title>My Events 📅</Title>
+        <Title>My Events</Title>
         <Subtitle>Track and manage your event registrations</Subtitle>
       </Header>
 
@@ -428,7 +433,7 @@ const MyEvents = () => {
           })
         ) : (
           <EmptyState>
-            <EmptyIcon>📭</EmptyIcon>
+            <EmptyIcon />
             <EmptyText>
               {activeTab === 'all' 
                 ? "You haven't registered for any events yet"

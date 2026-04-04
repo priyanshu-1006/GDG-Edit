@@ -143,9 +143,21 @@ const Users = () => {
       return;
     }
 
+    const payload = { ...newUser };
+    if (payload.year === "") {
+      delete payload.year;
+    } else {
+      const numericYear = Number(payload.year);
+      if (!Number.isInteger(numericYear) || numericYear < 1 || numericYear > 5) {
+        alert("Year must be between 1 and 5");
+        return;
+      }
+      payload.year = numericYear;
+    }
+
     try {
       setCreatingUser(true);
-      await axios.post(`${API_BASE_URL}/api/admin/users`, newUser, {
+      await axios.post(`${API_BASE_URL}/api/admin/users`, payload, {
         headers: getAuthHeaders(),
       });
       alert("User created successfully");
@@ -462,6 +474,22 @@ const Users = () => {
                     setNewUser({ ...newUser, phone: e.target.value })
                   }
                 />
+              </FormGroup>
+              <FormGroup>
+                <Label>Year</Label>
+                <RoleSelect
+                  value={newUser.year}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, year: e.target.value })
+                  }
+                >
+                  <option value="">Select Year</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
+                  <option value="4">4th Year</option>
+                  <option value="5">5th Year</option>
+                </RoleSelect>
               </FormGroup>
               <FormGroup>
                 <Label>Role</Label>

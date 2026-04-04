@@ -1503,14 +1503,20 @@ router.get('/', protect, authorize('event_manager', 'admin', 'super_admin'), asy
     const { status, branch, search, page = 1, limit = 50 } = req.query;
     const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
     const parsedLimit = Math.max(parseInt(limit, 10) || 50, 1);
+    const normalizedStatus = String(status || '').trim();
+    const hasExplicitStatusFilter =
+      normalizedStatus && VALID_INDUCTION_STATUSES.includes(normalizedStatus);
 
     const filter = buildInductionFilter({ status, branch, search });
+    const sortOrder = hasExplicitStatusFilter
+      ? { updatedAt: -1, createdAt: -1 }
+      : { createdAt: -1 };
 
     // Event managers can see all applications (not restricted to their panels)
     // This allows them to view total applications and select students for panel assignment
 
     const submissions = await Induction.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortOrder)
       .skip((parsedPage - 1) * parsedLimit)
       .limit(parsedLimit);
 

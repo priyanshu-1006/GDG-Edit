@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../config/api';
 
 const OverviewContainer = styled.div`
   animation: fadeIn 0.5s ease;
+  color: ${({ theme }) => theme.colors.text.primary};
 
   @keyframes fadeIn {
     from {
@@ -38,6 +39,10 @@ const WelcomeText = styled.h1`
 const SubText = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
+
+  @media (max-width: 480px) {
+    font-size: 0.95rem;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -53,18 +58,19 @@ const StatsGrid = styled.div`
 
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 0.85rem;
   }
 `;
 
 const StatCard = styled.div`
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
   transition: transform 0.3s ease;
 
   &:hover {
@@ -146,15 +152,20 @@ const ContentGrid = styled.div`
 `;
 
 const Card = styled.div`
-  background: #1c1c1c;
+  background: ${({ theme }) => theme.colors.surfaceElevated};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
+
+  @media (max-width: 480px) {
+    padding: 1rem;
+  }
 `;
 
 const InductionCard = styled(Card)`
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid ${({ theme }) => theme.colors.divider};
 `;
 
 const InductionHeader = styled.div`
@@ -194,14 +205,14 @@ const InductionGrid = styled.div`
 `;
 
 const InductionItem = styled.div`
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: ${({ theme }) => theme.colors.background.secondary};
   padding: 0.75rem;
 `;
 
 const InductionLabel = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 0.8rem;
   margin-bottom: 0.25rem;
   text-transform: uppercase;
@@ -219,6 +230,12 @@ const CardHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5rem;
+
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
 `;
 
 const CardTitle = styled.h2`
@@ -236,8 +253,7 @@ const ViewAllButton = styled.button`
   font-size: 0.9rem;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary};
-    color: black;
+    color: ${({ theme }) => theme.colors.primary};
     text-decoration: underline;
   }
 `;
@@ -250,14 +266,14 @@ const EventList = styled.div`
 
 const EventItem = styled.div`
   padding: 1rem;
-  background: #1c1c1c;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.background.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
   border-radius: 12px;
   transition: all 0.3s ease;
   cursor: pointer;
 
   &:hover {
-    background: #222222;
+    background: ${({ theme }) => theme.colors.background.tertiary};
     border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
@@ -275,6 +291,10 @@ const EventDetails = styled.div`
   gap: 1rem;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.9rem;
+
+  @media (max-width: 480px) {
+    gap: 0.5rem;
+  }
 `;
 
 const EventDetail = styled.div`
@@ -294,7 +314,8 @@ const ActivityItem = styled.div`
   gap: 0.75rem;
   padding: 0.75rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: ${({ theme }) => theme.colors.background.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.divider};
 `;
 
 const ActivityDot = styled.div`
@@ -323,7 +344,7 @@ const ActivityTime = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 2rem;
-  color: #666;
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const LoadingSpinner = styled.div`
@@ -336,8 +357,8 @@ const LoadingSpinner = styled.div`
     content: '';
     width: 40px;
     height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border: 4px solid ${({ theme }) => theme.colors.divider};
+    border-top-color: ${({ theme }) => theme.colors.primary};
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -469,7 +490,7 @@ const Overview = () => {
   return (
     <OverviewContainer>
       <Header>
-        <WelcomeText>Welcome back, {user?.name?.split(' ')[0] || 'there'}! 👋</WelcomeText>
+        <WelcomeText>Welcome back, {user?.name?.split(' ')[0] || 'there'}!</WelcomeText>
         <SubText>Here's what's happening with your GDG journey</SubText>
       </Header>
 
