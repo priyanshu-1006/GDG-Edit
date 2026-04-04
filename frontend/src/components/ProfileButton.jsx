@@ -102,6 +102,8 @@ const Dropdown = styled(motion.div)`
   box-shadow: ${({ theme }) => theme.colors.shadows.large};
   min-width: 200px;
   overflow: hidden;
+  z-index: 1200;
+  pointer-events: auto;
 
   @media (max-width: 480px) {
     min-width: 150px;
@@ -116,6 +118,7 @@ const DropdownItem = styled.button`
   gap: 12px;
   border: none;
   background: none;
+  cursor: pointer;
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: 14px;
   text-align: left;
@@ -147,14 +150,16 @@ const ProfileButton = () => {
   }
 
 
-  const handleProfile = () => {
-    navigate('/dashboard/profile');
+  const handleProfile = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsOpen(false);
+    window.location.assign('/dashboard/profile');
   };
 
   return (
     <ButtonContainer>
-      <Button onClick={() => setIsOpen(!isOpen)}>
+      <Button type="button" onClick={() => setIsOpen(!isOpen)}>
         <ProfilePhoto>
           {user?.profilePhoto ? (
             <img src={user?.profilePhoto} alt={user?.name} />
@@ -182,11 +187,11 @@ const ProfileButton = () => {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <DropdownItem onClick={handleProfile}>
+            <DropdownItem type="button" onClick={handleProfile}>
               <User size={18} />
               My Profile
             </DropdownItem>
-            <DropdownItem onClick={handleLogout}>
+            <DropdownItem type="button" onClick={handleLogout}>
               <LogOut size={18} />
               Sign Out
             </DropdownItem>
