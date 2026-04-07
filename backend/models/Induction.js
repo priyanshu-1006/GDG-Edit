@@ -67,6 +67,33 @@ const inductionSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  xUrl: {
+    type: String,
+    trim: true
+  },
+  selectedProfilePhoto: {
+    type: String,
+    trim: true
+  },
+  selectedDetailsSubmittedAt: {
+    type: Date
+  },
+  selectedDetailsEditCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  team2026Approved: {
+    type: Boolean,
+    default: false
+  },
+  team2026ReviewedAt: {
+    type: Date
+  },
+  team2026ReviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   whyJoin: {
     type: String,
     required: [true, 'This field is required'],

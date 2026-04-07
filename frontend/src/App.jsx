@@ -73,6 +73,7 @@ const ImmerseRegistrations = lazy(() => import("./pages/Immerse/ImmerseRegistrat
 const InductionForm = lazy(() => import("./pages/InductionForm"));
 const InductionSpecialForm = lazy(() => import("./pages/InductionSpecialForm"));
 const InductionResults = lazy(() => import("./pages/InductionResults"));
+const InductionUploadRedirect = lazy(() => import("./pages/InductionUploadRedirect"));
 
 function App() {
   const { theme, isDarkTheme } = useTheme();
@@ -231,6 +232,7 @@ function App() {
 
             {/* Induction Form & Results */}
             <Route path="/induction" element={<InductionForm />} />
+            <Route path="/induction/upload-details" element={<InductionUploadRedirect />} />
             <Route path="/induction/special/:inviteId/:token" element={<InductionSpecialForm />} />
             <Route path="/induction-results" element={<InductionResults />} />
 

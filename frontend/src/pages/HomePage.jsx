@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Rocket, X, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 import HeroSection from '../sections/HeroSection';
 import AboutSection from '../sections/AboutSection';
 import SponsorsSection from '../sections/SponsorsSection';
@@ -139,7 +140,7 @@ const HomePageContainer = styled.div`
 const HomePage = () => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll();
-  const [showPromo, setShowPromo] = useState(true);
+  const [showPromo, setShowPromo] = useState(false);
   
   // Use Framer Motion to create a smooth opacity transition based on scroll position
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -172,6 +173,33 @@ const HomePage = () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPromoVisibility = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/induction/status`);
+        const data = await response.json();
+
+        if (isMounted) {
+          setShowPromo(data?.success ? data.showInductionApplySection !== false : true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch induction promo visibility:', error);
+        if (isMounted) {
+          setShowPromo(true);
+        }
+      }
+    };
+
+    fetchPromoVisibility();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <HomePageContainer ref={containerRef}>
       <motion.div style={{ opacity }}>

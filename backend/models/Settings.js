@@ -6,6 +6,11 @@ const settingsSchema = new mongoose.Schema({
     type: Boolean, 
     default: true 
   },
+  // Controls whether the homepage induction apply promo section is visible
+  showInductionApplySection: {
+    type: Boolean,
+    default: true,
+  },
   piRound: {
     type: String,
     enum: ['shortlisted_online', 'shortlisted_offline'],

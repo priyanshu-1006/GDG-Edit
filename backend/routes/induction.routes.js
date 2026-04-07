@@ -14,6 +14,7 @@ import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import PDFParser from 'pdf2json';
 import https from 'https';
+import imageUpload from '../middleware/imageUpload.middleware.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 import { sendInductionRoundEmail } from '../utils/sendInductionEmail.js';
 import { sendGlobalEmail } from '../utils/unifiedEmail.js';
@@ -29,6 +30,11 @@ const upload = multer({
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 const INVITE_ID_PATTERN = /^[A-Za-z0-9_-]{4,60}$/;
+const isCloudinaryConfigured =
+  !!process.env.CLOUDINARY_CLOUD_NAME &&
+  !!process.env.CLOUDINARY_API_KEY &&
+  !!process.env.CLOUDINARY_API_SECRET;
+const MAX_TEAM_2026_EDITS = 1;
 
 const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactTrimmedRegex = (value = '') => new RegExp(`^\\s*${escapeRegex(String(value).trim())}\\s*$`, 'i');
@@ -206,6 +212,103 @@ const normalizeInductionPayload = (body = {}) => {
   };
 };
 
+const normalizeExternalUrl = (url = '') => {
+  const trimmed = String(url || '').trim();
+  if (!trimmed || trimmed === '#') return '';
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed.replace(/^\/+/, '')}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+};
+
+const normalizeGithubInput = (value = '') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/github\.com/i.test(raw)) return normalizeExternalUrl(raw);
+
+  const handle = raw
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+    .split(/[/?#]/)[0]
+    .trim();
+
+  if (!handle) return '';
+  return `https://github.com/${handle}`;
+};
+
+const normalizeLinkedinInput = (value = '') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/linkedin\.com/i.test(raw)) return normalizeExternalUrl(raw);
+
+  const handle = raw
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(www\.)?linkedin\.com\/(in|company)\//i, '')
+    .split(/[/?#]/)[0]
+    .trim();
+
+  if (!handle) return '';
+  return `https://www.linkedin.com/in/${handle}`;
+};
+
+const normalizeXInput = (value = '') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/(x|twitter)\.com/i.test(raw)) return normalizeExternalUrl(raw);
+
+  const handle = raw
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '')
+    .split(/[/?#]/)[0]
+    .trim();
+
+  if (!handle) return '';
+  return `https://x.com/${handle}`;
+};
+
+const uploadSelectedStudentPhoto = (buffer, studentId) => {
+  const publicId = `selected-${studentId}-${Date.now()}`;
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'gdg/induction/team-2026',
+        resource_type: 'image',
+        public_id: publicId,
+        transformation: [
+          { width: 700, height: 700, crop: 'fill', gravity: 'face' },
+          { quality: 'auto', fetch_format: 'auto' },
+        ],
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      },
+    );
+
+    stream.end(buffer);
+  });
+};
+
+const hasTeam2026Details = (submission) =>
+  !!(
+    submission?.selectedDetailsSubmittedAt &&
+    submission?.selectedProfilePhoto &&
+    submission?.linkedinUrl &&
+    submission?.githubId
+  );
+
 const findExistingInductionByIdentity = async ({ email, rollNumber }) => {
   const candidateConditions = [];
   if (email) candidateConditions.push({ email: exactTrimmedRegex(email) });
@@ -231,9 +334,13 @@ const getOrCreateSettings = async () => {
   if (!settings) {
     settings = await Settings.create({
       isInductionOpen: true,
+      showInductionApplySection: true,
       piRound: 'shortlisted_online',
       isPiStarted: false,
     });
+  } else if (typeof settings.showInductionApplySection !== 'boolean') {
+    settings.showInductionApplySection = true;
+    await settings.save();
   }
   return settings;
 };
@@ -306,9 +413,19 @@ router.get('/status', async (req, res) => {
   try {
     let settings = await Settings.findOne();
     if (!settings) {
-      settings = await Settings.create({ isInductionOpen: true });
+      settings = await Settings.create({
+        isInductionOpen: true,
+        showInductionApplySection: true,
+      });
+    } else if (typeof settings.showInductionApplySection !== 'boolean') {
+      settings.showInductionApplySection = true;
+      await settings.save();
     }
-    res.json({ success: true, isInductionOpen: settings.isInductionOpen });
+    res.json({
+      success: true,
+      isInductionOpen: settings.isInductionOpen,
+      showInductionApplySection: settings.showInductionApplySection,
+    });
   } catch (error) {
     console.error('Fetch status error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -329,19 +446,78 @@ router.get('/results', async (req, res) => {
   }
 });
 
-// PUT /api/induction/status — Update induction form open status (super_admin)
+// GET /api/induction/team-2026 — Public list of selected students who submitted Team 2026 details
+router.get('/team-2026', async (req, res) => {
+  try {
+    const submissions = await Induction.find({
+      status: 'selected',
+      team2026Approved: true,
+      selectedProfilePhoto: { $exists: true, $ne: '' },
+      linkedinUrl: { $exists: true, $ne: '' },
+      githubId: { $exists: true, $ne: '' },
+    })
+      .select('firstName lastName branch section linkedinUrl githubId xUrl selectedProfilePhoto selectedDetailsSubmittedAt')
+      .sort({ selectedDetailsSubmittedAt: -1, firstName: 1, lastName: 1 })
+      .lean();
+
+    const data = submissions.map((student) => ({
+      id: `selected-${student._id}`,
+      name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+      role: 'Executive Member',
+      badge: 'executive',
+      year: '2026',
+      image: student.selectedProfilePhoto,
+      social: {
+        linkedin: student.linkedinUrl || '',
+        github: student.githubId || '',
+        twitter: student.xUrl || '',
+      },
+      uploadedAt: student.selectedDetailsSubmittedAt || null,
+    }));
+
+    return res.json({ success: true, count: data.length, data });
+  } catch (error) {
+    console.error('Fetch Team 2026 error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PUT /api/induction/status — Update induction status and apply-section visibility (super_admin)
 router.put('/status', protect, authorize('super_admin'), async (req, res) => {
   try {
-    const { isInductionOpen } = req.body;
+    const { isInductionOpen, showInductionApplySection } = req.body;
+
+    if (typeof isInductionOpen !== 'boolean' && typeof showInductionApplySection !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one boolean field: isInductionOpen or showInductionApplySection',
+      });
+    }
+
     let settings = await Settings.findOne();
     if (!settings) {
-      settings = new Settings({ isInductionOpen });
-    } else {
+      settings = new Settings({
+        isInductionOpen: typeof isInductionOpen === 'boolean' ? isInductionOpen : true,
+        showInductionApplySection:
+          typeof showInductionApplySection === 'boolean' ? showInductionApplySection : true,
+      });
+    }
+
+    if (typeof isInductionOpen === 'boolean') {
       settings.isInductionOpen = isInductionOpen;
     }
+
+    if (typeof showInductionApplySection === 'boolean') {
+      settings.showInductionApplySection = showInductionApplySection;
+    }
+
     await settings.save();
-    
-    res.json({ success: true, isInductionOpen: settings.isInductionOpen });
+
+    res.json({
+      success: true,
+      isInductionOpen: settings.isInductionOpen,
+      showInductionApplySection: settings.showInductionApplySection,
+    });
   } catch (error) {
     console.error('Update status error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -1311,8 +1487,8 @@ router.post('/shortlist-for-offline', protect, authorize('super_admin'), async (
   }
 });
 
-// POST /api/induction — Submit induction form
-router.post('/', async (req, res) => {
+// POST /api/induction — Submit induction form (authenticated induction session required)
+router.post('/', verifyInductionToken, async (req, res) => {
   try {
     const settings = await Settings.findOne();
     if (settings && settings.isInductionOpen === false) {
@@ -1322,7 +1498,23 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const tokenEmail = String(req.user?.email || '').toLowerCase().trim();
+    if (!tokenEmail) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid induction session. Please verify your email again.',
+      });
+    }
+
     const normalizedPayload = normalizeInductionPayload(req.body);
+    if (normalizedPayload.email && normalizedPayload.email !== tokenEmail) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only submit induction form with your verified account email.',
+      });
+    }
+    normalizedPayload.email = tokenEmail;
+
     const existing = await findExistingInductionByIdentity({
       email: normalizedPayload.email,
       rollNumber: normalizedPayload.rollNumber,
@@ -1494,6 +1686,258 @@ router.get('/my-submission-status', verifyInductionToken, async (req, res) => {
   } catch (error) {
     console.error('Fetch my submission status error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/induction/upload-context — Selected-user context for Team 2026 upload page
+router.get('/upload-context', protect, async (req, res) => {
+  try {
+    const loggedInEmail = String(req.user?.email || '').toLowerCase().trim();
+
+    if (!loggedInEmail) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unable to verify logged-in user email',
+      });
+    }
+
+    const submission = await Induction.findOne({
+      email: exactTrimmedRegex(loggedInEmail),
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .select('status email linkedinUrl githubId xUrl selectedProfilePhoto selectedDetailsSubmittedAt selectedDetailsEditCount team2026Approved');
+
+    if (!submission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only selected users can access Team 2026 upload page with the same induction email.',
+      });
+    }
+
+    if (submission.status !== 'selected') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only selected users can access Team 2026 upload page.',
+      });
+    }
+
+    const hasSubmitted = hasTeam2026Details(submission);
+    const editCount = Number(submission.selectedDetailsEditCount || 0);
+    const remainingEdits = hasSubmitted
+      ? Math.max(MAX_TEAM_2026_EDITS - editCount, 0)
+      : MAX_TEAM_2026_EDITS;
+
+    return res.json({
+      success: true,
+      data: {
+        email: submission.email || loggedInEmail,
+        status: submission.status,
+        isSelected: true,
+        team2026: {
+          hasSubmitted,
+          linkedinUrl: submission.linkedinUrl || '',
+          githubId: submission.githubId || '',
+          xUrl: submission.xUrl || '',
+          profilePhoto: submission.selectedProfilePhoto || '',
+          submittedAt: submission.selectedDetailsSubmittedAt || null,
+          editCount,
+          remainingEdits,
+          isApproved: !!submission.team2026Approved,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Fetch upload context error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/induction/upload-details — Selected students upload Team 2026 details
+router.post('/upload-details', protect, imageUpload.single('photo'), async (req, res) => {
+  try {
+    if (!isCloudinaryConfigured) {
+      return res.status(503).json({
+        success: false,
+        message: 'Image upload service is not configured',
+      });
+    }
+
+    const loggedInEmail = String(req.user?.email || '').toLowerCase().trim();
+    if (!loggedInEmail) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unable to verify logged-in user email',
+      });
+    }
+
+    const linkedinId = String(req.body?.linkedinId || '').trim();
+    const githubId = String(req.body?.githubId || '').trim();
+    const xAccount = String(req.body?.xAccount || '').trim();
+
+    const selectedSubmission = await Induction.findOne({
+      email: exactTrimmedRegex(loggedInEmail),
+      status: 'selected',
+    }).sort({ updatedAt: -1, createdAt: -1 });
+
+    if (!selectedSubmission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only selected students can upload Team 2026 details using the same induction email.',
+      });
+    }
+
+    const alreadySubmitted = hasTeam2026Details(selectedSubmission);
+    const currentEditCount = Number(selectedSubmission.selectedDetailsEditCount || 0);
+
+    if (alreadySubmitted && currentEditCount >= MAX_TEAM_2026_EDITS) {
+      return res.status(403).json({
+        success: false,
+        message: 'You have already used your one allowed Team 2026 details update.',
+      });
+    }
+
+    if (!alreadySubmitted) {
+      if (!linkedinId || !githubId) {
+        return res.status(400).json({
+          success: false,
+          message: 'LinkedIn ID and GitHub ID are required',
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Profile photo is required',
+        });
+      }
+    }
+
+    const normalizedLinkedin = linkedinId ? normalizeLinkedinInput(linkedinId) : '';
+    const normalizedGithub = githubId ? normalizeGithubInput(githubId) : '';
+    const normalizedX = xAccount ? normalizeXInput(xAccount) : '';
+
+    if ((linkedinId && !normalizedLinkedin) || (githubId && !normalizedGithub) || (xAccount && !normalizedX)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid LinkedIn, GitHub, and X details',
+      });
+    }
+
+    const finalLinkedin = normalizedLinkedin || selectedSubmission.linkedinUrl || '';
+    const finalGithub = normalizedGithub || selectedSubmission.githubId || '';
+    const shouldUpdateX = Object.prototype.hasOwnProperty.call(req.body || {}, 'xAccount');
+    const finalX = shouldUpdateX ? normalizedX : (selectedSubmission.xUrl || '');
+
+    if (!finalLinkedin || !finalGithub) {
+      return res.status(400).json({
+        success: false,
+        message: 'LinkedIn and GitHub details are required',
+      });
+    }
+
+    let finalPhoto = selectedSubmission.selectedProfilePhoto || '';
+    if (req.file) {
+      const uploadResult = await uploadSelectedStudentPhoto(req.file.buffer, selectedSubmission._id);
+      finalPhoto = uploadResult.secure_url;
+    }
+
+    if (!finalPhoto) {
+      return res.status(400).json({
+        success: false,
+        message: 'Profile photo is required',
+      });
+    }
+
+    selectedSubmission.linkedinUrl = finalLinkedin;
+    selectedSubmission.githubId = finalGithub;
+    selectedSubmission.xUrl = finalX;
+    selectedSubmission.selectedProfilePhoto = finalPhoto;
+
+    if (!alreadySubmitted) {
+      selectedSubmission.selectedDetailsSubmittedAt = new Date();
+      selectedSubmission.selectedDetailsEditCount = 0;
+    } else {
+      selectedSubmission.selectedDetailsEditCount = currentEditCount + 1;
+    }
+
+    // Any submission/update requires admin review before public display.
+    selectedSubmission.team2026Approved = false;
+    selectedSubmission.team2026ReviewedAt = null;
+    selectedSubmission.team2026ReviewedBy = null;
+
+    await selectedSubmission.save();
+
+    const remainingEdits = Math.max(MAX_TEAM_2026_EDITS - Number(selectedSubmission.selectedDetailsEditCount || 0), 0);
+
+    return res.json({
+      success: true,
+      message: alreadySubmitted
+        ? 'Team 2026 details updated successfully. Waiting for admin review.'
+        : 'Team 2026 details uploaded successfully. Waiting for admin review.',
+      data: {
+        name: `${selectedSubmission.firstName || ''} ${selectedSubmission.lastName || ''}`.trim(),
+        email: selectedSubmission.email,
+        linkedinUrl: selectedSubmission.linkedinUrl,
+        githubId: selectedSubmission.githubId,
+        xUrl: selectedSubmission.xUrl || '',
+        selectedProfilePhoto: selectedSubmission.selectedProfilePhoto,
+        selectedDetailsSubmittedAt: selectedSubmission.selectedDetailsSubmittedAt,
+        selectedDetailsEditCount: selectedSubmission.selectedDetailsEditCount,
+        remainingEdits,
+        team2026Approved: selectedSubmission.team2026Approved,
+      },
+    });
+  } catch (error) {
+    console.error('Upload Team 2026 details error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/induction/:id/team-2026-review — Toggle Team 2026 public review approval (super_admin only)
+router.patch('/:id/team-2026-review', protect, authorize('super_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approved } = req.body || {};
+
+    if (typeof approved !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'approved must be a boolean value',
+      });
+    }
+
+    const submission = await Induction.findById(id);
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found',
+      });
+    }
+
+    if (submission.status !== 'selected' || !hasTeam2026Details(submission)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team 2026 review can be updated only for selected students who submitted details',
+      });
+    }
+
+    submission.team2026Approved = approved;
+    submission.team2026ReviewedAt = new Date();
+    submission.team2026ReviewedBy = req.user?._id || null;
+    await submission.save();
+
+    return res.json({
+      success: true,
+      message: approved ? 'Team 2026 profile approved' : 'Team 2026 profile moved back to pending review',
+      data: {
+        id: submission._id,
+        team2026Approved: submission.team2026Approved,
+        team2026ReviewedAt: submission.team2026ReviewedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Update Team 2026 review error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

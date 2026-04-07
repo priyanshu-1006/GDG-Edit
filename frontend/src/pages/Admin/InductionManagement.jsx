@@ -31,6 +31,7 @@ const InductionManagement = () => {
   const [total, setTotal] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [isInductionOpen, setIsInductionOpen] = useState(true);
+  const [showInductionApplySection, setShowInductionApplySection] = useState(true);
   const [statusLoading, setStatusLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
   const [targetStatus, setTargetStatus] = useState("");
@@ -46,6 +47,7 @@ const InductionManagement = () => {
   const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
   const [requestReason, setRequestReason] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
+  const [reviewTogglingId, setReviewTogglingId] = useState("");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -175,6 +177,7 @@ const InductionManagement = () => {
       const { data } = await axios.get(`${API}/induction/status`);
       if (data.success) {
         setIsInductionOpen(data.isInductionOpen);
+        setShowInductionApplySection(data.showInductionApplySection !== false);
       }
     } catch (err) {
       console.error("Failed to fetch induction status:", err);
@@ -210,6 +213,31 @@ const InductionManagement = () => {
     } catch (err) {
       console.error("Failed to toggle induction form:", err);
       alert("Failed to change form status. Make sure you are a super admin.");
+    }
+  };
+
+  const handleToggleInductionApplySection = async () => {
+    const nextValue = !showInductionApplySection;
+    const actionText = nextValue ? 'SHOW' : 'HIDE';
+
+    if (!window.confirm(`Are you sure you want to ${actionText} the homepage induction apply section?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.put(
+        `${API}/induction/status`,
+        { showInductionApplySection: nextValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        setShowInductionApplySection(data.showInductionApplySection !== false);
+      }
+    } catch (err) {
+      console.error("Failed to toggle homepage induction apply section:", err);
+      alert("Failed to update homepage apply section visibility.");
     }
   };
 
@@ -294,6 +322,57 @@ const InductionManagement = () => {
     }
   };
 
+  const handleToggleTeam2026Review = async (student, approved) => {
+    if (!student?._id) return;
+    if (user?.role !== 'super_admin') {
+      alert('Only super admin can change Team 2026 approval status.');
+      return;
+    }
+
+    const confirmMessage = approved
+      ? `Approve ${student.firstName} ${student.lastName} for public Team 2026 display?`
+      : `Move ${student.firstName} ${student.lastName} back to pending review?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setReviewTogglingId(student._id);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.patch(
+        `${API}/induction/${student._id}/team-2026-review`,
+        { approved },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (data?.success) {
+        setSubmissions((prev) => prev.map((entry) => (
+          entry._id === student._id
+            ? {
+              ...entry,
+              team2026Approved: approved,
+              team2026ReviewedAt: data?.data?.team2026ReviewedAt || new Date().toISOString(),
+            }
+            : entry
+        )));
+
+        setSelectedStudent((prev) => (
+          prev && prev._id === student._id
+            ? {
+              ...prev,
+              team2026Approved: approved,
+              team2026ReviewedAt: data?.data?.team2026ReviewedAt || new Date().toISOString(),
+            }
+            : prev
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to update Team 2026 review status:", err);
+      alert(err.response?.data?.message || "Failed to update Team 2026 review status.");
+    } finally {
+      setReviewTogglingId("");
+    }
+  };
+
   const handleExport = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -366,10 +445,19 @@ const InductionManagement = () => {
         </div>
         <HeaderActions>
           {user?.role === 'super_admin' && !statusLoading && (
-            <StatusToggleWrapper onClick={handleToggleInductionForm} $isOpen={isInductionOpen}>
-              <ToggleIndicator $isOpen={isInductionOpen} />
-              <span>{isInductionOpen ? 'Form is OPEN' : 'Form is CLOSED'}</span>
-            </StatusToggleWrapper>
+            <>
+              <StatusToggleWrapper onClick={handleToggleInductionForm} $isOpen={isInductionOpen}>
+                <ToggleIndicator $isOpen={isInductionOpen} />
+                <span>{isInductionOpen ? 'Form is OPEN' : 'Form is CLOSED'}</span>
+              </StatusToggleWrapper>
+              <StatusToggleWrapper
+                onClick={handleToggleInductionApplySection}
+                $isOpen={showInductionApplySection}
+              >
+                <ToggleIndicator $isOpen={showInductionApplySection} />
+                <span>{showInductionApplySection ? 'Apply Section is VISIBLE' : 'Apply Section is HIDDEN'}</span>
+              </StatusToggleWrapper>
+            </>
           )}
           {user?.role === 'super_admin' && (
             <ExportButton onClick={handleExport}>
@@ -556,6 +644,7 @@ const InductionManagement = () => {
                   <Th>Email</Th>
                   <Th>Branch</Th>
                   <Th>Stage</Th>
+                  <Th>2026 Review</Th>
                   <Th>Actions</Th>
                 </tr>
               </thead>
@@ -583,6 +672,31 @@ const InductionManagement = () => {
                     </Td>
                     <Td>
                       <StatusBadge $status={s.status}>{s.status.replace('_', ' ')}</StatusBadge>
+                    </Td>
+                    <Td>
+                      {s.status !== 'selected' ? (
+                        <ReviewStateText>—</ReviewStateText>
+                      ) : !s.selectedDetailsSubmittedAt ? (
+                        <ReviewStateText>Not submitted</ReviewStateText>
+                      ) : (
+                        <ReviewCell>
+                          <ReviewStateText $approved={!!s.team2026Approved}>
+                            {s.team2026Approved ? 'Approved' : 'Pending'}
+                          </ReviewStateText>
+                          {user?.role === 'super_admin' && (
+                            <ReviewToggleButton
+                              type="button"
+                              onClick={() => handleToggleTeam2026Review(s, !s.team2026Approved)}
+                              disabled={reviewTogglingId === s._id}
+                              $approved={!!s.team2026Approved}
+                            >
+                              {reviewTogglingId === s._id
+                                ? 'Saving...'
+                                : (s.team2026Approved ? 'Set Pending' : 'Approve')}
+                            </ReviewToggleButton>
+                          )}
+                        </ReviewCell>
+                      )}
                     </Td>
                     <Td>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -730,7 +844,9 @@ const InductionManagement = () => {
                   <DetailValue>
                     {selectedStudent.githubId ? (
                       <ProfileLink
-                        href={`https://github.com/${selectedStudent.githubId}`}
+                        href={/^https?:\/\//i.test(selectedStudent.githubId)
+                          ? selectedStudent.githubId
+                          : `https://github.com/${selectedStudent.githubId}`}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -801,6 +917,53 @@ const InductionManagement = () => {
                   </DetailValue>
                 </DetailItem>
               </DetailGrid>
+
+              {(selectedStudent.status === 'selected' && selectedStudent.selectedDetailsSubmittedAt) && (
+                <>
+                  <SectionLabel>Team 2026 Review</SectionLabel>
+                  <DetailGrid>
+                    <DetailItem>
+                      <DetailLabel>Submission Status</DetailLabel>
+                      <DetailValue>{selectedStudent.team2026Approved ? 'Approved' : 'Pending Review'}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Submitted Details At</DetailLabel>
+                      <DetailValue>
+                        {selectedStudent.selectedDetailsSubmittedAt
+                          ? new Date(selectedStudent.selectedDetailsSubmittedAt).toLocaleString()
+                          : '—'}
+                      </DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Edit Count Used</DetailLabel>
+                      <DetailValue>{Number(selectedStudent.selectedDetailsEditCount || 0)}</DetailValue>
+                    </DetailItem>
+                    <DetailItem>
+                      <DetailLabel>Last Reviewed At</DetailLabel>
+                      <DetailValue>
+                        {selectedStudent.team2026ReviewedAt
+                          ? new Date(selectedStudent.team2026ReviewedAt).toLocaleString()
+                          : 'Not reviewed'}
+                      </DetailValue>
+                    </DetailItem>
+                  </DetailGrid>
+
+                  {user?.role === 'super_admin' && (
+                    <ModalInlineActions>
+                      <ReviewToggleButton
+                        type="button"
+                        onClick={() => handleToggleTeam2026Review(selectedStudent, !selectedStudent.team2026Approved)}
+                        disabled={reviewTogglingId === selectedStudent._id}
+                        $approved={!!selectedStudent.team2026Approved}
+                      >
+                        {reviewTogglingId === selectedStudent._id
+                          ? 'Saving...'
+                          : (selectedStudent.team2026Approved ? 'Set Pending Review' : 'Approve For Public 2026')}
+                      </ReviewToggleButton>
+                    </ModalInlineActions>
+                  )}
+                </>
+              )}
 
               {/* ─ Responses ─ */}
               <SectionLabel>Responses</SectionLabel>
@@ -1173,6 +1336,43 @@ const ViewButton = styled.button`
   }
 `;
 
+const ReviewCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+`;
+
+const ReviewStateText = styled.span`
+  font-size: 12px;
+  font-weight: 700;
+  color: ${({ $approved }) => (
+    $approved === undefined ? '#64748b' : ($approved ? '#16a34a' : '#f59e0b')
+  )};
+
+  .dark & {
+    color: ${({ $approved }) => (
+      $approved === undefined ? '#94a3b8' : ($approved ? '#86efac' : '#fde68a')
+    )};
+  }
+`;
+
+const ReviewToggleButton = styled.button`
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: white;
+  background: ${({ $approved }) => ($approved ? '#f59e0b' : '#16a34a')};
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 const Pagination = styled.div`
   display: flex;
   justify-content: space-between;
@@ -1438,6 +1638,12 @@ const SubmittedDate = styled.p.attrs({
   font-size: 12px;
   margin-top: 20px;
   text-align: right;
+`;
+
+const ModalInlineActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 `;
 
 const DeleteButton = styled(ViewButton)`

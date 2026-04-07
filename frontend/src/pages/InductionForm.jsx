@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Hash, Code, Layers, 
   Github, Linkedin, MessageSquare, Users,
-  Trophy, FileText, Send, CheckCircle, AlertCircle, ArrowLeft, LogOut, Shield
+  Trophy, FileText, Send, CheckCircle, AlertCircle, ArrowLeft, LogOut, Shield, Lock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
@@ -417,6 +417,15 @@ const mapDepartmentToBranch = (department) => {
   if (reverseMatch) return reverseMatch;
   return department;
 };
+
+const INITIAL_AUTH_FORM = {
+  email: '',
+  otp: '',
+  tempToken: '',
+  name: '',
+  password: '',
+  confirmPassword: '',
+};
 const InfoCard = styled(motion.div)`
   background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.94)'};
   backdrop-filter: blur(16px);
@@ -489,6 +498,66 @@ const AuthActionWrap = styled.div`
   max-width: 560px;
   margin: 0 auto;
   text-align: center;
+`;
+
+const AuthInlineForm = styled.form`
+  margin-top: 1rem;
+  text-align: left;
+`;
+
+const AuthOtpMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 0.2rem;
+  margin-bottom: 0.8rem;
+  color: ${p => p.theme.colors.text.secondary};
+  font-size: 0.84rem;
+`;
+
+const AuthButtonRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+`;
+
+const AuthSecondaryButton = styled.button`
+  border: 1px solid ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(32,33,36,0.18)'};
+  background: ${p => p.theme.name === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};
+  color: ${p => p.theme.colors.text.secondary};
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(66,133,244,0.4);
+    color: ${p => p.theme.colors.text.primary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const AuthTextButton = styled.button`
+  border: none;
+  background: transparent;
+  color: #4285f4;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.8rem;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const ShieldWrap = styled.div`
@@ -656,6 +725,11 @@ const InductionForm = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authUser, setAuthUser] = useState(null);
+  const [authStep, setAuthStep] = useState('request');
+  const [authForm, setAuthForm] = useState(INITIAL_AUTH_FORM);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [canResendOtp, setCanResendOtp] = useState(false);
   const { login: globalLogin } = useAuth();
   
   // Resume Parsing state
@@ -758,8 +832,215 @@ const InductionForm = () => {
     checkAuth();
   }, [globalLogin]);
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE_URL}/api/induction/auth/google`;
+  useEffect(() => {
+    if (!authenticated && otpCountdown > 0) {
+      const timer = setTimeout(() => {
+        setOtpCountdown((prev) => {
+          const next = Math.max(prev - 1, 0);
+          if (next === 0) {
+            setCanResendOtp(true);
+          }
+          return next;
+        });
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [authenticated, otpCountdown]);
+
+  const formatOtpCountdown = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const setAuthField = (key, value) => {
+    setAuthForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleSendInductionOtp = async (event, isResend = false) => {
+    if (event) {
+      event.preventDefault();
+    }
+
+    setAuthError(null);
+
+    const email = String(authForm.email || '').trim().toLowerCase();
+    if (!email) {
+      setAuthError('Please enter your email address.');
+      return;
+    }
+
+    setAuthSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/induction/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to send OTP. Please try again.');
+      }
+
+      setAuthForm((prev) => ({
+        ...prev,
+        email,
+        otp: '',
+      }));
+      setAuthStep('verify');
+      setOtpCountdown(120);
+      setCanResendOtp(false);
+    } catch (error) {
+      setAuthError(error.message || 'Failed to send OTP. Please try again.');
+      if (isResend) {
+        setCanResendOtp(true);
+      }
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const handleVerifyInductionOtp = async (event) => {
+    event.preventDefault();
+    setAuthError(null);
+
+    const email = String(authForm.email || '').trim().toLowerCase();
+    const otp = String(authForm.otp || '').trim();
+
+    if (!email || !otp) {
+      setAuthError('Please provide both email and OTP.');
+      return;
+    }
+
+    if (otp.length !== 6) {
+      setAuthError('OTP must be a 6-digit code.');
+      return;
+    }
+
+    setAuthSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/induction/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'OTP verification failed.');
+      }
+
+      setAuthForm((prev) => ({
+        ...prev,
+        tempToken: data.tempToken,
+        name: prev.name || '',
+        password: '',
+        confirmPassword: '',
+      }));
+      setAuthStep('register');
+      setOtpCountdown(0);
+      setCanResendOtp(false);
+    } catch (error) {
+      setAuthError(error.message || 'OTP verification failed.');
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const handleCreateInductionAccount = async (event) => {
+    event.preventDefault();
+    setAuthError(null);
+
+    const name = String(authForm.name || '').trim();
+    const password = String(authForm.password || '');
+    const confirmPassword = String(authForm.confirmPassword || '');
+
+    if (!name) {
+      setAuthError('Please enter your full name.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setAuthError('Password must be at least 8 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
+      return;
+    }
+
+    setAuthSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/induction/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tempToken: authForm.tempToken,
+          name,
+          password,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to create account.');
+      }
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        globalLogin();
+      }
+      sessionStorage.setItem('inductionToken', data.inductionToken);
+      window.location.reload();
+    } catch (error) {
+      setAuthError(error.message || 'Failed to create account.');
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const handleInductionPasswordLogin = async (event) => {
+    event.preventDefault();
+    setAuthError(null);
+
+    const email = String(authForm.email || '').trim().toLowerCase();
+    const password = String(authForm.password || '');
+
+    if (!email || !password) {
+      setAuthError('Please enter your email and password.');
+      return;
+    }
+
+    setAuthSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/induction/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Login failed.');
+      }
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        globalLogin();
+      }
+      sessionStorage.setItem('inductionToken', data.inductionToken);
+      window.location.reload();
+    } catch (error) {
+      setAuthError(error.message || 'Login failed.');
+    } finally {
+      setAuthSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -767,6 +1048,10 @@ const InductionForm = () => {
     setAuthenticated(false);
     setSubmitted(false);
     setAuthError(null);
+    setAuthStep('request');
+    setAuthForm(INITIAL_AUTH_FORM);
+    setOtpCountdown(0);
+    setCanResendOtp(false);
     setFormData(prev => ({ ...prev, email: '', firstName: '', lastName: '' }));
   };
 
@@ -951,7 +1236,7 @@ const InductionForm = () => {
     );
   }
 
-  // Login gate — show Google Sign-In
+  // Login gate — OTP + password account flow
   if (!authenticated) {
     return (
       <PageWrapper>
@@ -1007,8 +1292,8 @@ const InductionForm = () => {
             </InfoBody>
 
             <HighlightNotice>
-              <strong>Important:</strong> For registration, you need to use your college mail (@mmmut.ac.in) first,
-              then click <strong>Continue with Google</strong>.
+              <strong>Important:</strong> Start with the same email used for your induction submission, verify OTP sent from
+              <strong> team@gdg.mmmut.app</strong>, create your password, and then continue to the induction form.
             </HighlightNotice>
 
             <AuthDivider />
@@ -1018,27 +1303,253 @@ const InductionForm = () => {
                 <Shield size={44} style={{ color: '#4285f4' }} />
               </ShieldWrap>
 
-              <LoginTitle>Login to Continue</LoginTitle>
+              <LoginTitle>Verify Email to Continue</LoginTitle>
 
               <LoginText>
-                Use your college email first, then continue with Google.
+                Use your induction submission email and complete OTP verification before creating your induction account password.
               </LoginText>
 
               <NoteBox>
                 <NoteText>
                   <AlertCircle size={16} />
-                  <strong>Note:</strong> Login can be done only through college email (@mmmut.ac.in)
+                  <strong>Note:</strong> Use the exact same email you used while submitting induction details.
                 </NoteText>
               </NoteBox>
 
-              <GoogleButton
-                onClick={handleGoogleLogin}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                Sign in with Google
-              </GoogleButton>
+              {authStep === 'request' && (
+                <AuthInlineForm onSubmit={(event) => handleSendInductionOtp(event, false)}>
+                  <FieldGroup>
+                    <Label>Email <span>*</span></Label>
+                    <InputWrapper>
+                      <Mail />
+                      <Input
+                        $hasIcon
+                        type="email"
+                        placeholder="Enter the same induction form email"
+                        value={authForm.email}
+                        onChange={(event) => setAuthField('email', event.target.value)}
+                        required
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.25rem' }}>
+                    {authSubmitting ? 'Sending OTP...' : 'Send OTP'}
+                  </SubmitButton>
+
+                  <AuthTextButton
+                    type="button"
+                    onClick={() => {
+                      setAuthError(null);
+                      setAuthStep('login');
+                      setOtpCountdown(0);
+                      setCanResendOtp(false);
+                      setAuthForm((prev) => ({
+                        ...prev,
+                        otp: '',
+                        tempToken: '',
+                        password: '',
+                        confirmPassword: '',
+                      }));
+                    }}
+                  >
+                    Already registered? Sign in with password
+                  </AuthTextButton>
+                </AuthInlineForm>
+              )}
+
+              {authStep === 'verify' && (
+                <AuthInlineForm onSubmit={handleVerifyInductionOtp}>
+                  <FieldGroup>
+                    <Label>Verified Email</Label>
+                    <InputWrapper>
+                      <Mail />
+                      <Input
+                        $hasIcon
+                        type="email"
+                        value={authForm.email}
+                        readOnly
+                        style={{ opacity: 0.75, cursor: 'not-allowed' }}
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <FieldGroup>
+                    <Label>Enter 6-digit OTP <span>*</span></Label>
+                    <InputWrapper>
+                      <Hash />
+                      <Input
+                        $hasIcon
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={authForm.otp}
+                        onChange={(event) => setAuthField('otp', event.target.value.replace(/\D/g, '').slice(0, 6))}
+                        required
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <AuthOtpMeta>
+                    <span>
+                      {otpCountdown > 0
+                        ? `OTP expires in ${formatOtpCountdown(otpCountdown)}`
+                        : 'OTP expired. Request a new code.'}
+                    </span>
+                    {canResendOtp && (
+                      <AuthSecondaryButton
+                        type="button"
+                        onClick={(event) => handleSendInductionOtp(event, true)}
+                        disabled={authSubmitting}
+                      >
+                        Resend OTP
+                      </AuthSecondaryButton>
+                    )}
+                  </AuthOtpMeta>
+
+                  <AuthButtonRow>
+                    <AuthSecondaryButton
+                      type="button"
+                      onClick={() => {
+                        setAuthError(null);
+                        setAuthStep('request');
+                        setOtpCountdown(0);
+                        setCanResendOtp(false);
+                        setAuthField('otp', '');
+                      }}
+                    >
+                      Change Email
+                    </AuthSecondaryButton>
+                  </AuthButtonRow>
+
+                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.75rem' }}>
+                    {authSubmitting ? 'Verifying OTP...' : 'Verify OTP'}
+                  </SubmitButton>
+                </AuthInlineForm>
+              )}
+
+              {authStep === 'register' && (
+                <AuthInlineForm onSubmit={handleCreateInductionAccount}>
+                  <FieldGroup>
+                    <Label>Full Name <span>*</span></Label>
+                    <InputWrapper>
+                      <User />
+                      <Input
+                        $hasIcon
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={authForm.name}
+                        onChange={(event) => setAuthField('name', event.target.value)}
+                        required
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <FieldGroup>
+                    <Label>Create Password <span>*</span></Label>
+                    <InputWrapper>
+                      <Lock />
+                      <Input
+                        $hasIcon
+                        type="password"
+                        placeholder="At least 8 characters"
+                        value={authForm.password}
+                        onChange={(event) => setAuthField('password', event.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <FieldGroup>
+                    <Label>Confirm Password <span>*</span></Label>
+                    <InputWrapper>
+                      <Lock />
+                      <Input
+                        $hasIcon
+                        type="password"
+                        placeholder="Re-enter your password"
+                        value={authForm.confirmPassword}
+                        onChange={(event) => setAuthField('confirmPassword', event.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <AuthButtonRow>
+                    <AuthSecondaryButton
+                      type="button"
+                      onClick={() => {
+                        setAuthError(null);
+                        setAuthStep('verify');
+                      }}
+                    >
+                      Back to OTP
+                    </AuthSecondaryButton>
+                  </AuthButtonRow>
+
+                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.75rem' }}>
+                    {authSubmitting ? 'Creating Account...' : 'Create Account & Continue'}
+                  </SubmitButton>
+                </AuthInlineForm>
+              )}
+
+              {authStep === 'login' && (
+                <AuthInlineForm onSubmit={handleInductionPasswordLogin}>
+                  <FieldGroup>
+                    <Label>Email <span>*</span></Label>
+                    <InputWrapper>
+                      <Mail />
+                      <Input
+                        $hasIcon
+                        type="email"
+                        placeholder="Enter the same induction form email"
+                        value={authForm.email}
+                        onChange={(event) => setAuthField('email', event.target.value)}
+                        required
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <FieldGroup>
+                    <Label>Password <span>*</span></Label>
+                    <InputWrapper>
+                      <Lock />
+                      <Input
+                        $hasIcon
+                        type="password"
+                        placeholder="Enter your password"
+                        value={authForm.password}
+                        onChange={(event) => setAuthField('password', event.target.value)}
+                        required
+                      />
+                    </InputWrapper>
+                  </FieldGroup>
+
+                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.5rem' }}>
+                    {authSubmitting ? 'Signing In...' : 'Sign In'}
+                  </SubmitButton>
+
+                  <AuthTextButton
+                    type="button"
+                    onClick={() => {
+                      setAuthError(null);
+                      setAuthStep('request');
+                      setAuthForm((prev) => ({
+                        ...prev,
+                        otp: '',
+                        tempToken: '',
+                        password: '',
+                        confirmPassword: '',
+                      }));
+                    }}
+                  >
+                    New here? Verify OTP and create account
+                  </AuthTextButton>
+                </AuthInlineForm>
+              )}
 
               {authError && (
                 <StatusMessage

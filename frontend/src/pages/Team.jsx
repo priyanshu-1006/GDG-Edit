@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { motion, useInView } from 'framer-motion';
 import { FaGit, FaLinkedin, FaTwitter } from 'react-icons/fa';
-import Uploadbox from '../../Upload/Uploadbox';
 
 import { apiClient } from '../utils/apiUtils';
 
@@ -146,8 +145,11 @@ const SocialLinks = styled.div`
 const SocialLink = styled(motion.a)`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.25rem;
+  opacity: ${({ $disabled }) => ($disabled ? 0.55 : 1)};
+  pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
+  cursor: ${({ $disabled }) => ($disabled ? 'default' : 'pointer')};
   &:hover {
-    color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme, $disabled }) => ($disabled ? theme.colors.text.secondary : theme.colors.primary)};
   }
 `;
 const FilterButton = styled.button`
@@ -229,7 +231,6 @@ function normalizeExternalUrl(url) {
 }
 
 export default function Team() {
-  const [upload, setUpload] = useState(false);
   const [selectedYear, setSelectedYear] = useState("GDG Lead");
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.1 });
@@ -238,16 +239,25 @@ export default function Team() {
   useEffect(() => {
     const fetchTeamData = async () => {
       try {
-        const response = await apiClient.get('/api/core-team');
-        if (response.data.success) {
-          const fetchedData = response.data.data.map(member => {
+        const [coreTeamResponse, selected2026Response] = await Promise.all([
+          apiClient.get('/api/core-team'),
+          apiClient.get('/api/induction/team-2026').catch(() => ({ data: { success: false, data: [] } })),
+        ]);
+
+        const coreMembers = coreTeamResponse?.data?.success
+          ? coreTeamResponse.data.data.map((member) => {
             if (member.name === "Rasshi Ashish Khan") {
               return { ...member, name: "Rasshi Ashish Srivastav" };
             }
             return member;
-          });
-          setTeamData(fetchedData);
-        }
+          })
+          : [];
+
+        const selected2026Members = selected2026Response?.data?.success
+          ? selected2026Response.data.data
+          : [];
+
+        setTeamData([...coreMembers, ...selected2026Members]);
       } catch (error) {
         console.error('Error fetching team data:', error);
       }
@@ -330,9 +340,6 @@ export default function Team() {
       </div>
     );
   }
-  function handleUpload() {
-    setUpload(true);
-  }
   // Normalize role to a category key for ordering
   function getTeamCategory(member) {
     const role = (member?.role || '').toLowerCase();
@@ -372,6 +379,12 @@ export default function Team() {
     });
   }
 
+  if (selectedYear === '2026') {
+    filteredMembers = [...filteredMembers].sort((a, b) =>
+      String(a.name || '').localeCompare(String(b.name || ''), 'en', { sensitivity: 'base' })
+    );
+  }
+
   return (
     <>
       <TeamSectionContainer id="team" className="animate-section">
@@ -388,6 +401,12 @@ export default function Team() {
               onClick={() => setSelectedYear('GDG Lead')}
             >
               Our Leads
+            </FilterButton>
+            <FilterButton
+              $active={selectedYear === '2026'}
+              onClick={() => setSelectedYear('2026')}
+            >
+              2026
             </FilterButton>
             <FilterButton
               $active={selectedYear === '2025'}
@@ -426,117 +445,115 @@ export default function Team() {
             animate={isInView ? "visible" : undefined}
           >
             <TeamGrid>
-              {filteredMembers?.map((member) => (
-                <TiltWrapper key={member.id || member._id}>
-                  <TeamMemberCard 
-                    variants={itemVariants} 
-                    className="transition-transform duration-700 ease-in-out"
-                    $isLead={selectedYear === "GDG Lead"}
-                  >
-                  <MemberImage>
-                    <img 
-                      src={buildCloudinaryUrl(member?.image, 600)} 
-                      srcSet={buildResponsiveSrcSet(member?.image)}
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 250px"
-                      alt={member.name}
-                      loading={(member.id || member._id) <= 104 ? 'eager' : 'lazy'}
-                      fetchpriority={(member.id || member._id) <= 104 ? 'high' : 'auto'}
-                      referrerPolicy={!isCloudinaryUrl(member?.image) ? 'no-referrer' : undefined}
-                      decoding="async"
-                      style={{
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease-in-out'
-                      }}
-                      onLoad={(e) => {
-                        if (e.target.dataset.placeholder === 'true') {
-                          return; // keep reduced opacity for placeholder
-                        }
-                        e.target.style.opacity = '1';
-                      }}
-                      onError={(e) => {
-                        // fallback to original or a placeholder to avoid broken images
-                        if (isCloudinaryUrl(member?.image)) {
-                          const original = member?.image;
-                          if (e.target.src !== original) {
-                            e.target.src = original;
+              {filteredMembers?.map((member) => {
+                const linkedinUrl = normalizeExternalUrl(member.social?.linkedin);
+                const twitterUrl = normalizeExternalUrl(member.social?.twitter);
+                const githubUrl = normalizeExternalUrl(member.social?.github);
+
+                return (
+                  <TiltWrapper key={member.id || member._id}>
+                    <TeamMemberCard 
+                      variants={itemVariants} 
+                      className="transition-transform duration-700 ease-in-out"
+                      $isLead={selectedYear === "GDG Lead"}
+                    >
+                    <MemberImage>
+                      <img 
+                        src={buildCloudinaryUrl(member?.image, 600)} 
+                        srcSet={buildResponsiveSrcSet(member?.image)}
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 250px"
+                        alt={member.name}
+                        loading={(member.id || member._id) <= 104 ? 'eager' : 'lazy'}
+                        fetchpriority={(member.id || member._id) <= 104 ? 'high' : 'auto'}
+                        referrerPolicy={!isCloudinaryUrl(member?.image) ? 'no-referrer' : undefined}
+                        decoding="async"
+                        style={{
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease-in-out'
+                        }}
+                        onLoad={(e) => {
+                          if (e.target.dataset.placeholder === 'true') {
+                            return; // keep reduced opacity for placeholder
                           }
                           e.target.style.opacity = '1';
-                        } else {
-                          // Use local logo as placeholder with reduced opacity for subtlety
-                          e.target.dataset.placeholder = 'true';
-                          e.target.src = 'https://res.cloudinary.com/startup-grind/image/upload/c_fill,dpr_2.0,f_auto,g_center,h_900,q_auto:good,w_1200/v1/gcs/platform-data-goog/contentbuilder/GDG_Bevy_SocialSharingThumbnail_KFxxrrs.png';
-                          e.target.style.opacity = '0.35';
+                        }}
+                        onError={(e) => {
+                          // fallback to original or a placeholder to avoid broken images
+                          if (isCloudinaryUrl(member?.image)) {
+                            const original = member?.image;
+                            if (e.target.src !== original) {
+                              e.target.src = original;
+                            }
+                            e.target.style.opacity = '1';
+                          } else {
+                            // Use local logo as placeholder with reduced opacity for subtlety
+                            e.target.dataset.placeholder = 'true';
+                            e.target.src = 'https://res.cloudinary.com/startup-grind/image/upload/c_fill,dpr_2.0,f_auto,g_center,h_900,q_auto:good,w_1200/v1/gcs/platform-data-goog/contentbuilder/GDG_Bevy_SocialSharingThumbnail_KFxxrrs.png';
+                            e.target.style.opacity = '0.35';
+                          }
+                        }}
+                      />
+                    </MemberImage>
+
+                    <MemberContent>
+                      <>
+                        {
+                          selectedYear != 'GDG Lead' ? <><RoleBadge $role={member.badge}>
+                            {member.badge ? member.badge.charAt(0).toUpperCase() + member.badge.slice(1) : ''}
+                          </RoleBadge></> :
+                            <></>
                         }
-                      }}
-                    />
-                    <button onClick={handleUpload}>Upload</button>
-                  </MemberImage>
+                      </>
 
-                  <MemberContent>
-                    <>
-                      {
-                        selectedYear != 'GDG Lead' ? <><RoleBadge $role={member.badge}>
-                          {member.badge ? member.badge.charAt(0).toUpperCase() + member.badge.slice(1) : ''}
-                        </RoleBadge></> :
-                          <></>
-                      }
-                    </>
-
-                    <MemberName>{member.name}</MemberName>
-                    <MemberRole>{member.role}</MemberRole>
-                    <SocialLinks>
-                      <SocialLink
-                        href={normalizeExternalUrl(member.social?.linkedin)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ y: -3 }}
-                        aria-label={`${member.name}'s LinkedIn`}
-                      >
-                        <i className="fab fa-linkedin"><FaLinkedin /></i>
-                      </SocialLink>
-                      <SocialLink
-                        href={normalizeExternalUrl(member.social?.twitter)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ y: -3 }}
-                        aria-label={`${member.name}'s Twitter`}
-                      >
-                        <i className="fab fa-twitter"><FaTwitter /></i>
-                      </SocialLink>
-                      <SocialLink
-                        href={normalizeExternalUrl(member.social?.github)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ y: -3 }}
-                        aria-label={`${member.name}'s GitHub`}
-                      >
-                        <i className="fab fa-github"><FaGit /></i>
-                      </SocialLink>
-                    </SocialLinks>
-                  </MemberContent>
-                  </TeamMemberCard>
-                </TiltWrapper>
-              ))}
+                      <MemberName>{member.name}</MemberName>
+                      <MemberRole>{member.role}</MemberRole>
+                      <SocialLinks>
+                        {linkedinUrl !== '#' && (
+                          <SocialLink
+                            href={linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            whileHover={{ y: -3 }}
+                            aria-label={`${member.name}'s LinkedIn`}
+                          >
+                            <i className="fab fa-linkedin"><FaLinkedin /></i>
+                          </SocialLink>
+                        )}
+                        <SocialLink
+                          href={twitterUrl !== '#' ? twitterUrl : undefined}
+                          target={twitterUrl !== '#' ? '_blank' : undefined}
+                          rel={twitterUrl !== '#' ? 'noopener noreferrer' : undefined}
+                          whileHover={twitterUrl !== '#' ? { y: -3 } : undefined}
+                          aria-label={twitterUrl !== '#'
+                            ? `${member.name}'s X account`
+                            : `${member.name}'s X account not provided`}
+                          aria-disabled={twitterUrl === '#'}
+                          tabIndex={twitterUrl !== '#' ? undefined : -1}
+                          $disabled={twitterUrl === '#'}
+                        >
+                          <i className="fab fa-twitter"><FaTwitter /></i>
+                        </SocialLink>
+                        {githubUrl !== '#' && (
+                          <SocialLink
+                            href={githubUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            whileHover={{ y: -3 }}
+                            aria-label={`${member.name}'s GitHub`}
+                          >
+                            <i className="fab fa-github"><FaGit /></i>
+                          </SocialLink>
+                        )}
+                      </SocialLinks>
+                    </MemberContent>
+                    </TeamMemberCard>
+                  </TiltWrapper>
+                );
+              })}
             </TeamGrid>
           </motion.div>
         </SectionContent>
       </TeamSectionContainer>
-      {upload && <motion.div style={{
-        position: "fixed",
-        top: "0",
-        left: "0",
-        right: "0",
-        bottom: "0",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(5px)",
-        display: "flex",
-        justifyContent: " center",
-        alignItems: "center",
-        zIndex: "1000"
-      }}
-      >
-        <Uploadbox setUpload={setUpload} />
-      </motion.div>}
     </>
   );
 };

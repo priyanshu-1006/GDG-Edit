@@ -45,6 +45,7 @@ const INDUCTION_STATUS_META = {
     roundLabel: 'Final Result',
   },
 };
+const MAX_TEAM_2026_EDITS = 1;
 
 const uploadProfilePhotoToCloudinary = (buffer, userId) => {
   const publicId = `profile-${userId}-${Date.now()}`;
@@ -473,7 +474,7 @@ router.get('/profile', protect, async (req, res, next) => {
       const induction = await Induction.findOne({
         email: String(user.email || '').toLowerCase().trim(),
       })
-        .select('status createdAt updatedAt rollNumber')
+        .select('status createdAt updatedAt rollNumber linkedinUrl githubId xUrl selectedProfilePhoto selectedDetailsSubmittedAt selectedDetailsEditCount team2026Approved team2026ReviewedAt')
         .sort({ createdAt: -1 });
 
       const settings = await Settings.findOne().select('piRound isPiStarted piStartedAt');
@@ -487,6 +488,18 @@ router.get('/profile', protect, async (req, res, next) => {
           submittedAt: null,
           updatedAt: null,
           rollNumber: null,
+          team2026: {
+            hasSubmitted: false,
+            linkedinUrl: '',
+            githubId: '',
+            xUrl: '',
+            profilePhoto: '',
+            submittedAt: null,
+            editCount: 0,
+            remainingEdits: MAX_TEAM_2026_EDITS,
+            isApproved: false,
+            reviewedAt: null,
+          },
           activePiRound: settings?.piRound || null,
           isPiStarted: !!settings?.isPiStarted,
           piStartedAt: settings?.piStartedAt || null,
@@ -494,6 +507,16 @@ router.get('/profile', protect, async (req, res, next) => {
       } else {
         const statusKey = induction.status || 'applied';
         const statusMeta = INDUCTION_STATUS_META[statusKey] || INDUCTION_STATUS_META.applied;
+        const hasSubmittedTeam2026 = !!(
+          induction.selectedDetailsSubmittedAt &&
+          induction.selectedProfilePhoto &&
+          induction.linkedinUrl &&
+          induction.githubId
+        );
+        const team2026EditCount = Number(induction.selectedDetailsEditCount || 0);
+        const remainingTeam2026Edits = hasSubmittedTeam2026
+          ? Math.max(MAX_TEAM_2026_EDITS - team2026EditCount, 0)
+          : MAX_TEAM_2026_EDITS;
 
         profile.induction = {
           hasSubmitted: true,
@@ -503,6 +526,18 @@ router.get('/profile', protect, async (req, res, next) => {
           submittedAt: induction.createdAt || null,
           updatedAt: induction.updatedAt || null,
           rollNumber: induction.rollNumber || null,
+          team2026: {
+            hasSubmitted: hasSubmittedTeam2026,
+            linkedinUrl: induction.linkedinUrl || '',
+            githubId: induction.githubId || '',
+            xUrl: induction.xUrl || '',
+            profilePhoto: induction.selectedProfilePhoto || '',
+            submittedAt: induction.selectedDetailsSubmittedAt || null,
+            editCount: team2026EditCount,
+            remainingEdits: remainingTeam2026Edits,
+            isApproved: !!induction.team2026Approved,
+            reviewedAt: induction.team2026ReviewedAt || null,
+          },
           activePiRound: settings?.piRound || null,
           isPiStarted: !!settings?.isPiStarted,
           piStartedAt: settings?.piStartedAt || null,

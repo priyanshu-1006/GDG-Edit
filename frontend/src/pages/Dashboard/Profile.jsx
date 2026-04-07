@@ -207,6 +207,15 @@ const InductionNote = styled.p`
   font-size: 0.92rem;
 `;
 
+const Team2026ReviewBadge = styled.span`
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: ${({ $approved }) => ($approved ? '#86efac' : '#fde68a')};
+  background: ${({ $approved }) => ($approved ? 'rgba(22, 163, 74, 0.2)' : 'rgba(202, 138, 4, 0.2)')};
+`;
+
 const ProfileBody = styled.div`
   padding: 2rem;
 `;
@@ -377,6 +386,10 @@ const Button = styled.button`
 const Profile = () => {
   const { user } = useAuth();
   const induction = user?.induction;
+  const team2026Details = induction?.team2026 || {};
+  const hasSubmittedTeam2026 = !!team2026Details?.hasSubmitted;
+  const remainingTeam2026Edits = Math.max(Number(team2026Details?.remainingEdits ?? 1), 0);
+  const canEditTeam2026 = hasSubmittedTeam2026 && remainingTeam2026Edits > 0;
   const photoInputRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -388,19 +401,43 @@ const Profile = () => {
   });
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [selectedDetailsForm, setSelectedDetailsForm] = useState({
+    linkedinId: '',
+    githubId: '',
+    xAccount: '',
+  });
+  const [selectedDetailsPhoto, setSelectedDetailsPhoto] = useState(null);
+  const [submittingSelectedDetails, setSubmittingSelectedDetails] = useState(false);
+  const [editingSelectedDetails, setEditingSelectedDetails] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        phone: user.phone || '',
-        college: user.college || '',
-        year: user.year ? String(user.year) : '',
-        branch: user.branch || ''
-      });
-    }
+    setFormData({
+      name: user?.name || '',
+      phone: user?.phone || '',
+      college: user?.college || '',
+      year: user?.year ? String(user.year) : '',
+      branch: user?.branch || ''
+    });
+
+    setSelectedDetailsForm({
+      linkedinId: user?.induction?.team2026?.linkedinUrl || '',
+      githubId: user?.induction?.team2026?.githubId || '',
+      xAccount: user?.induction?.team2026?.xUrl || '',
+    });
+    setSelectedDetailsPhoto(null);
+    setEditingSelectedDetails(false);
   }, [user]);
+
+  const resetTeam2026EditForm = () => {
+    setSelectedDetailsForm({
+      linkedinId: team2026Details?.linkedinUrl || '',
+      githubId: team2026Details?.githubId || '',
+      xAccount: team2026Details?.xUrl || '',
+    });
+    setSelectedDetailsPhoto(null);
+    setEditingSelectedDetails(false);
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -531,6 +568,80 @@ const Profile = () => {
     }
   };
 
+  const handleSelectedDetailsChange = (event) => {
+    const { name, value } = event.target;
+    setSelectedDetailsForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectedDetailsPhotoChange = (event) => {
+    setSelectedDetailsPhoto(event.target.files?.[0] || null);
+  };
+
+  const handleSelectedDetailsSubmit = async () => {
+    const isUpdateMode = hasSubmittedTeam2026;
+
+    if (isUpdateMode && !editingSelectedDetails) {
+      return;
+    }
+
+    if (!selectedDetailsForm.linkedinId.trim() || !selectedDetailsForm.githubId.trim()) {
+      alert('LinkedIn ID and GitHub ID are required.');
+      return;
+    }
+
+    if (!isUpdateMode && !selectedDetailsPhoto) {
+      alert('Please select a profile photo.');
+      return;
+    }
+
+    if (selectedDetailsPhoto && !selectedDetailsPhoto.type.startsWith('image/')) {
+      alert('Please upload a valid image file.');
+      return;
+    }
+
+    if (selectedDetailsPhoto && selectedDetailsPhoto.size > 5 * 1024 * 1024) {
+      alert('Image size must be 5MB or smaller.');
+      return;
+    }
+
+    try {
+      setSubmittingSelectedDetails(true);
+      const token = localStorage.getItem('token');
+      const payload = new FormData();
+
+      if (selectedDetailsPhoto) {
+        payload.append('photo', selectedDetailsPhoto);
+      }
+      payload.append('linkedinId', selectedDetailsForm.linkedinId);
+      payload.append('githubId', selectedDetailsForm.githubId);
+      payload.append('xAccount', selectedDetailsForm.xAccount);
+
+      await axios.post(
+        `${API_BASE_URL}/api/induction/upload-details`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      alert(isUpdateMode
+        ? 'Team 2026 details updated successfully. Waiting for admin re-review.'
+        : 'Team 2026 details submitted successfully. Waiting for admin review.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error submitting Team 2026 details:', error);
+      alert(error.response?.data?.message || 'Failed to submit Team 2026 details. Please try again.');
+    } finally {
+      setSubmittingSelectedDetails(false);
+    }
+  };
+
   return (
     <Container>
       <Header>
@@ -615,6 +726,161 @@ const Profile = () => {
                   </InductionNote>
                 )}
               </InductionStatusCard>
+            </Section>
+          )}
+
+          {user?.role === 'student' && induction?.status === 'selected' && (
+            <Section>
+              <SectionHeader>
+                <SectionTitle>Team 2026 Details</SectionTitle>
+                {hasSubmittedTeam2026 && (
+                  <Team2026ReviewBadge $approved={!!team2026Details?.isApproved}>
+                    {team2026Details?.isApproved ? 'Approved' : 'Pending Review'}
+                  </Team2026ReviewBadge>
+                )}
+              </SectionHeader>
+
+              {!hasSubmittedTeam2026 && (
+                <InductionNote>
+                  You are selected. Submit your profile photo, LinkedIn, and GitHub details to be featured in the 2026 team section.
+                </InductionNote>
+              )}
+
+              {hasSubmittedTeam2026 && !editingSelectedDetails && (
+                <>
+                  <InductionNote>
+                    Details submitted on {formatDateTime(team2026Details?.submittedAt)}.
+                    {canEditTeam2026
+                      ? ' You can edit these details only once before they are locked.'
+                      : ' Edit limit reached. Contact admin if another change is needed.'}
+                  </InductionNote>
+
+                  <InfoGrid>
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>LinkedIn</InfoLabel>
+                        <InfoValue>{team2026Details?.linkedinUrl || 'Not provided'}</InfoValue>
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>GitHub</InfoLabel>
+                        <InfoValue>{team2026Details?.githubId || 'Not provided'}</InfoValue>
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>X Account</InfoLabel>
+                        <InfoValue>{team2026Details?.xUrl || 'Not provided'}</InfoValue>
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiCalendar /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>Remaining Edits</InfoLabel>
+                        <InfoValue>{remainingTeam2026Edits}</InfoValue>
+                      </InfoContent>
+                    </InfoItem>
+                  </InfoGrid>
+
+                  {canEditTeam2026 && (
+                    <Actions>
+                      <Button
+                        $variant="primary"
+                        onClick={() => setEditingSelectedDetails(true)}
+                      >
+                        <FiEdit2 />
+                        Edit Once
+                      </Button>
+                    </Actions>
+                  )}
+                </>
+              )}
+
+              {(!hasSubmittedTeam2026 || editingSelectedDetails) && (
+                <>
+                  <InfoGrid>
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>LinkedIn ID or URL</InfoLabel>
+                        <Input
+                          type="text"
+                          name="linkedinId"
+                          value={selectedDetailsForm.linkedinId}
+                          onChange={handleSelectedDetailsChange}
+                          placeholder="linkedin.com/in/your-id or your-id"
+                        />
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>GitHub ID or URL</InfoLabel>
+                        <Input
+                          type="text"
+                          name="githubId"
+                          value={selectedDetailsForm.githubId}
+                          onChange={handleSelectedDetailsChange}
+                          placeholder="github.com/your-id or your-id"
+                        />
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiUser /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>X Account (Optional)</InfoLabel>
+                        <Input
+                          type="text"
+                          name="xAccount"
+                          value={selectedDetailsForm.xAccount}
+                          onChange={handleSelectedDetailsChange}
+                          placeholder="x.com/your-id or @your-id"
+                        />
+                      </InfoContent>
+                    </InfoItem>
+
+                    <InfoItem>
+                      <InfoIcon><FiUpload /></InfoIcon>
+                      <InfoContent>
+                        <InfoLabel>{hasSubmittedTeam2026 ? 'Profile Photo (Optional for edit)' : 'Profile Photo'}</InfoLabel>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleSelectedDetailsPhotoChange}
+                        />
+                      </InfoContent>
+                    </InfoItem>
+                  </InfoGrid>
+
+                  <Actions>
+                    {hasSubmittedTeam2026 && (
+                      <Button onClick={resetTeam2026EditForm} disabled={submittingSelectedDetails}>
+                        <FiX />
+                        Cancel Edit
+                      </Button>
+                    )}
+                    <Button
+                      $variant="primary"
+                      onClick={handleSelectedDetailsSubmit}
+                      disabled={submittingSelectedDetails}
+                    >
+                      <FiSave />
+                      {submittingSelectedDetails
+                        ? (hasSubmittedTeam2026 ? 'Updating...' : 'Submitting...')
+                        : (hasSubmittedTeam2026 ? 'Save One-Time Update' : 'Submit Team 2026 Details')}
+                    </Button>
+                  </Actions>
+                </>
+              )}
             </Section>
           )}
 

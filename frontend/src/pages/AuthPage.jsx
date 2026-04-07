@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Github as GitHub, Twitter, Mail, Camera, ChevronLeft, ChevronRight, Calendar, MapPin } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL, API_ENDPOINTS } from "../config/api";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useAuth } from "../contexts/useAuth";
 import {
@@ -403,6 +403,14 @@ const GoogleIcon = () => (
 const AuthPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const nextFromQuery = new URLSearchParams(location.search).get('next');
+  const redirectAfterAuth =
+    (typeof location.state?.redirectTo === 'string' && location.state.redirectTo.startsWith('/'))
+      ? location.state.redirectTo
+      : (typeof nextFromQuery === 'string' && nextFromQuery.startsWith('/'))
+        ? nextFromQuery
+        : '/';
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -585,7 +593,7 @@ const AuthPage = () => {
         console.log('Login successful, token received');
         localStorage.setItem("token", response.data.token);
         login(response.data.token);
-        navigate("/");
+        navigate(redirectAfterAuth, { replace: true });
       } else {
         // Register - send FormData for file upload
         const formData = new FormData();
@@ -604,7 +612,7 @@ const AuthPage = () => {
         console.log('Registration successful, token received');
         localStorage.setItem("token", response.data.token);
         login(response.data.token);
-        navigate("/");
+        navigate(redirectAfterAuth, { replace: true });
       }
     } catch (err) {
       console.error("Auth error:", err);
