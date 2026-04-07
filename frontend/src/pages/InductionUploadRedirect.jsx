@@ -7,50 +7,121 @@ import { useAuth } from "../contexts/useAuth";
 
 const Wrapper = styled.div`
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(0.75rem, 2vw, 2rem);
+  background:
+    radial-gradient(1200px 600px at -10% -20%, rgba(66, 133, 244, 0.14), transparent 60%),
+    radial-gradient(900px 480px at 120% 120%, rgba(15, 157, 88, 0.14), transparent 62%),
+    ${({ theme }) => (theme.name === "dark"
+      ? "linear-gradient(135deg, #0c1222 0%, #0f1b30 45%, #0b1629 100%)"
+      : "linear-gradient(135deg, #f7fbff 0%, #eef5ff 45%, #f4f8ff 100%)")};
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+  }
 `;
 
 const Card = styled.div`
-  width: min(680px, 100%);
-  border-radius: 18px;
-  padding: 1.5rem;
-  background: ${({ theme }) => theme.colors.background.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.divider};
-  box-shadow: ${({ theme }) => theme.colors.shadows.medium};
+  width: min(760px, 100%);
+  border-radius: 24px;
+  padding: clamp(1rem, 2.2vw, 2rem);
+  background:
+    linear-gradient(
+      to bottom right,
+      ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.95)")},
+      ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.88)")}
+    );
+  border: 1px solid ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.12)" : "rgba(32,33,36,0.14)")};
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    border-radius: 18px;
+  }
+`;
+
+const Badge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: ${({ theme }) => (theme.name === "dark" ? "#d2e3fc" : "#174ea6")};
+  background: ${({ theme }) => (theme.name === "dark" ? "rgba(66,133,244,0.22)" : "rgba(66,133,244,0.14)")};
+  border: 1px solid ${({ theme }) => (theme.name === "dark" ? "rgba(66,133,244,0.35)" : "rgba(66,133,244,0.28)")};
+`;
+
+const ProgressRow = styled.div`
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const ProgressPill = styled.div`
+  border-radius: 999px;
+  text-align: center;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: ${({ theme, $active }) => ($active ? theme.colors.text.inverse : theme.colors.text.secondary)};
+  background: ${({ theme, $active }) =>
+    $active
+      ? "linear-gradient(90deg, #4285f4 0%, #0f9d58 100%)"
+      : (theme.name === "dark" ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)")};
+  border: 1px solid ${({ theme, $active }) =>
+    $active
+      ? "rgba(66, 133, 244, 0.35)"
+      : (theme.name === "dark" ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)")};
 `;
 
 const Title = styled.h1`
-  margin: 0;
-  font-size: 1.5rem;
+  margin: 0.95rem 0 0;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+  line-height: 1.15;
+  font-weight: 800;
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Body = styled.p`
-  margin: 0.9rem 0 0;
+  margin: 0.78rem 0 0;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: 1.55;
+  line-height: 1.6;
+  font-size: 0.98rem;
 `;
 
 const Notice = styled.div`
   margin-top: 1rem;
-  padding: 0.8rem 0.95rem;
-  border-radius: 10px;
-  background: rgba(66, 133, 244, 0.12);
-  border: 1px solid rgba(66, 133, 244, 0.24);
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: ${({ theme }) => (theme.name === "dark" ? "rgba(66, 133, 244, 0.2)" : "rgba(66, 133, 244, 0.12)")};
+  border: 1px solid rgba(66, 133, 244, 0.28);
   color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
 `;
 
 const Alert = styled.div`
   margin-top: 1rem;
-  padding: 0.8rem 0.95rem;
-  border-radius: 10px;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
   background: ${({ $type }) => ($type === "error" ? "rgba(220, 38, 38, 0.14)" : "rgba(22, 163, 74, 0.14)")};
   border: 1px solid ${({ $type }) => ($type === "error" ? "rgba(220, 38, 38, 0.32)" : "rgba(22, 163, 74, 0.32)")};
   color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
 `;
 
 const MetaGrid = styled.div`
@@ -65,82 +136,128 @@ const MetaGrid = styled.div`
 `;
 
 const MetaItem = styled.div`
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.colors.divider};
-  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.12)")};
+  padding: 0.78rem 0.9rem;
+  background: ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.72)")};
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 `;
 
 const MetaValue = styled.span`
   color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
+  font-weight: 700;
 `;
 
 const Form = styled.form`
   margin-top: 1rem;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.9rem;
 `;
 
 const Label = styled.label`
   display: grid;
-  gap: 0.3rem;
+  gap: 0.45rem;
   color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
 `;
 
 const Input = styled.input`
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.colors.divider};
-  background: ${({ theme }) => theme.colors.background.primary};
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.18)" : "rgba(15,23,42,0.18)")};
+  background: ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.92)")};
   color: ${({ theme }) => theme.colors.text.primary};
-  padding: 0.72rem 0.85rem;
+  padding: 0.82rem 0.92rem;
   font-size: 0.96rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+  &::placeholder {
+    color: ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.45)" : "rgba(15,23,42,0.45)")};
+  }
+
+  &[type='file'] {
+    padding: 0.55rem;
+  }
+
+  &::file-selector-button {
+    border: 0;
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    margin-right: 0.6rem;
+    background: ${({ theme }) => (theme.name === "dark" ? "rgba(66,133,244,0.25)" : "rgba(66,133,244,0.14)")};
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-weight: 600;
+    cursor: pointer;
+  }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    font-size: 16px;
   }
 `;
 
 const FileHint = styled.div`
-  margin-top: -0.1rem;
+  margin-top: -0.15rem;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.85rem;
+  line-height: 1.45;
 `;
 
 const Actions = styled.div`
   margin-top: 0.4rem;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.65rem;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const PrimaryButton = styled.button`
   border: none;
-  border-radius: 10px;
-  padding: 0.72rem 1rem;
+  border-radius: 12px;
+  padding: 0.78rem 1rem;
   cursor: pointer;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.primary};
+  background: linear-gradient(90deg, #4285f4 0%, #0f9d58 100%);
   color: ${({ theme }) => theme.colors.text.inverse};
+  box-shadow: 0 8px 22px rgba(66, 133, 244, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(66, 133, 244, 0.3);
+  }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.65;
+    box-shadow: none;
   }
 `;
 
 const SecondaryButton = styled.button`
-  border: 1px solid ${({ theme }) => theme.colors.divider};
-  border-radius: 10px;
-  padding: 0.72rem 1rem;
+  border: 1px solid ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.16)" : "rgba(15,23,42,0.14)")};
+  border-radius: 12px;
+  padding: 0.78rem 1rem;
   cursor: pointer;
   font-weight: 600;
-  background: transparent;
+  background: ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.72)")};
   color: ${({ theme }) => theme.colors.text.primary};
+  transition: border-color 0.2s ease, transform 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(66, 133, 244, 0.45);
+    transform: translateY(-1px);
+  }
 
   &:disabled {
     cursor: not-allowed;
@@ -149,10 +266,21 @@ const SecondaryButton = styled.button`
 `;
 
 const HomeLink = styled(Link)`
-  margin-top: 0.9rem;
-  display: inline-block;
-  font-size: 0.9rem;
+  margin-top: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0.62rem 0.9rem;
+  font-size: 0.88rem;
+  text-decoration: none;
+  border: 1px dashed ${({ theme }) => (theme.name === "dark" ? "rgba(255,255,255,0.2)" : "rgba(15,23,42,0.22)")};
   color: ${({ theme }) => theme.colors.text.secondary};
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text.primary};
+    border-color: rgba(66, 133, 244, 0.5);
+  }
 `;
 
 const STEPS = {
@@ -767,6 +895,12 @@ const InductionUploadRedirect = () => {
 
   const isSelectedCandidate = teamMeta.inductionStatus === "selected";
   const hasEditLeft = !teamMeta.hasSubmitted || Number(teamMeta.remainingEdits) > 0;
+  const authProgressStage = (() => {
+    if (isAuthenticated) return 4;
+    if (step === STEPS.VERIFY_OTP || step === STEPS.FORGOT_VERIFY_OTP) return 2;
+    if (step === STEPS.CREATE_PASSWORD || step === STEPS.FORGOT_RESET_PASSWORD) return 3;
+    return 1;
+  })();
 
   if (checkingLogin || profileLoading) {
     return <Spinner />;
@@ -775,15 +909,23 @@ const InductionUploadRedirect = () => {
   return (
     <Wrapper>
       <Card>
+        <Badge>Selected Members Upload Portal</Badge>
+        <ProgressRow>
+          <ProgressPill $active={authProgressStage >= 1}>Authenticate</ProgressPill>
+          <ProgressPill $active={authProgressStage >= 2}>Verify OTP</ProgressPill>
+          <ProgressPill $active={authProgressStage >= 3}>Secure</ProgressPill>
+          <ProgressPill $active={authProgressStage >= 4}>Submit Form</ProgressPill>
+        </ProgressRow>
+
         {!isAuthenticated ? (
           <>
-            <Title>Team 2026 Upload Login</Title>
+            <Title>Team 2026 Member Access</Title>
             <Body>
-              Login with the same email used in your induction submission. After login, this same page shows a simple form where you can submit details directly.
+              Use the same email from your induction submission. After authentication, this page transforms into your details upload form.
             </Body>
 
             <Notice>
-              Flow: login with email, verify OTP, create or reset password if needed, then submit Team 2026 details.
+              Flow: email login, OTP verification, password create or reset if needed, then direct Team 2026 profile submission.
             </Notice>
 
             {error ? <Alert $type="error">{error}</Alert> : null}
@@ -1042,9 +1184,9 @@ const InductionUploadRedirect = () => {
           </>
         ) : (
           <>
-            <Title>Team 2026 Simple Details Form</Title>
+            <Title>Team 2026 Profile Submission</Title>
             <Body>
-              Fill this form and submit directly from this page.
+              Submit your social links and photo from this page. Your profile appears publicly only after admin review.
             </Body>
 
             <Notice>
