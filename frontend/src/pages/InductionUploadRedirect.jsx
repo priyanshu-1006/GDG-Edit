@@ -38,6 +38,22 @@ const Card = styled.div`
   backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
+  animation: cardIn 0.42s ease-out;
+
+  @keyframes cardIn {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 
   @media (max-width: 768px) {
     border-radius: 18px;
@@ -85,6 +101,7 @@ const ProgressPill = styled.div`
     $active
       ? "rgba(66, 133, 244, 0.35)"
       : (theme.name === "dark" ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)")};
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 `;
 
 const Title = styled.h1`
