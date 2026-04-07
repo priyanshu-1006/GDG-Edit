@@ -733,7 +733,7 @@ const InductionForm = () => {
   const { login: globalLogin } = useAuth();
   
   // Resume Parsing state
-  const [resumeChoice, setResumeChoice] = useState(null); // 'with' or 'without'
+  const [resumeChoice, setResumeChoice] = useState('without'); // directly show form after auth
   const theme = useTheme();
   const [resumeUploading, setResumeUploading] = useState(false);
 
@@ -859,6 +859,11 @@ const InductionForm = () => {
       ...prev,
       [key]: value,
     }));
+  };
+
+  const handleGoogleInductionLogin = () => {
+    setAuthError(null);
+    window.location.href = `${API_BASE_URL}/api/induction/auth/google`;
   };
 
   const handleSendInductionOtp = async (event, isResend = false) => {
@@ -1236,7 +1241,7 @@ const InductionForm = () => {
     );
   }
 
-  // Login gate — OTP + password account flow
+  // Login gate — Google sign-in flow (legacy workflow)
   if (!authenticated) {
     return (
       <PageWrapper>
@@ -1292,8 +1297,7 @@ const InductionForm = () => {
             </InfoBody>
 
             <HighlightNotice>
-              <strong>Important:</strong> Start with the same email used for your induction submission, verify OTP sent from
-              <strong> team@gdg.mmmut.app</strong>, create your password, and then continue to the induction form.
+              <strong>Important:</strong> Sign in with Google using the same email you used in induction.
             </HighlightNotice>
 
             <AuthDivider />
@@ -1303,253 +1307,23 @@ const InductionForm = () => {
                 <Shield size={44} style={{ color: '#4285f4' }} />
               </ShieldWrap>
 
-              <LoginTitle>Verify Email to Continue</LoginTitle>
+              <LoginTitle>Login with Google to Continue</LoginTitle>
 
               <LoginText>
-                Use your induction submission email and complete OTP verification before creating your induction account password.
+                After Google login, you will be taken directly to the induction form.
               </LoginText>
 
-              <NoteBox>
-                <NoteText>
-                  <AlertCircle size={16} />
-                  <strong>Note:</strong> Use the exact same email you used while submitting induction details.
-                </NoteText>
-              </NoteBox>
-
-              {authStep === 'request' && (
-                <AuthInlineForm onSubmit={(event) => handleSendInductionOtp(event, false)}>
-                  <FieldGroup>
-                    <Label>Email <span>*</span></Label>
-                    <InputWrapper>
-                      <Mail />
-                      <Input
-                        $hasIcon
-                        type="email"
-                        placeholder="Enter the same induction form email"
-                        value={authForm.email}
-                        onChange={(event) => setAuthField('email', event.target.value)}
-                        required
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.25rem' }}>
-                    {authSubmitting ? 'Sending OTP...' : 'Send OTP'}
-                  </SubmitButton>
-
-                  <AuthTextButton
-                    type="button"
-                    onClick={() => {
-                      setAuthError(null);
-                      setAuthStep('login');
-                      setOtpCountdown(0);
-                      setCanResendOtp(false);
-                      setAuthForm((prev) => ({
-                        ...prev,
-                        otp: '',
-                        tempToken: '',
-                        password: '',
-                        confirmPassword: '',
-                      }));
-                    }}
-                  >
-                    Already registered? Sign in with password
-                  </AuthTextButton>
-                </AuthInlineForm>
-              )}
-
-              {authStep === 'verify' && (
-                <AuthInlineForm onSubmit={handleVerifyInductionOtp}>
-                  <FieldGroup>
-                    <Label>Verified Email</Label>
-                    <InputWrapper>
-                      <Mail />
-                      <Input
-                        $hasIcon
-                        type="email"
-                        value={authForm.email}
-                        readOnly
-                        style={{ opacity: 0.75, cursor: 'not-allowed' }}
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <FieldGroup>
-                    <Label>Enter 6-digit OTP <span>*</span></Label>
-                    <InputWrapper>
-                      <Hash />
-                      <Input
-                        $hasIcon
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        placeholder="123456"
-                        value={authForm.otp}
-                        onChange={(event) => setAuthField('otp', event.target.value.replace(/\D/g, '').slice(0, 6))}
-                        required
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <AuthOtpMeta>
-                    <span>
-                      {otpCountdown > 0
-                        ? `OTP expires in ${formatOtpCountdown(otpCountdown)}`
-                        : 'OTP expired. Request a new code.'}
-                    </span>
-                    {canResendOtp && (
-                      <AuthSecondaryButton
-                        type="button"
-                        onClick={(event) => handleSendInductionOtp(event, true)}
-                        disabled={authSubmitting}
-                      >
-                        Resend OTP
-                      </AuthSecondaryButton>
-                    )}
-                  </AuthOtpMeta>
-
-                  <AuthButtonRow>
-                    <AuthSecondaryButton
-                      type="button"
-                      onClick={() => {
-                        setAuthError(null);
-                        setAuthStep('request');
-                        setOtpCountdown(0);
-                        setCanResendOtp(false);
-                        setAuthField('otp', '');
-                      }}
-                    >
-                      Change Email
-                    </AuthSecondaryButton>
-                  </AuthButtonRow>
-
-                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.75rem' }}>
-                    {authSubmitting ? 'Verifying OTP...' : 'Verify OTP'}
-                  </SubmitButton>
-                </AuthInlineForm>
-              )}
-
-              {authStep === 'register' && (
-                <AuthInlineForm onSubmit={handleCreateInductionAccount}>
-                  <FieldGroup>
-                    <Label>Full Name <span>*</span></Label>
-                    <InputWrapper>
-                      <User />
-                      <Input
-                        $hasIcon
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={authForm.name}
-                        onChange={(event) => setAuthField('name', event.target.value)}
-                        required
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <FieldGroup>
-                    <Label>Create Password <span>*</span></Label>
-                    <InputWrapper>
-                      <Lock />
-                      <Input
-                        $hasIcon
-                        type="password"
-                        placeholder="At least 8 characters"
-                        value={authForm.password}
-                        onChange={(event) => setAuthField('password', event.target.value)}
-                        required
-                        minLength={8}
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <FieldGroup>
-                    <Label>Confirm Password <span>*</span></Label>
-                    <InputWrapper>
-                      <Lock />
-                      <Input
-                        $hasIcon
-                        type="password"
-                        placeholder="Re-enter your password"
-                        value={authForm.confirmPassword}
-                        onChange={(event) => setAuthField('confirmPassword', event.target.value)}
-                        required
-                        minLength={8}
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <AuthButtonRow>
-                    <AuthSecondaryButton
-                      type="button"
-                      onClick={() => {
-                        setAuthError(null);
-                        setAuthStep('verify');
-                      }}
-                    >
-                      Back to OTP
-                    </AuthSecondaryButton>
-                  </AuthButtonRow>
-
-                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.75rem' }}>
-                    {authSubmitting ? 'Creating Account...' : 'Create Account & Continue'}
-                  </SubmitButton>
-                </AuthInlineForm>
-              )}
-
-              {authStep === 'login' && (
-                <AuthInlineForm onSubmit={handleInductionPasswordLogin}>
-                  <FieldGroup>
-                    <Label>Email <span>*</span></Label>
-                    <InputWrapper>
-                      <Mail />
-                      <Input
-                        $hasIcon
-                        type="email"
-                        placeholder="Enter the same induction form email"
-                        value={authForm.email}
-                        onChange={(event) => setAuthField('email', event.target.value)}
-                        required
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <FieldGroup>
-                    <Label>Password <span>*</span></Label>
-                    <InputWrapper>
-                      <Lock />
-                      <Input
-                        $hasIcon
-                        type="password"
-                        placeholder="Enter your password"
-                        value={authForm.password}
-                        onChange={(event) => setAuthField('password', event.target.value)}
-                        required
-                      />
-                    </InputWrapper>
-                  </FieldGroup>
-
-                  <SubmitButton type="submit" disabled={authSubmitting} style={{ marginTop: '0.5rem' }}>
-                    {authSubmitting ? 'Signing In...' : 'Sign In'}
-                  </SubmitButton>
-
-                  <AuthTextButton
-                    type="button"
-                    onClick={() => {
-                      setAuthError(null);
-                      setAuthStep('request');
-                      setAuthForm((prev) => ({
-                        ...prev,
-                        otp: '',
-                        tempToken: '',
-                        password: '',
-                        confirmPassword: '',
-                      }));
-                    }}
-                  >
-                    New here? Verify OTP and create account
-                  </AuthTextButton>
-                </AuthInlineForm>
-              )}
+              <GoogleButton
+                onClick={handleGoogleInductionLogin}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                />
+                Continue with Google
+              </GoogleButton>
 
               {authError && (
                 <StatusMessage
